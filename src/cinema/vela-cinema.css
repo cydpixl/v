@@ -1,0 +1,100 @@
+/* Complete browse primitives: the retained cinema theme previously assumed
+   layout rules from the retired site's stylesheet. Scope these to Vela. */
+#vela-movies{--cinema-accent:#a6afff;--cinema-gutter:clamp(24px,3vw,48px);background:#101114;color:#f5f5f7;isolation:isolate;container-type:inline-size}
+#vela-movies .vela-cinema-toolbar{display:flex;align-items:center;gap:28px;position:sticky;top:0;z-index:30;padding:0 var(--cinema-gutter);min-height:76px;background:#101114ef;backdrop-filter:blur(20px);border-bottom:1px solid #ffffff0c}
+#vela-movies .vela-cinema-header{display:contents}
+#vela-movies .vela-cinema-header>strong{order:0;font-size:22px;font-weight:750;letter-spacing:-.8px;margin:0}
+#vela-movies .vela-cinema-nav{order:1;display:flex;align-items:center;gap:22px;position:static;background:none;padding:0;margin-right:auto;min-width:0;overflow:auto;scrollbar-width:none;align-self:stretch}
+#vela-movies .vela-cinema-nav button{font-size:13px;font-weight:550;white-space:nowrap;padding:0 0 2px;border-bottom:2px solid transparent;color:#999ca8;transition:color .18s,border-color .18s}
+#vela-movies .vela-cinema-nav button:hover{color:#fff}
+#vela-movies .vela-cinema-nav button.selected{color:#fff;border-color:var(--cinema-accent)}
+#vela-movies [data-upload-movie]{order:2;display:flex;align-items:center;white-space:nowrap;min-height:36px;padding:0 14px;border:1px solid #ffffff20;border-radius:7px;font-size:12px;background:#ffffff08}
+#vela-movies [data-upload-movie]:hover{background:#ffffff15}
+#vela-movies .movie-upload-status{order:3;font-size:11px;max-width:170px}
+#vela-movies .movie-upload-status:empty{display:none}
+#vela-movies [data-cancel-upload]{order:4}
+#vela-movies .vela-cinema-results{padding-bottom:0;min-height:500px}
+#vela-movies .cinema-feature{height:clamp(400px,47vh,540px)!important;min-height:0;margin:0 0 28px!important;background:#1a1c23}
+#vela-movies .cinema-feature-slide{isolation:isolate}
+#vela-movies .cinema-feature-art{z-index:-2;object-position:65% 32%}
+#vela-movies .cinema-feature-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#101114f5 0%,#101114b0 33%,#10111410 75%),linear-gradient(0deg,#101114,transparent 55%)}
+#vela-movies .cinema-feature-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:35px var(--cinema-gutter) 55px;max-width:600px;transform:none;overflow:hidden}
+#vela-movies .cinema-feature-title{font-size:clamp(40px,4.5vw,68px)!important;line-height:1.02!important;letter-spacing:-2.5px!important;margin-bottom:16px!important;text-wrap:balance;max-width:100%}
+#vela-movies .cinema-feature-meta{font-size:12px;color:#c8cbd4;letter-spacing:.2px}
+#vela-movies .cinema-feature-copy p{font-size:14px!important;line-height:1.7!important;font-weight:400;color:#c5c7cf;max-width:430px;overflow:hidden;margin:16px 0 24px!important}
+#vela-movies .cinema-feature-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px!important;min-height:44px;background:#f4f4f7;color:#15161a;border:0;border-radius:7px!important;padding:0 20px!important;font-size:13px;font-weight:650}
+#vela-movies .cinema-hero-secondary{height:44px;border:0;padding:0;gap:8px;background:none;backdrop-filter:none}
+#vela-movies .cinema-hero-secondary .cinema-icon-action{height:44px;width:44px;border:1px solid #ffffff32;border-radius:7px;background:#10111455}
+#vela-movies .cinema-slide-dots{bottom:25px;right:var(--cinema-gutter)}
+#vela-movies .cinema-row{padding:0 var(--cinema-gutter);margin:0 0 38px;min-width:0}
+#vela-movies .cinema-row>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+#vela-movies .cinema-row h3{margin:0;font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.4px}
+#vela-movies .cinema-row header p{margin:5px 0 0;font-size:12px;color:#888d9b}
+#vela-movies .cinema-row-arrows{display:flex;align-items:center;gap:7px}
+#vela-movies .cinema-row-arrows button{display:grid;place-items:center;width:28px;height:28px;border:1px solid #ffffff19;border-radius:50%}
+#vela-movies .cinema-row-arrows button:hover{background:#ffffff13;color:#fff}
+#vela-movies .cinema-row-arrows svg{width:16px;height:16px}
+#vela-movies .cinema-row-arrows .cinema-view-all{display:block;width:auto;border:0;border-radius:0;font-size:12px;color:#b7bbc9}
+#vela-movies .cinema-rail{display:flex;overflow-x:auto;overflow-y:hidden;gap:18px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#ffffff20 transparent;margin:0;padding:0 0 10px}
+#vela-movies .cinema-rail>.cinema-tile{flex:0 0 clamp(145px,15cqw,202px);scroll-snap-align:start}
+#vela-movies .cinema-tile{position:relative;min-width:0;text-align:left}
+#vela-movies .cinema-art{display:block;width:100%;aspect-ratio:2/3;position:relative;overflow:hidden;background:#21232b;border:1px solid #ffffff0c;border-radius:8px!important;padding:0;color:#fff;isolation:isolate}
+#vela-movies .cinema-art img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease,filter .25s}
+#vela-movies .cinema-art:hover{transform:none}
+#vela-movies .cinema-art:hover img{transform:scale(1.045);filter:brightness(.75)}
+#vela-movies .cinema-art-action{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .2s;background:#0001}
+#vela-movies .cinema-art-action svg{width:32px;height:32px;filter:drop-shadow(0 2px 8px #000a)}
+#vela-movies .cinema-art:hover .cinema-art-action,#vela-movies .cinema-art:focus-visible .cinema-art-action{opacity:1}
+#vela-movies .cinema-watch-save{position:absolute;right:8px;top:8px;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#111318cf;border:1px solid #ffffff3a;color:#fff;opacity:0;transition:opacity .2s,background .2s}
+#vela-movies .cinema-watch-save svg{width:16px;height:16px}
+#vela-movies .cinema-tile:hover .cinema-watch-save,#vela-movies .cinema-tile:focus-within .cinema-watch-save,#vela-movies .cinema-watch-save.selected{opacity:1}
+#vela-movies .cinema-watch-save.selected{color:var(--cinema-accent);background:#1e2344}
+#vela-movies .cinema-tile-label{display:flex;flex-direction:column;gap:5px;padding:12px 1px 0;line-height:1.35}
+#vela-movies .cinema-tile-label strong{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vela-movies .cinema-tile-label span{font-size:11px;color:#888e9d}
+#vela-movies .cinema-ready{position:absolute;bottom:8px;left:8px;border-radius:4px;padding:4px 6px;font-size:9px;background:#101114c9}
+#vela-movies .cinema-no-art{display:grid;place-items:center;height:100%;padding:20px;color:#bbbfc9;font-size:17px;text-align:center}
+#vela-movies .cinema-rank{position:absolute;bottom:0;left:7px;font-size:55px;line-height:1;font-weight:800;text-shadow:0 2px 10px #000}
+#vela-movies .cinema-row-landscape .cinema-rail>.cinema-tile{flex-basis:clamp(230px,28cqw,340px)}
+#vela-movies .cinema-landscape .cinema-art{aspect-ratio:16/9}
+#vela-movies .cinema-progress{height:3px;background:#ffffff20;position:absolute;left:0;right:0;bottom:52px;border-radius:4px;overflow:hidden}
+#vela-movies .cinema-progress i{display:block;height:100%;background:var(--cinema-accent)}
+#vela-movies .cinema-provider-rail{gap:10px}
+#vela-movies .cinema-provider-rail button{flex:0 0 100px;height:72px;border-radius:7px;padding:10px;background:#ffffff04;border-color:#ffffff0d}
+#vela-movies .cinema-provider-rail img{width:30px;height:30px;border-radius:6px}
+#vela-movies .cinema-provider-rail span{font-size:10px}
+#vela-movies .cinema-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:28px 18px;padding:0 var(--cinema-gutter) 40px}
+#vela-movies .cinema-list-page{padding-top:36px}
+#vela-movies .cinema-list-page>header,#vela-movies .cinema-search-page>header{padding:0 var(--cinema-gutter) 24px}
+#vela-movies .cinema-list-page h1,#vela-movies .cinema-search-page h1,#vela-movies .cinema-browse-grid h1{font-size:26px;letter-spacing:-.8px;margin:0}
+#vela-movies .cinema-search-page>header{padding-top:8px}
+#vela-movies .cinema-search-page>h2{font-size:16px;margin:0;padding:0 var(--cinema-gutter) 20px}
+#vela-movies .vela-cinema-search{padding:28px var(--cinema-gutter) 20px}
+#vela-movies .vela-cinema-search input{border:1px solid #ffffff20;background:#191b22;border-radius:9px;padding:14px 18px;font-size:15px;max-width:640px}
+#vela-movies .vela-cinema-filters{padding:20px var(--cinema-gutter);gap:18px;flex-wrap:wrap;background:#101114}
+#vela-movies .vela-cinema-filters label{font-size:10px;color:#8f95a3;text-transform:uppercase;letter-spacing:.9px}
+#vela-movies .vela-cinema-filters select,#vela-movies .vela-cinema-filters input{font-size:12px;text-transform:none;letter-spacing:0;padding:9px 12px;min-width:130px;max-width:180px;background:#1b1d24;color:#dddfe6;border:1px solid #ffffff12;border-radius:6px}
+#vela-movies .cinema-browse-grid{padding:0 var(--cinema-gutter) 24px}
+#vela-movies .cinema-browse-grid .cinema-grid{padding:0}
+#vela-movies .cinema-empty{padding:70px var(--cinema-gutter);text-align:center;color:#949aaa}
+#vela-movies .cinema-empty h3{color:#eee;font-size:22px;font-weight:600}
+#vela-movies .cinema-empty p{font-size:13px;line-height:1.7}
+#vela-movies .cinema-empty button{padding:10px 18px;border:1px solid #ffffff30;border-radius:6px;color:#eee}
+#vela-movies .movie-loading{position:absolute;z-index:5;right:var(--cinema-gutter);margin:12px 0;font-size:11px;color:#cbd0e0;background:#15171ee8;padding:8px 12px;border-radius:6px}
+#vela-movies .cinema-title-hero{height:clamp(510px,65vh,700px);margin-bottom:28px}
+#vela-movies .cinema-title-back{top:24px;left:var(--cinema-gutter);font-size:12px;padding:8px 12px;border-radius:6px}
+#vela-movies .cinema-title-copy{left:var(--cinema-gutter);bottom:45px;right:32%;max-width:650px}
+#vela-movies .cinema-title-copy h1{font-size:clamp(36px,4vw,62px)}
+#vela-movies .cinema-title-facts{bottom:45px;right:var(--cinema-gutter);min-width:190px;border-radius:8px}
+#vela-movies .cinema-title-facts{display:block}
+#vela-movies .cinema-title-facts>div{display:flex;justify-content:space-between;gap:20px;font-size:11px;padding:10px 0}
+#vela-movies .cinema-title-description{font-size:13px;line-height:1.75}
+#vela-movies .cinema-episode-solo{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:8px 0;color:#c3c9ff}
+#vela-movies .cinema-episode-solo svg{width:14px;height:14px}
+#vela-movies .arnie-episode-copy p{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+#vela-movies .cinema-footer{padding:26px var(--cinema-gutter);color:#727989;font-size:11px}
+#vela-movies .cinema-row,#vela-movies .cinema-grid{animation:vela-cinema-enter .3s ease both}
+@keyframes vela-cinema-enter{from{opacity:.4;transform:translateY(8px)}to{opacity:1;transform:none}}
+@container (max-width:950px){#vela-movies .vela-cinema-toolbar{gap:20px;flex-wrap:wrap;padding-top:18px;padding-bottom:0}#vela-movies .vela-cinema-header>strong{margin-right:auto}#vela-movies [data-upload-movie]{order:0}#vela-movies .vela-cinema-nav{flex-basis:100%;min-height:48px;order:5;margin:0}#vela-movies .cinema-title-facts{display:none}#vela-movies .cinema-title-copy{right:12%}}
+@container (max-width:600px){#vela-movies .vela-cinema-nav{gap:19px}#vela-movies .vela-cinema-nav button{font-size:12px}#vela-movies .cinema-feature-copy{max-width:95%}#vela-movies .cinema-feature{height:430px!important}#vela-movies .cinema-feature-title{font-size:40px!important}#vela-movies .cinema-feature-copy p{max-width:330px}#vela-movies .cinema-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#vela-movies .cinema-provider-section>header>span{display:none}#vela-movies .cinema-title-hero{height:580px}#vela-movies .cinema-title-copy{right:var(--cinema-gutter)}#vela-movies .cinema-feature-actions{flex-wrap:wrap}#vela-movies .cinema-footer{flex-wrap:wrap}#vela-movies .cinema-footer small{margin:0}}
+@media(prefers-reduced-motion:reduce){#vela-movies *{animation:none!important;scroll-behavior:auto!important;transition:none!important}}

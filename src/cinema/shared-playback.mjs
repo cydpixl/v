@@ -11,7 +11,10 @@ export function applySharedPlayback(video,state,{reason='heartbeat',sourceChange
  }
  session.revision=(session.revision||0)+1;
  session.state={...state};session.received=performance.now();session.elapsedMs=elapsedMs;session.rttMs=rttMs;
- session.reason=reason;session.sourceChanged=sourceChanged;session.onBlocked=onBlocked;
+ // A heartbeat may arrive while the new source is still probing metadata.
+ // Retain the initial seek until the element can actually apply it.
+ session.reason=reason==='heartbeat'&&session.reason?session.reason:reason;
+ session.sourceChanged=sourceChanged||!!session.sourceChanged;session.onBlocked=onBlocked;
  video.__sharedPlayback=session;
  session.apply=(force=false)=>{
   const latest=session.state;if(!latest||movieSource(video)!==latest.url)return;
