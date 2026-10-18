@@ -1,12 +1,12 @@
 {
   "name": "vela",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "check": "node --check src/app.js && node --check src/call.js && node --check src/emoji-picker.js && node --check src/account-popover.js && node --check src/accounts.js && node --check src/avatar-editor.js && node --check worker/index.js",
+    "check": "node --check src/app.js && node --check src/call.js && node --check src/emoji-picker.js && node --check src/account-popover.js && node --check src/accounts.js && node --check src/avatar-editor.js && node --check worker/index.js && node --check src/expression-picker.js && node --check worker/features.js && node --check worker/expressions.js && node --check src/speech-gate.js",
     "deploy": "npm run build && wrangler deploy",
     "build:github": "node scripts/build-github.mjs"
   },
