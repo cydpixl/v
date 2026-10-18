@@ -1,0 +1,60 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vela-cyd",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-18",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pixl-chat",
+      "database_id": "f4415581-ad3a-4d83-b62d-6cc2288d99f1"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "pixl-chat-files"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "HUB",
+        "class_name": "UserHub"
+      },
+      {
+        "name": "ROOM",
+        "class_name": "CallRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "UserHub",
+        "CallRoom"
+      ]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  }
+}

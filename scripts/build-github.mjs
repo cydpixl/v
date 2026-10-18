@@ -1,0 +1,3 @@
+import {spawnSync} from 'node:child_process';import fs from 'node:fs';import path from 'node:path';
+const result=spawnSync(process.execPath,['node_modules/vite/bin/vite.js','build','--mode','github','--base=/v/','--outDir=dist-gh'],{stdio:'inherit'});if(result.status)process.exit(result.status);
+const root=fs.realpathSync('.'),target=path.resolve(root,'docs');if(target!==path.join(root,'docs'))throw Error('Unexpected publish target');fs.rmSync(target,{recursive:true,force:true});fs.cpSync(path.resolve(root,'dist-gh'),target,{recursive:true});fs.writeFileSync(path.join(target,'.nojekyll'),'');console.log('GitHub Pages files prepared in docs/.');

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.wrangler/
+.private/
+.dev.vars
+test-results/
+
+dist-gh/
+AGENTS.md
+REFERENCE-CALL-PASS.md
+RELEASE.md
