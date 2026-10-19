@@ -1,0 +1,51 @@
+/* Call-stage media sits beside cameras; speaking outlines stay above video. */
+#call-stage .call-tile.speaking:not(.screen-tile)::after{content:'';position:absolute;inset:0;border:3px solid #23a559;border-radius:inherit;z-index:8;pointer-events:none}
+#call-stage.voice-only .call-tile.speaking::after{display:none}
+#call-stage .call-tile:focus-visible{outline:2px solid #8894ff;outline-offset:-2px}
+#call-stage{position:relative}
+#call-stage[data-resized=true]:not(.expanded){height:var(--call-height)!important;min-height:180px!important;max-height:calc(100dvh - 200px);flex:0 0 auto}
+.call-resizer{height:10px;position:absolute;left:0;right:0;bottom:-5px;z-index:14;cursor:row-resize;touch-action:none;display:flex;justify-content:center;align-items:center;outline:none}
+.call-resizer span{height:3px;width:48px;border-radius:4px;background:#ffffff28;transition:background .15s,width .15s}
+.call-resizer:hover span,.call-resizer:focus-visible span,.resizing .call-resizer span{width:72px;background:#8894ff}
+#call-stage.resizing{user-select:none}
+#call-stage.has-movie:not(.expanded):not([data-resized=true]){height:min(66vh,700px);min-height:360px}
+#call-stage .call-tiles{min-height:0;overflow:hidden}
+#call-tiles.movie-focused{display:grid!important;grid-template-columns:minmax(0,1fr) 170px!important;grid-template-rows:repeat(var(--tile-rows),minmax(0,1fr))!important;align-items:start;gap:10px}
+#call-tiles.movie-focused>.call-tile{grid-column:2;aspect-ratio:16/9;min-height:0!important;height:auto!important;max-height:140px;max-width:none;width:100%}
+#call-tiles.movie-focused>.call-tile .call-avatar{width:48px;height:48px}
+#call-tiles.movie-focused>#vela-movie-player{grid-column:1;grid-row:1/-1;align-self:stretch}
+#vela-movie-player.in-call-stage{position:relative;inset:auto;width:100%;height:100%;min-height:0;max-height:none;z-index:auto;border:1px solid #ffffff15;border-radius:8px;box-shadow:none;display:flex;flex-direction:column;background:#000;overflow:hidden;order:-1}
+#vela-movie-player.in-call-stage>header{padding:7px 10px;min-height:34px;flex-shrink:0;background:#111217}
+#vela-movie-player.in-call-stage header strong{cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vela-movie-player.in-call-stage video{position:static;inset:auto;display:block;flex:1;height:0;min-height:0;width:100%;max-height:none;aspect-ratio:auto;object-fit:contain}
+#vela-movie-player.in-call-stage [data-movie-minimize],#vela-movie-player.in-call-stage [data-movie-fullscreen]{display:none}
+#vela-movie-player.in-call-stage .movie-controls{flex-shrink:0;gap:10px;padding:8px 10px;background:#111217}
+#vela-movie-player.in-call-stage .movie-controls input{accent-color:#a6afff}
+#vela-movie-player.in-call-stage .movie-controls label{font-size:11px}
+#vela-movie-player.in-call-stage .movie-controls button{font-size:11px;padding:4px 8px}
+#vela-movie-player.in-call-stage .movie-time{font-size:11px;min-width:85px}
+#vela-movie-player.in-call-stage.dimmed{grid-column:2;grid-row:auto;max-height:140px;align-self:start;aspect-ratio:16/9}
+#vela-movie-player.in-call-stage.dimmed .movie-controls,#vela-movie-player.in-call-stage.dimmed .movie-sync-status{display:none}
+#call-tiles:not(.participant-focused)>#vela-movie-player.in-call-stage{grid-column:auto;grid-row:auto;min-height:150px}
+.call-movie-picker.modal{width:min(1240px,calc(100vw - 64px));max-width:none;max-height:calc(100dvh - 64px);padding:0;background:#141720d9;backdrop-filter:blur(32px) saturate(140%);border:1px solid #ffffff28;border-radius:18px;box-shadow:0 24px 100px #0009;overflow:hidden;animation:cinema-picker-in .25s ease both}
+.call-movie-picker::backdrop{background:#05060b66;backdrop-filter:blur(5px)}
+.call-movie-picker.modal>header{padding:12px 20px;background:#ffffff04;border-bottom:1px solid #ffffff10;min-height:48px}
+.call-movie-picker.modal>header h2{font-size:14px;font-weight:600}
+.call-movie-picker.modal>.modal-content{padding:0;max-height:calc(100dvh - 120px);overflow:auto;scrollbar-width:thin}
+.call-movie-picker .call-movie-browser{min-height:480px}
+.call-movie-picker #vela-movies{background:#12151bbf;--cinema-gutter:32px}
+.call-movie-picker #vela-movies .vela-cinema-toolbar{background:#171b25ad;backdrop-filter:blur(20px);min-height:64px}
+.call-movie-picker #vela-movies .cinema-feature{height:330px!important;min-height:0!important}
+.call-movie-picker #vela-movies .cinema-feature-title{font-size:44px!important}
+.call-movie-picker #vela-movies .cinema-feature-copy{padding-top:24px;padding-bottom:45px}
+.call-movie-picker #vela-movies .cinema-feature-scrim{background:linear-gradient(90deg,#12151bf0,transparent),linear-gradient(0deg,#12151be0,transparent 65%)}
+.camera-capture.modal{width:min(720px,calc(100vw - 32px))}
+.camera-preview{position:relative;aspect-ratio:16/9;background:#08090d;border-radius:10px;overflow:hidden;display:grid;place-items:center}
+.camera-preview video,.camera-preview img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
+.camera-preview video{transform:scaleX(-1)}
+.camera-preview [role=status]{position:relative;z-index:1;color:#aeb4c3}
+.camera-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:18px}
+.camera-actions button{min-width:110px;padding:11px 18px}
+@keyframes cinema-picker-in{from{opacity:0;transform:translateY(18px) scale(.975)}to{opacity:1;transform:none}}
+@media(max-width:900px){#call-tiles.movie-focused{grid-template-columns:minmax(0,1fr) 110px!important}#vela-movie-player.in-call-stage .movie-controls label{display:none}.call-movie-picker.modal{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}}
+@media(prefers-reduced-motion:reduce){.call-movie-picker.modal{animation:none}.call-resizer span{transition:none}}

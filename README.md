@@ -12,9 +12,9 @@ Apply `worker/schema.sql` and `worker/features.sql` to D1 before deploying the b
 
 ## Implemented
 
-Direct/group messaging, friends, inline editing, read receipts, photos/files, GIF search, transparent custom emoji/stickers, sticker favorites, anchored account/profile cards, profile-photo cropping, bios/pronouns/banner colors, real game search and profile collections. Calls include camera focus, screen sharing, device selection, ringing indicators, rejoining and transfer between browser sessions.
+Direct/group messaging, friends, inline editing, read receipts, photos/files, camera photo capture with retake/direct send, GIF search, transparent custom emoji/stickers, sticker favorites, anchored account/profile cards, profile-photo cropping, bios/pronouns/banner colors, real game search and profile collections. Calls include drag/keyboard stage resizing, camera speaking outlines, camera focus, screen sharing, device selection, ringing indicators, rejoining and transfer between browser sessions.
 
-Movies includes the retained library, catalog search/details, series/episodes, My List, progress, shared uploaded-video playback, late joining, MP4/WebM multipart uploads, and the previous external provider player. The original library storage and playback initialization repair are retained. New uploads share a capped R2 allowance.
+Movies includes the retained library, catalog search/details, series/episodes, My List, progress, shared uploaded-video playback as an in-call media tile, a glass-style in-call movie browser, late joining, MP4/WebM multipart uploads, and the previous external provider player. The original library storage and playback initialization repair are retained. New uploads share a capped R2 allowance.
 
 ## Verification and limits
 
