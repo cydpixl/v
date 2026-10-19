@@ -46,7 +46,7 @@ try{
  for(const p of pages)await p.waitForFunction(()=>{const v=document.querySelector('#vela-movie-player video');return v.currentTime>55&&v.readyState>=2},null,{timeout:90000});await a.screenshot({path:'.private/movie-in-call-stage.png',animations:'disabled'});
  await a.locator('.call-tile.video-enabled').first().click();assert.ok(await a.locator('.call-tile.focused').count());
  await a.locator('#vela-movie-player header strong').click();await a.locator('#call-tiles.movie-focused').waitFor();
- for(const p of pages){await p.getByRole('button',{name:'Close movie',exact:true}).click();await p.locator('#call-controls [data-action=leave-call]').click()}
+ for(const p of pages){await p.getByRole('button',{name:'Close movie',exact:true}).click();const left=p.waitForResponse(r=>r.url().includes('/calls/')&&r.url().endsWith('/leave')&&r.request().method()==='POST');await p.locator('#call-controls [data-action=leave-call]').click();await left}
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,site,checks:['camera speaking outline from analyser','photo capture retake and recipient image','call camera survives photo capture','three attachment options','pointer resizing','large glass movie picker','movie becomes call tile on both accounts','pause and seek sync','camera/movie focus','no per-camera fullscreen buttons'],errors}));
 }catch(e){for(const[i,p]of pages.entries())await p.screenshot({path:'.private/call-workspace-failure-'+i+'.png',animations:'disabled'}).catch(()=>{});throw e}
 finally{await browser.close()}
