@@ -4,6 +4,7 @@ dist/
 .private/
 .dev.vars
 test-results/
+output/playwright/
 
 dist-gh/
 AGENTS.md

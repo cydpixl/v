@@ -1,0 +1,10 @@
+.call-presence-banner{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:color-mix(in srgb,#36bd76 7%,var(--surface,#17191c));flex-shrink:0;min-width:0}
+.call-presence-banner[hidden]{display:none}
+.call-presence-avatars{display:flex;align-items:center;padding-left:0;flex-shrink:0}
+.call-presence-avatars>span+span{margin-left:-7px}
+.call-presence-avatars .avatar{width:30px;height:30px;border:2px solid var(--bg,#17191c);font-size:12px}
+.call-presence-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.call-presence-copy strong{font-size:14px;color:#65d99b;font-weight:600}
+.call-presence-copy>span{font-size:13px;color:var(--muted,#b2b6bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.call-presence-join{flex-shrink:0;padding:8px 16px;font-size:13px}
+.dm-row:has(.call-presence-label) .dm-identity small{color:#65d99b}
