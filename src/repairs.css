@@ -6,6 +6,8 @@
 .icon-button{flex-shrink:0}
 .icon-button:hover{color:var(--text)}
 .dm-row small,.sidebar-empty{color:var(--muted)}
+.dm-list{min-width:0;max-width:100%;overflow-x:hidden}
+.dm-row{max-width:100%;min-width:0}
 .camera-actions{flex-wrap:wrap}
 .camera-preview{max-height:60dvh}
 .camera-preview img{transform:none}

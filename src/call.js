@@ -44,10 +44,13 @@ export class CallEngine extends EventTarget{
  }
  async flipCamera(){
   if(!this.camera)throw Error('Turn on your camera before flipping it.');
-  this.settings.facing=this.settings.facing==='environment'?'user':'environment';
-  this.settings.camera='';
+  const track=this.camera.getVideoTracks()[0],current=track?.getSettings().deviceId,devices=(await navigator.mediaDevices.enumerateDevices()).filter(device=>device.kind==='videoinput');
+  const index=devices.findIndex(device=>device.deviceId===current);
+  if(devices.length>1){const next=devices[(index+1+devices.length)%devices.length];this.settings.camera=next.deviceId;this.settings.facing='';}
+  else{this.settings.facing=this.settings.facing==='environment'?'user':'environment';this.settings.camera='';}
   await this.enableCamera(true);
-  return this.settings.facing;
+  const active=this.camera?.getVideoTracks()[0];this.settings.camera=active?.getSettings().deviceId||this.settings.camera;this.settings.facing=active?.getSettings().facingMode||this.settings.facing;
+  return active?.label||'Camera';
  }
  async processMic(raw){this.rawMic?.getTracks().forEach(t=>t.stop());this.rawMic=raw;this.audioContext??=new AudioContext({latencyHint:'interactive'});await this.audioContext.resume();this.micSource?.disconnect();this.inputGain?.disconnect();this.micSource=this.audioContext.createMediaStreamSource(raw);this.inputGain=this.audioContext.createGain();const destination=this.audioContext.createMediaStreamDestination();this.micSource.connect(this.inputGain);this.inputGain.connect(destination);this.setInputVolume(this.settings.inputVolume??100);this.monitorSpeech(this.user.uid,destination.stream);return destination.stream;}
  setInputVolume(value){if(this.inputGain)this.inputGain.gain.setTargetAtTime(Math.max(0,Math.min(2,value/100)),this.audioContext.currentTime,.015);}

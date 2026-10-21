@@ -124,12 +124,12 @@ body.cinema-page-open #vela-movies .vela-cinema-nav .cinema-close-nav{font-size:
 body.cinema-page-open #vela-movies .cinema-feature{height:clamp(650px,88dvh,920px)!important;margin:0 0 38px!important}
 body.cinema-page-open #vela-movies .cinema-feature-art{object-position:62% 35%}
 body.cinema-page-open #vela-movies .cinema-feature-scrim{background:linear-gradient(90deg,#07100be6 0%,#07100b9d 31%,#07100b14 69%),linear-gradient(0deg,#080a0d 0%,transparent 38%),linear-gradient(180deg,#05070855,transparent 22%)}
-body.cinema-page-open #vela-movies .cinema-feature-copy{justify-content:flex-end;max-width:650px;padding:0 var(--cinema-gutter) 23vh}
-body.cinema-page-open #vela-movies .cinema-feature-title{font-size:clamp(54px,5.2vw,94px)!important;font-weight:900!important;letter-spacing:-.065em!important;text-shadow:0 5px 30px #0008}
+body.cinema-page-open #vela-movies .cinema-feature-copy{justify-content:center;max-width:650px;padding:180px var(--cinema-gutter) 44px}
+body.cinema-page-open #vela-movies .cinema-feature-title{font-size:clamp(48px,4.25vw,76px)!important;font-weight:900!important;letter-spacing:-.055em!important;text-shadow:0 5px 30px #0008}
 body.cinema-page-open #vela-movies .cinema-feature-copy p{font-size:16px!important;line-height:1.62!important;max-width:540px;color:#eef0ed;font-weight:560;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4}
 body.cinema-page-open #vela-movies .cinema-feature-actions>.cinema-feature-button{min-width:130px;height:52px;background:#f5f6f4!important;color:#0b0e0c!important;border:0!important;border-radius:999px!important;font-size:15px!important;font-weight:800!important}
 body.cinema-page-open #vela-movies .cinema-hero-secondary{background:#24302dc4;border:1px solid #ffffff18}
-body.cinema-page-open #vela-movies .cinema-slide-dots{right:var(--cinema-gutter);bottom:27vh}
+body.cinema-page-open #vela-movies .cinema-slide-dots{right:var(--cinema-gutter);bottom:30%}
 body.cinema-page-open #vela-movies .cinema-row{padding-left:var(--cinema-gutter);padding-right:var(--cinema-gutter)}
 body.cinema-page-open #vela-movies .cinema-row h3{font-size:20px}
 body.cinema-page-open #vela-movies .cinema-provider-rail button{flex-basis:86px;height:86px;padding:10px;background:#ffffff08;border-radius:14px}
