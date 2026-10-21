@@ -9,7 +9,7 @@ export class CallEngine extends EventTarget{
   if(this.info?.id===info.id&&!this.closed)return;
   if(!this.closed)await this.leave();this.closed=false;this.device=crypto.randomUUID();this.info=info;this.members=members;this.status='Connecting';this.started=Date.now();this.change();
   try{
-   const config=await this.api('/ice');this.ice=config.iceServers;this.relayAvailable=config.relay;this.mic=await this.processMic(await navigator.mediaDevices.getUserMedia({audio:this.audioConstraints(),video:false}));this.mic.getAudioTracks().forEach(t=>t.enabled=!this.muted);
+   const config=await this.api('/ice');if(this.closed||this.info?.id!==info.id)return;this.ice=config.iceServers;this.relayAvailable=config.relay;const raw=await navigator.mediaDevices.getUserMedia({audio:this.audioConstraints(),video:false});if(this.closed||this.info?.id!==info.id){raw.getTracks().forEach(t=>t.stop());return}this.mic=await this.processMic(raw);if(this.closed)return;this.mic.getAudioTracks().forEach(t=>t.enabled=!this.muted);
    if(info.kind==='video')try{await this.enableCamera(true)}catch(error){this.error(mediaError(error));}
    await this.api('/calls/'+info.id+'/join',{method:'POST'});await this.connect();if(this.closed)return;this.statsTimer=setInterval(()=>this.collectStats(),2500);this.wake();this.change();
   }catch(error){this.error(mediaError(error));await this.leave();throw error;}
@@ -35,9 +35,18 @@ export class CallEngine extends EventTarget{
  }
  peer(uid){if(this.links.has(uid))return this.links.get(uid);const link=new Peer(this,uid);this.links.set(uid,link);return link;}
  async enableCamera(enabled=!this.camera){
+  const request=this.cameraRequest=(this.cameraRequest||0)+1;
   if(!enabled){this.camera?.getTracks().forEach(t=>t.stop());this.camera=null;await Promise.all([...this.links.values()].map(l=>l.replace('camera',null)));this.publish();this.change();return;}
   const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{deviceId:this.settings.camera?{exact:this.settings.camera}:undefined,facingMode:this.settings.facing||'user',width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:60,max:60}}});
+  if(this.closed||request!==this.cameraRequest){stream.getTracks().forEach(t=>t.stop());return}
   const old=this.camera;this.camera=stream;stream.getVideoTracks()[0].onended=()=>{if(this.camera===stream)this.enableCamera(false).catch(e=>this.error(e.message))};await Promise.all([...this.links.values()].map(l=>l.replace('camera',stream.getVideoTracks()[0])));old?.getTracks().forEach(t=>t.stop());this.publish();this.change();
+ }
+ async flipCamera(){
+  if(!this.camera)throw Error('Turn on your camera before flipping it.');
+  this.settings.facing=this.settings.facing==='environment'?'user':'environment';
+  this.settings.camera='';
+  await this.enableCamera(true);
+  return this.settings.facing;
  }
  async processMic(raw){this.rawMic?.getTracks().forEach(t=>t.stop());this.rawMic=raw;this.audioContext??=new AudioContext({latencyHint:'interactive'});await this.audioContext.resume();this.micSource?.disconnect();this.inputGain?.disconnect();this.micSource=this.audioContext.createMediaStreamSource(raw);this.inputGain=this.audioContext.createGain();const destination=this.audioContext.createMediaStreamDestination();this.micSource.connect(this.inputGain);this.inputGain.connect(destination);this.setInputVolume(this.settings.inputVolume??100);this.monitorSpeech(this.user.uid,destination.stream);return destination.stream;}
  setInputVolume(value){if(this.inputGain)this.inputGain.gain.setTargetAtTime(Math.max(0,Math.min(2,value/100)),this.audioContext.currentTime,.015);}
