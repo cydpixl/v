@@ -112,7 +112,7 @@ async function api(req,env,ctx){
    const prior=await row(env,'SELECT * FROM messages WHERE id=?',id);if(prior){if(prior.sender!==uid||prior.conversation!==cid)fail('Message identifier is in use.',409);return json({id});}
    const attachment=expressionAttachment?JSON.stringify(expressionAttachment):att?JSON.stringify({id:att.id,name:att.name,type:att.type,size:att.size}):null,now=Date.now();
    await env.DB.batch([env.DB.prepare('INSERT INTO messages(id,conversation,sender,text,attachment,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,cid,uid,text,attachment,b.replyTo||null,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,cid),...(att?[env.DB.prepare('UPDATE uploads SET conversation=? WHERE id=?').bind(cid,att.id)]:[])]);
-   await publish(env,cid,{type:'message',id,sender:uid});return json({id});
+   const message={id,conversation:cid,sender:uid,text,attachment:expressionAttachment||(att?{id:att.id,name:att.name,type:att.type,size:att.size}:null),reply_to:b.replyTo||null,created:now,edited:null,deleted:0,pinned:0,reactions:[]};await publish(env,cid,{type:'message',id,sender:uid,message});return json({id,message});
   }
   if(action==='read'&&method==='POST'){await run(env,'UPDATE members SET last_read=? WHERE conversation=? AND uid=?',Date.now(),cid,uid);await publish(env,cid,{type:'read',uid});return json({ok:true});}
   if(action==='typing'&&method==='POST'){const b=await body(req);await publish(env,cid,{type:'typing',uid,typing:b.typing===true});return json({ok:true});}
