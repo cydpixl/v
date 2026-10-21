@@ -23,3 +23,5 @@ The `scripts/qa-*.mjs` browser checks exercise dedicated QA accounts loaded from
 This remains an independent app with unfinished Discord parity. Server creation/import, Discord identity/game-account linking and statistics, poll/app commands, and the complete Discord moderation/permissions system are not implemented. Mutual-server views reflect stored Vela memberships, not Discord memberships. TURN relay fallback is not configured. Phone handoff is browser-tested; physical iOS/Android behavior still needs device validation. Third-party movie providers depend on their availability and were not verified title-by-title.
 
 Emoji attribution: [Twemoji](https://github.com/jdecked/twemoji), CC-BY 4.0 graphics; emoji-mart metadata, MIT. See `public/emoji/ATTRIBUTION.txt`.
+
+Clipboard screenshots: focus the message box and press Ctrl+V (Cmd+V on macOS). Images use the existing private attachment uploader, show a removable thumbnail, and wait for Send. Text paste is preserved. One attachment per message; 25 MB limit. Run `npm run test:clipboard` for clipboard extraction and paste-event checks.
