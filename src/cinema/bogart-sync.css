@@ -1,0 +1,11 @@
+.cnx-cinema [data-window-party].active{color:#7ee2a8;background:#163524}
+.bogart-party{display:grid;gap:12px}
+.bogart-party>strong:first-child{font-size:16px}
+.bogart-party p{margin:0;color:#aeb6ad;font-size:12px;line-height:1.5}
+.bogart-party label{display:grid;gap:7px;color:#aeb6ad;font-size:11px}
+.bogart-party input{width:100%;min-width:0;border:1px solid #ffffff20;border-radius:8px;background:#0c0e0d;color:#fff;padding:10px;font:12px ui-monospace,monospace;letter-spacing:.07em}
+.bogart-party button{width:100%;text-align:center!important;border:1px solid #ffffff1a!important;background:#ffffff0b!important}
+.bogart-party [data-party-start]{background:#f4f5f2!important;color:#101311!important;font-weight:700}
+.bogart-party [data-party-leave]{color:#ff8c8c}
+.bogart-party [data-party-room]{min-height:18px;overflow-wrap:anywhere;color:#fff;font:12px ui-monospace,monospace;letter-spacing:.08em}
+.bogart-party small{color:#7f8780;font-size:10px;line-height:1.5}

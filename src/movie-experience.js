@@ -3,7 +3,7 @@ import {icon} from './icons.js';
 const decorated=new WeakSet();
 function decorate(root=document){
  const header=root.querySelector?.('.vela-cinema-header');
- if(header&&!header.querySelector('.spex-mini-brand')){header.querySelector('strong')?.insertAdjacentHTML('afterbegin','<span class="spex-mini-brand" aria-hidden="true">S▶</span>');const link=document.createElement('a');link.className='spex-open-link';link.href='https://bogart.pages.dev';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open Spex';header.append(link);}
+ if(header&&!header.querySelector('.spex-open-link')){const link=document.createElement('a');link.className='spex-open-link';link.href='https://bogart.pages.dev';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open Spex';header.append(link);}
  root.querySelectorAll?.('[data-watch-item]').forEach(card=>{
   if(decorated.has(card))return;decorated.add(card);
   const button=document.createElement('button');button.type='button';button.className='cinema-share-film';button.dataset.shareFilm='';button.setAttribute('aria-label','Send this film to a friend');button.innerHTML=icon('shareItem',17);card.append(button);

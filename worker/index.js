@@ -178,6 +178,7 @@ export class CallRoom extends DurableObject{
  async webSocketMessage(ws,raw){if(typeof raw!=='string'||raw.length>80000){ws.close(1009,'Message too large');return}const owner=ws.deserializeAttachment();let msg;try{msg=JSON.parse(raw)}catch{return}if(Date.now()-owner.at>10000){owner.at=Date.now();owner.count=0;}if(++owner.count>250){ws.close(1008,'Too many signals');return}ws.serializeAttachment(owner);
   if(msg.type==='ping'){ws.send(JSON.stringify({type:'pong'}));return;}
   if(msg.type==='state'){owner.state={mic:msg.state?.mic===true,camera:msg.state?.camera===true,screen:msg.state?.screen===true,deaf:msg.state?.deaf===true};ws.serializeAttachment(owner);this.send({type:'state',uid:owner.uid,state:owner.state},ws);return;}
+   if(msg.type==='sound'&&['message1','camera_on','stream_started','user_join'].includes(msg.sound)){this.send({type:'sound',uid:owner.uid,sound:msg.sound},ws);return;}
   if(!['description','candidate'].includes(msg.type)||typeof msg.to!=='string')return;
   if(msg.type==='description'&&(!['offer','answer'].includes(msg.description?.type)||typeof msg.description?.sdp!=='string'||msg.description.sdp.length>60000))return;
   for(const target of this.ctx.getWebSockets(msg.to))if(target.readyState===1)try{target.send(JSON.stringify({...msg,from:owner.uid,to:msg.to}))}catch{}

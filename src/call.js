@@ -3,7 +3,7 @@ import {socketURL} from './config.js';
 import {mediaError} from './util.js';
 export const QUALITY={auto:{width:3840,height:2160,frameRate:60,bitrate:18000000},1080:{width:1920,height:1080,frameRate:60,bitrate:10000000},720:{width:1280,height:720,frameRate:30,bitrate:4500000}};
 export class CallEngine extends EventTarget{
- constructor({api,user,settings}){super();Object.assign(this,{api,user,settings});this.links=new Map();this.remote=new Map();this.mic=null;this.camera=null;this.screen=null;this.info=null;this.socket=null;this.muted=!!settings.muted;this.deafened=false;this.closed=true;this.stats=[];this.signalQueue=[];this.status='';this.speaking=new Map();this.speechDetectors=new Map();}
+ constructor({api,user,settings}){super();Object.assign(this,{api,user,settings});this.links=new Map();this.remote=new Map();this.mic=null;this.camera=null;this.screen=null;this.info=null;this.socket=null;this.muted=!!settings.muted||!!settings.pushToTalk;this.deafened=false;this.closed=true;this.stats=[];this.signalQueue=[];this.status='';this.speaking=new Map();this.speechDetectors=new Map();}
  change(){this.dispatchEvent(new Event('change'));}
  async join(info,members){
   if(this.info?.id===info.id&&!this.closed)return;
@@ -31,6 +31,7 @@ export class CallEngine extends EventTarget{
   if(msg.type==='peer-joined'){if(msg.uid===this.user.uid)return;this.remote.set(msg.uid,{uid:msg.uid,state:{},streams:{}});const link=this.peer(msg.uid);if(this.user.uid<msg.uid)await link.offer();this.publish();this.change();return;}
   if(msg.type==='peer-left'){this.links.get(msg.uid)?.close();this.links.delete(msg.uid);this.remote.delete(msg.uid);this.speechDetectors.get(msg.uid)?.stop();this.speechDetectors.delete(msg.uid);this.speaking.delete(msg.uid);this.status=this.links.size?'Connected':'Waiting for others';this.change();return;}
   if(msg.type==='state'){const p=this.remote.get(msg.uid);if(p)p.state=msg.state;this.change();return;}
+  if(msg.type==='sound'&&['message1','camera_on','stream_started','user_join'].includes(msg.sound)){this.dispatchEvent(new CustomEvent('soundboard',{detail:{uid:msg.uid,sound:msg.sound}}));return;}
   if(['description','candidate'].includes(msg.type)){const link=this.peer(msg.from);await link.receive(msg);}
  }
  peer(uid){if(this.links.has(uid))return this.links.get(uid);const link=new Peer(this,uid);this.links.set(uid,link);return link;}
@@ -52,6 +53,8 @@ export class CallEngine extends EventTarget{
  setInputVolume(value){if(this.inputGain)this.inputGain.gain.setTargetAtTime(Math.max(0,Math.min(2,value/100)),this.audioContext.currentTime,.015);}
  async switchInput(){const stream=await this.processMic(await navigator.mediaDevices.getUserMedia({audio:this.audioConstraints(),video:false}));stream.getAudioTracks()[0].enabled=!this.muted;const old=this.mic;this.mic=stream;await Promise.all([...this.links.values()].map(l=>l.replace('mic',stream.getAudioTracks()[0])));old?.getTracks().forEach(t=>t.stop());this.change();}
  toggleMute(){this.muted=!this.muted;if(this.muted)this.speaking.set(this.user.uid,false);this.mic?.getAudioTracks().forEach(t=>t.enabled=!this.muted);this.publish();this.change();}
+ setPushToTalk(active){if(!this.settings.pushToTalk||!this.info)return;const muted=!active;if(this.muted===muted)return;this.muted=muted;if(muted)this.speaking.set(this.user.uid,false);this.mic?.getAudioTracks().forEach(track=>track.enabled=active);this.publish();this.change();}
+ playSound(sound){if(!['message1','camera_on','stream_started','user_join'].includes(sound))return false;return this.send({type:'sound',sound});}
  toggleDeafen(){this.deafened=!this.deafened;if(this.deafened&&!this.muted){this.restoreMic=true;this.toggleMute()}else if(!this.deafened&&this.restoreMic){this.restoreMic=false;this.toggleMute()}this.publish();this.change();}
  async startShare({quality='auto',mode='motion',audio=true}={}){
   if(this.closed)throw Error('Join a call before sharing.');

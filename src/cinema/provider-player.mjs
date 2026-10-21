@@ -1,4 +1,5 @@
 import {installStreamWindow} from './stream-window.mjs';
+import {BogartSync} from './bogart-sync.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const providers=[
  {id:'cinesrc',name:'CineSrc',origin:'https://cinesrc.st',controls:true,path:item=>item.type==='tv'?`/embed/tv/${item.id}?s=${item.season}&e=${item.episode}`:`/embed/movie/${item.id}`},
@@ -15,7 +16,7 @@ export function providerURL(provider,item,position=0){const url=new URL(provider
 const playSVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg>';
 const time=value=>{const n=Math.floor(Math.max(0,value||0));return n>=3600?`${Math.floor(n/3600)}:${String(Math.floor(n%3600/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`:`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`};
 export class ProviderPlayer {
- constructor({prefix,brand='Cinema',onProgress=()=>{},onClose=()=>{},onOpen=()=>{},onMinimize=()=>{}}){Object.assign(this,{prefix,brand,onProgress,onClose,onOpen,onMinimize});this.dialog=null;this.frame=null;this.state={position:0,duration:0,playing:false};this.poll=null;this.lastSave=0;this.ads=readAds(prefix);this.available=providers.filter(p=>!p.ads||this.ads);this.message=event=>this.receive(event);this.keydown=event=>this.keys(event);}
+ constructor({prefix,brand='Cinema',onProgress=()=>{},onClose=()=>{},onOpen=()=>{},onMinimize=()=>{}}){Object.assign(this,{prefix,brand,onProgress,onClose,onOpen,onMinimize});this.dialog=null;this.frame=null;this.state={position:0,duration:0,playing:false};this.poll=null;this.lastSave=0;this.ads=readAds(prefix);this.available=providers.filter(p=>!p.ads||this.ads);this.message=event=>this.receive(event);this.keydown=event=>this.keys(event);this.party=new BogartSync(this);}
  get mediaKey(){return `${this.prefix}.progress.${this.item.type}.${this.item.id}.${this.item.type==='tv'?this.item.season+'.'+this.item.episode:'film'}`}
  readProgress(){try{return JSON.parse(localStorage.getItem(this.mediaKey)||'null')}catch{return null}}
  open(input){const item=normalizedItem(input);this.close();this.onOpen(item);this.item=item;this.state={position:0,duration:0,playing:false};let chosen;try{chosen=localStorage.getItem(this.prefix+'.source')}catch{}this.provider=this.available.find(p=>p.id===chosen)||this.available[0];this.nativeControls=this.provider.id!=='cinesrc';
