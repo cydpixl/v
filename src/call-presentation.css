@@ -5,6 +5,8 @@
 #call-stage .presentation-options label{display:flex;align-items:center;gap:6px;white-space:nowrap}
 #call-stage .presentation-options input[type=range]{width:90px}
 #call-stage .presentation-options[hidden]{display:none}
+#call-stage:has(.presentation-options:not([hidden])) .call-statusline{position:relative;top:auto;right:auto;width:100%;height:auto;min-height:36px;flex:0 0 auto;gap:12px;justify-content:space-between;background:#0c0e13}
+#call-stage:has(.presentation-options:not([hidden])) .call-statusline .icon-button{opacity:1}
 #call-stage:fullscreen{display:flex!important;flex-direction:column!important;background:#08090d!important;width:100vw!important;height:100dvh!important;max-height:none!important;min-height:0!important;padding:12px!important}
 #call-stage:fullscreen .call-tiles{flex:1!important;height:0!important;min-height:0!important;max-height:none!important}
 #call-stage:fullscreen .call-resizer{display:none}

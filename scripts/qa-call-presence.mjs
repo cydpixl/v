@@ -52,7 +52,7 @@ try{
  await roster(caller,id,fixture.users.slice(0,2).map(u=>u.uid));
  console.log('PASS simultaneous starts share one room; no empty phantom invite; incoming call and two-way decoded camera frames');
  if(process.env.QA_PRESENTATION==='1'){
-  await a.evaluate(()=>{navigator.mediaDevices.getDisplayMedia=()=>navigator.mediaDevices.getUserMedia({video:true,audio:false});return window.__pixl.call.startShare({quality:'720'});});
+  await a.evaluate(()=>{navigator.mediaDevices.getDisplayMedia=()=>navigator.mediaDevices.getUserMedia({video:true,audio:false});});await a.locator('#call-controls [data-action=share]').click();await a.locator('[data-share]').click();
   await b.waitForFunction(()=>document.querySelector('.screen-tile video')?.videoWidth>0);
   const screen=b.locator('.screen-tile');await screen.locator('[data-tile-fullscreen]').click();
   await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
@@ -67,7 +67,7 @@ try{
   await b.waitForFunction(()=>documentPictureInPicture.window?.document.querySelectorAll('video').length>=3);
   await b.waitForFunction(()=>[...documentPictureInPicture.window.document.querySelectorAll('video')].every(v=>v.videoWidth>0));
   await b.evaluate(()=>documentPictureInPicture.window.close());
-  await a.evaluate(()=>window.__pixl.call.stopShare());
+  await a.locator('#call-controls [data-action=stop-share]').click();
   console.log('PASS visible fullscreen and PiP controls; fullscreen screen with cameras, side by side, Enter key, and decoded media in floating call window');
   if(process.env.QA_MOVIE==='1'){
    await b.locator('#call-controls [data-action=call-movies]').click();
