@@ -1,0 +1,22 @@
+.expression-bulk-form .expression-dropzone{padding:16px;border:1px dashed #8793b477;border-radius:8px;background:#ffffff04;font-size:13px!important;letter-spacing:0!important}
+.expression-bulk-form.dragging .expression-dropzone{border-color:#a4b5ff;background:#8498ff14}
+.expression-upload-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto;margin-top:14px}
+.expression-upload-row{display:flex;align-items:center;gap:12px;padding:9px;background:#ffffff05;border-radius:7px}
+.expression-upload-row>img{width:54px;height:54px;object-fit:contain;flex:none}
+.expression-upload-row>div{flex:1;min-width:0;display:grid;gap:5px}
+.expression-upload-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.expression-upload-row input{width:100%;padding:6px 8px;font-size:13px}
+.expression-upload-row [data-status]{font-size:12px;color:var(--muted)}
+.expression-upload-row[data-state=uploaded] [data-status]{color:#70d69b}
+.expression-upload-row[data-state=failed] [data-status],.expression-upload-row[data-state=invalid] [data-status]{color:#ff9da6}
+.expression-upload-progress{font-size:13px;margin-top:12px}
+.expression-bulk-form footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.custom-emoji-grid{grid-template-columns:repeat(8,minmax(0,1fr))!important}
+.custom-emoji-grid button{height:44px!important}
+.custom-emoji-grid img{width:36px!important;height:36px!important}
+.message-text .custom-emoji{width:32px!important;height:32px!important;vertical-align:middle}
+.message-body .sticker-attachment{width:200px;height:200px;max-width:100%}
+.message-body .custom-emoji-attachment{width:64px;height:64px}
+.message-body .gif-attachment{display:block;width:360px;max-width:100%;height:auto;max-height:340px;object-fit:contain;margin:8px 0}
+.expression-picker.expression-media-picker{width:530px;max-width:calc(100vw - 24px)}
+.expression-media-picker .expression-send img{max-height:210px}
