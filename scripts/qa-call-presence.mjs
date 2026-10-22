@@ -78,7 +78,7 @@ try{
    await b.screenshot({path:'output/playwright/call-movie-fullscreen.png'});
    await b.locator('[data-movie-fullscreen]').click();await b.waitForFunction(()=>!document.fullscreenElement);
    await b.locator('#vela-movie-player video').press('Enter');await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
-   await b.locator('[data-movie-fullscreen]').click();await b.locator('[data-movie-close]').click();
+   await b.locator('[data-movie-fullscreen]').click();await b.locator('[data-movie-pip]').click();await b.waitForFunction(()=>documentPictureInPicture.window?.document.querySelector('figure.main video')?.videoWidth>0);await b.evaluate(()=>documentPictureInPicture.window.close());await b.locator('[data-movie-close]').click();
    console.log('PASS actual library movie decoded in the call; visible fullscreen button and Enter fullscreen keep cameras inside');
   }
 

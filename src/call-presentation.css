@@ -17,5 +17,5 @@
 #call-stage.side-by-side #call-tiles.participant-focused{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
 #call-stage.camera-overlay #call-tiles.participant-focused{position:relative;display:flex!important;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:10px}
 #call-stage.camera-overlay #call-tiles.participant-focused>.focused{position:absolute!important;inset:0;z-index:0}
-#call-stage.camera-overlay #call-tiles.participant-focused>.dimmed{position:relative;z-index:3;width:var(--camera-size,260px)!important;height:auto!important;aspect-ratio:16/9!important;max-height:40%!important;flex:0 1 auto;box-shadow:0 4px 20px #0008}
+#call-stage.camera-overlay #call-tiles.participant-focused>.dimmed{position:relative;align-self:flex-end!important;z-index:3;width:var(--camera-size,260px)!important;height:auto!important;aspect-ratio:16/9!important;max-height:40%!important;flex:0 1 auto;box-shadow:0 4px 20px #0008}
 #call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen],#call-stage #vela-movie-player.in-call-stage [data-movie-pip]{display:inline-flex!important}
