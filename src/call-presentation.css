@@ -48,3 +48,5 @@
 #vela-movie-player:fullscreen.view-controls-visible>header,#vela-movie-player:fullscreen.view-controls-visible>.movie-controls,#vela-movie-player:fullscreen:has(header :focus-visible)>header,#vela-movie-player:fullscreen:has(.movie-controls :focus-visible)>.movie-controls{opacity:1;pointer-events:auto}
 /* One fullscreen entry for the call. Movies keep their entry in solo playback. */
 #call-stage .presentation-options,#call-stage .camera-visibility,#call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen]{display:none!important}
+/* The movie ID outranks the generic .focused rule. Place it explicitly. */
+#call-stage #call-tiles.movie-focused>#vela-movie-player.in-call-stage{grid-column:1!important;grid-row:1/-1!important;position:relative!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;max-height:none!important;align-self:stretch!important;aspect-ratio:auto!important}
