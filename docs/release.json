@@ -1,1 +1,1 @@
-{"version":"1.3.4","release":"call-workspace-20261021","changes":["authoritative call roster and reconnect recovery","30-second ringing","fullscreen screen and movie with cameras","visible picture-in-picture controls","server-clock-based ringing deadlines"]}
+{"version":"1.3.5","release":"call-visibility-20261021","changes":["independent camera visibility in call and popout","edge-to-edge fullscreen with fading controls","screen-only call and popout views","popout fullscreen preserves visibility choices"]}

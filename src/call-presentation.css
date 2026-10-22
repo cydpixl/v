@@ -19,3 +19,30 @@
 #call-stage.camera-overlay #call-tiles.participant-focused>.focused{position:absolute!important;inset:0;z-index:0}
 #call-stage.camera-overlay #call-tiles.participant-focused>.dimmed{position:relative;align-self:flex-end!important;z-index:3;width:var(--camera-size,260px)!important;height:auto!important;aspect-ratio:16/9!important;max-height:40%!important;flex:0 1 auto;box-shadow:0 4px 20px #0008}
 #call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen],#call-stage #vela-movie-player.in-call-stage [data-movie-pip]{display:inline-flex!important}
+.camera-visibility{display:flex;align-items:center;gap:8px}
+.camera-visibility button,.camera-visibility summary{border:1px solid #ffffff20;background:#252830;border-radius:5px;padding:6px 9px;font-size:12px;cursor:pointer;white-space:nowrap}
+.camera-visibility details{position:relative}
+.camera-visibility-list{position:absolute;right:0;top:calc(100% + 6px);z-index:100;min-width:210px;display:flex;flex-direction:column;gap:10px;background:#20232c;border:1px solid #ffffff22;box-shadow:0 8px 28px #0009;border-radius:7px;padding:12px}
+#call-stage .camera-visibility-list label{font-size:13px;white-space:nowrap}
+#call-stage .camera-visibility-list input{width:auto;accent-color:#8691ff}
+#call-stage #call-tiles>[data-view-hidden=true]{display:none!important}
+#call-stage.presentation-solo #call-tiles.participant-focused{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;padding:0!important;gap:0!important}
+#call-stage.presentation-solo #call-tiles.participant-focused>.focused{position:relative!important;grid-column:1!important;grid-row:1!important;inset:auto!important;width:100%!important;height:100%!important}
+#call-stage.presentation-screen-only #call-tiles>:not(.focused){display:none!important}
+#call-stage:fullscreen{padding:0!important;gap:0!important;overflow:hidden}
+#call-stage:fullscreen #call-tiles{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;max-height:none!important}
+#call-stage:fullscreen .call-statusline,#call-stage:fullscreen:has(.presentation-options:not([hidden])) .call-statusline{position:absolute!important;inset:8px 8px auto!important;width:auto!important;z-index:45;min-height:36px;flex-wrap:wrap;background:#11131be8;border-radius:7px;padding:4px 8px}
+#call-stage:fullscreen .call-controls{position:absolute!important;inset:auto 8px 8px!important;z-index:45;width:auto!important;margin:0!important;border-radius:8px;background:#11131be8}
+#call-stage:fullscreen .call-statusline,#call-stage:fullscreen .call-controls,#call-stage:fullscreen .tile-actions,#call-stage:fullscreen .tile-label,#call-stage:fullscreen #vela-movie-player>header,#call-stage:fullscreen #vela-movie-player>.movie-controls{opacity:0;pointer-events:none;transition:opacity .18s}
+#call-stage:fullscreen.view-controls-visible .call-statusline,#call-stage:fullscreen.view-controls-visible .call-controls,#call-stage:fullscreen.view-controls-visible .tile-actions,#call-stage:fullscreen.view-controls-visible .tile-label,#call-stage:fullscreen.view-controls-visible #vela-movie-player>header,#call-stage:fullscreen.view-controls-visible #vela-movie-player>.movie-controls,#call-stage:fullscreen:has(details[open]) .call-statusline,#call-stage:fullscreen:has(.call-statusline :focus-visible) .call-statusline,#call-stage:fullscreen:has(.call-controls :focus-visible) .call-controls{opacity:1;pointer-events:auto}
+#call-stage:fullscreen #vela-movie-player{border:0;border-radius:0;position:relative}
+#call-stage:fullscreen #vela-movie-player>video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain}
+#call-stage:fullscreen #vela-movie-player>header{position:absolute;inset:46px 0 auto;z-index:20}
+#call-stage:fullscreen #vela-movie-player>.movie-controls{position:absolute;inset:auto 0 66px;z-index:20}
+#call-stage:fullscreen.presentation-solo #call-tiles>.focused{border:0;border-radius:0;box-shadow:none}
+#vela-movie-player:fullscreen{position:relative;width:100vw;height:100dvh;max-height:none;border:0;border-radius:0;padding:0;background:#000}
+#vela-movie-player:fullscreen>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#vela-movie-player:fullscreen>header,#vela-movie-player:fullscreen>.movie-controls{position:absolute;left:0;right:0;z-index:20;opacity:0;pointer-events:none;transition:opacity .18s}
+#vela-movie-player:fullscreen>header{top:0}
+#vela-movie-player:fullscreen>.movie-controls{bottom:0}
+#vela-movie-player:fullscreen.view-controls-visible>header,#vela-movie-player:fullscreen.view-controls-visible>.movie-controls,#vela-movie-player:fullscreen:has(header :focus-visible)>header,#vela-movie-player:fullscreen:has(.movie-controls :focus-visible)>.movie-controls{opacity:1;pointer-events:auto}
