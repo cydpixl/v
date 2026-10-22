@@ -1,11 +1,7 @@
+import {toggleImmersiveCall} from './immersive-call.js';
 import {CameraVisibility,callViewChoices,bindFullscreenView,revealCallControls} from './call-view.js';
 // Fullscreen the shared workspace so cameras stay beside the selected media.
-export async function fullscreenCall(stage){
- bindFullscreenView(stage);revealCallControls(stage);
- if(document.fullscreenElement)await document.exitFullscreen();
- else if(stage?.requestFullscreen)await stage.requestFullscreen();
- else throw Error('Fullscreen is unavailable in this browser.');
-}
+export function fullscreenCall(stage){return toggleImmersiveCall(stage).then(()=>{if(document.fullscreenElement?.id==='call-immersive')closeCallPip();});}
 
 let floating,refresh;
 export function closeCallPip(){clearInterval(refresh);refresh=null;floating?.close();floating=null;}

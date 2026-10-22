@@ -1,0 +1,25 @@
+#call-immersive{position:fixed;inset:0;background:#000;color:#fff;font:14px Inter,'Segoe UI',sans-serif;overflow:hidden;outline:0}
+#call-immersive:fullscreen{width:100vw;height:100dvh;margin:0;padding:0;border:0;display:block;background:#000}
+#call-immersive .immersive-main{position:absolute;inset:0;width:100%;height:100%;max-height:none;object-fit:contain;background:#000}
+#call-immersive .immersive-camera{position:absolute;top:20px;right:20px;width:clamp(170px,19vw,300px);aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#111;box-shadow:0 8px 36px #0008;cursor:grab;touch-action:none;user-select:none;z-index:2}
+#call-immersive .immersive-camera:active{cursor:grabbing}
+#call-immersive .immersive-camera:focus-visible{outline:2px solid #a8b7ff;outline-offset:3px}
+#call-immersive .immersive-camera video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+#call-immersive .immersive-camera span{position:absolute;bottom:8px;left:10px;font-size:11px;text-shadow:0 1px 5px #000;pointer-events:none}
+#call-immersive .immersive-exit{position:absolute;left:18px;top:18px;z-index:4;padding:9px 13px;border-radius:8px;background:#171a24a6;backdrop-filter:blur(18px);color:white;opacity:0;pointer-events:none;transition:opacity .15s;font-size:12px}
+#call-immersive.show-exit .immersive-exit,#call-immersive .immersive-exit:focus-visible{opacity:1;pointer-events:auto}
+#call-immersive .immersive-chat{position:absolute;right:20px;bottom:20px;width:min(390px,calc(100vw - 40px));height:min(470px,62vh);z-index:3;display:flex;flex-direction:column;background:linear-gradient(135deg,#ffffff17,#151a2e55);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);border:1px solid #ffffff2b;border-radius:18px;box-shadow:0 16px 60px #0005;overflow:hidden}
+#call-immersive [hidden]{display:none!important}
+#call-immersive .immersive-chat header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #ffffff15;flex:none;background:#ffffff05}
+#call-immersive .immersive-chat header strong{font-size:13px;font-weight:600}
+#call-immersive .immersive-chat header button{width:28px;height:28px;border-radius:50%;background:#ffffff12;font-size:21px;color:#fff}
+#call-immersive .immersive-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 16px;scrollbar-width:thin;scrollbar-color:#ffffff3b transparent}
+#call-immersive .immersive-messages article{padding:8px 0}
+#call-immersive .immersive-messages strong{font-size:11px;color:#c8d0ff;font-weight:600}
+#call-immersive .immersive-messages p{font-size:13px;line-height:1.5;color:#fff;white-space:pre-wrap;overflow-wrap:anywhere;margin:3px 0 0}
+#call-immersive .immersive-chat form{display:flex;align-items:flex-end;gap:8px;padding:12px;border-top:1px solid #ffffff16;flex:none}
+#call-immersive .immersive-chat textarea{flex:1;min-width:0;min-height:38px;max-height:90px;resize:none;background:#ffffff0d;color:white;border:1px solid #ffffff22;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;outline:none}
+#call-immersive .immersive-chat textarea:focus{border-color:#b3bcff99;box-shadow:0 0 0 2px #a3b4ff15}
+#call-immersive .immersive-chat form button{background:#c4ceff;color:#11172f;border-radius:10px;padding:10px 13px;font-size:12px;font-weight:600;min-height:38px}
+#call-immersive .immersive-chat-error{color:#ffbcc6;background:#63233855;padding:8px 12px;font-size:12px}
+@media(prefers-reduced-motion:reduce){#call-immersive .immersive-exit{transition:none}}

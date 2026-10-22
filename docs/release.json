@@ -1,1 +1,1 @@
-{"version":"1.3.5","release":"call-visibility-20261021","changes":["independent camera visibility in call and popout","edge-to-edge fullscreen with fading controls","screen-only call and popout views","popout fullscreen preserves visibility choices"]}
+{"version":"1.3.6","release":"immersive-call-20261021","changes":["one call fullscreen button","fullscreen media with draggable remote camera","Enter opens transparent conversation chat"]}

@@ -46,3 +46,5 @@
 #vela-movie-player:fullscreen>header{top:0}
 #vela-movie-player:fullscreen>.movie-controls{bottom:0}
 #vela-movie-player:fullscreen.view-controls-visible>header,#vela-movie-player:fullscreen.view-controls-visible>.movie-controls,#vela-movie-player:fullscreen:has(header :focus-visible)>header,#vela-movie-player:fullscreen:has(.movie-controls :focus-visible)>.movie-controls{opacity:1;pointer-events:auto}
+/* One fullscreen entry for the call. Movies keep their entry in solo playback. */
+#call-stage .presentation-options,#call-stage .camera-visibility,#call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen]{display:none!important}
