@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {createOutboxPump} from '../src/outbox.js';
+import {messagePreview} from '../src/message-preview.js';
+const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve}};
+const state={user:{uid:'one'},outbox:[{id:'first'}]},gate=deferred(),sent=[];
+const pump=createOutboxPump({state:()=>state,online:()=>true,send:async m=>{sent.push(m.id);if(m.id==='first')await gate.promise;return {id:m.id}},accept:()=>{},changed:()=>{}});
+const draining=pump.flush();state.outbox.push({id:'second'});pump.flush();gate.resolve();await draining;
+assert.deepEqual(sent,['first','second']);assert.equal(state.outbox.length,0);
+state.outbox=[{id:'network',conversation:'a'},{id:'ordered',conversation:'a'},{id:'allowed',conversation:'b'},{id:'denied',conversation:'c'}];let clock=10000,attempts=0;
+const accepted=[];
+const retry=createOutboxPump({state:()=>state,online:()=>true,now:()=>clock,send:async m=>{if(m.id==='network'&&attempts++===0)throw new TypeError('Network lost');if(m.id==='denied')throw Object.assign(new Error('Forbidden'),{status:403});return {id:m.id}},accept:m=>accepted.push(m.id),changed:()=>{}});
+await retry.flush();assert.deepEqual(accepted,['allowed']);assert.equal(state.outbox[0].pending,true);assert.equal(state.outbox[2].failed,true);
+clock+=1001;await retry.flush();assert.deepEqual(accepted,['allowed','network','ordered']);assert.equal(state.outbox.length,1);retry.reset();
+state.outbox=[{id:'account'}];const accountGate=deferred();const account=createOutboxPump({state:()=>state,online:()=>true,send:()=>accountGate.promise,accept:()=>assert.fail('Acknowledgement leaked across accounts'),changed:()=>assert.fail('Old account persisted into new account')});
+const task=account.flush();state.user=null;state.outbox=[{id:'new-user'}];accountGate.resolve({id:'account'});await task;assert.equal(state.outbox[0].id,'new-user');account.reset();
+assert.equal(messagePreview('',{kind:'sticker'}),'Sticker');assert.equal(messagePreview('',{kind:'gif'}),'GIF');assert.equal(messagePreview('',{type:'video/quicktime'}),'Video');assert.equal(messagePreview('<:cat:12345678-abcd>'),'Emoji');assert.equal(messagePreview('Hi <:cat:12345678-abcd>'),'Hi :cat:');
+console.log('PASS: enqueue during send, drain without another click, network retry, permanent failure, account isolation, media/sidebar labels');

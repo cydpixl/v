@@ -1,1 +1,1 @@
-{"version":"1.3.9","release":"visual-emoji-composer-20261021","changes":["custom emoji images in the composer","animated emoji previews","atomic emoji editing and draft restoration"]}
+{"version": "1.3.10", "release": "faster-messages-20261022", "changes": ["reliable message queue and automatic retries", "instant sticker and GIF previews", "95 MB attachments and iPhone MOV support", "readable sidebar previews"]}
