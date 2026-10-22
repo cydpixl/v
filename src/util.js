@@ -1,4 +1,5 @@
-const expressionLinks=new Map();export function setExpressionLinks(links){for(const [id,url] of Object.entries(links))expressionLinks.set(id,url)}
+const expressionLinks=new Map();export function setExpressionLinks(links){for(const [id,url] of Object.entries(links))expressionLinks.set(id,url);window.dispatchEvent(new Event('vela-expression-links'));}
+export const expressionURL=id=>expressionLinks.get(id)||'';
 import {assetURL} from './config.js';
 import twemoji from '@twemoji/api';
 export const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
