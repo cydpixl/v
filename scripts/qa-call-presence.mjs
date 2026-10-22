@@ -51,6 +51,39 @@ try{
  await Promise.all([remoteFrames(a,fixture.users[recipient].uid),remoteFrames(b,fixture.users[caller].uid)]);
  await roster(caller,id,fixture.users.slice(0,2).map(u=>u.uid));
  console.log('PASS simultaneous starts share one room; no empty phantom invite; incoming call and two-way decoded camera frames');
+ if(process.env.QA_PRESENTATION==='1'){
+  await a.evaluate(()=>{navigator.mediaDevices.getDisplayMedia=()=>navigator.mediaDevices.getUserMedia({video:true,audio:false});return window.__pixl.call.startShare({quality:'720'});});
+  await b.waitForFunction(()=>document.querySelector('.screen-tile video')?.videoWidth>0);
+  const screen=b.locator('.screen-tile');await screen.locator('[data-tile-fullscreen]').click();
+  await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
+  const sizes=await b.evaluate(()=>{const screen=document.querySelector('.screen-tile').getBoundingClientRect(),camera=[...document.querySelectorAll('.call-tile:not(.screen-tile).video-enabled')].map(t=>t.getBoundingClientRect());return {width:screen.width,camera:camera.map(r=>({width:r.width,height:r.height,x:r.x}))};});
+  assert.ok(sizes.width>800&&sizes.camera.every(r=>r.width>=250&&r.height>100),'Fullscreen must preserve visible cameras next to the screen');
+  await b.getByLabel('Side by side',{exact:true}).check();await b.getByLabel('Camera size',{exact:true}).fill('400');
+  await b.getByLabel('Camera overlay',{exact:true}).check();await b.screenshot({path:'output/playwright/call-screen-fullscreen.png'});
+  await b.locator('#call-controls [data-action=call-fullscreen]').click();await b.waitForFunction(()=>!document.fullscreenElement);
+  await screen.press('Enter');await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
+  await b.locator('#call-controls [data-action=call-fullscreen]').click();
+  await b.locator('#call-controls [data-action=call-pip]').click();
+  await b.waitForFunction(()=>documentPictureInPicture.window?.document.querySelectorAll('video').length>=3);
+  await b.waitForFunction(()=>[...documentPictureInPicture.window.document.querySelectorAll('video')].every(v=>v.videoWidth>0));
+  await b.evaluate(()=>documentPictureInPicture.window.close());
+  await a.evaluate(()=>window.__pixl.call.stopShare());
+  console.log('PASS visible fullscreen and PiP controls; fullscreen screen with cameras, side by side, Enter key, and decoded media in floating call window');
+  if(process.env.QA_MOVIE==='1'){
+   await b.locator('#call-controls [data-action=call-movies]').click();
+   await b.locator('.call-movie-picker [data-play-id="outlaw-buddy"]').first().click();
+   await b.waitForFunction(()=>{const v=document.querySelector('#vela-movie-player video');return v?.videoWidth>0&&v.currentTime>0;},null,{timeout:45000});
+   await b.locator('[data-movie-fullscreen]').click();await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
+   assert.ok(await b.locator('.call-tile.video-enabled').first().isVisible());
+   await b.screenshot({path:'output/playwright/call-movie-fullscreen.png'});
+   await b.locator('[data-movie-fullscreen]').click();await b.waitForFunction(()=>!document.fullscreenElement);
+   await b.locator('#vela-movie-player video').press('Enter');await b.waitForFunction(()=>document.fullscreenElement?.id==='call-stage');
+   await b.locator('[data-movie-fullscreen]').click();await b.locator('[data-movie-close]').click();
+   console.log('PASS actual library movie decoded in the call; visible fullscreen button and Enter fullscreen keep cameras inside');
+  }
+
+ }
+
  await leave(a);await roster(caller,id,[fixture.users[recipient].uid]);await b.locator('#call-stage').waitFor();await a.locator('.join-active-call').waitFor();
  await a.reload();await a.locator('.app-shell').waitFor();await a.locator('.dm-row[data-open="'+cid+'"]').click();await a.locator('.join-active-call').waitFor();
  await a.locator('#conversation-call-presence').waitFor();assert.equal(await a.locator('#incoming-call .incoming-card').count(),0);assert.equal(await b.locator('#incoming-call .incoming-card').count(),0);
@@ -82,11 +115,11 @@ try{
  await api(caller,'/calls/'+id+'/leave','POST',{device:preparing});
  await a.getByRole('button',{name:'Start Voice Call',exact:true}).click();await assertEventually(()=>assert.notEqual(devices.get(a).id,id));const fresh=devices.get(a).id;await b.locator('#incoming-call .incoming-card').waitFor();
  assert.equal((await api(caller,'/calls/'+fresh)).call.kind,'voice','An abandoned video call must not change a new voice call');
- if(process.env.QA_AGE_CHECK==='1'){
-  console.log('Checking that a lone caller remains discoverable after the old 90-second ringing cutoff…');
-  const until=Date.now()+95000;while(Date.now()<until)await new Promise(resolve=>setTimeout(resolve,Math.min(20000,until-Date.now())));
+ if(process.env.QA_AGE_CHECK==='1'||process.env.QA_RING_CHECK==='1'){
+  console.log('Checking real elapsed ringing timeout while preserving the occupied room...');
+  const until=Date.now()+(process.env.QA_RING_CHECK==='1'?32000:95000);while(Date.now()<until)await new Promise(resolve=>setTimeout(resolve,Math.min(20000,until-Date.now())));
   await roster(recipient,fresh,[fixture.users[caller].uid]);await b.locator('.join-active-call').waitFor();await b.locator('#incoming-call .incoming-card').waitFor({state:'hidden',timeout:10000});
-  console.log('PASS real elapsed 90-second cutoff: caller remains in the room and recipient can still join');
+  assert.equal((await api(caller,'/calls/'+fresh)).call.status,'active');assert.equal(await a.locator('#call-stage.outgoing-ringing').count(),0);console.log('PASS ringing stops, incoming modal disappears, occupied call remains active and joinable');
  }
  await b.locator('.join-active-call').click();await Promise.all([connected(a),connected(b)]);await leave(a);await leave(b);await roster(recipient,fresh,[]);
  assert.deepEqual(errors,[]);console.log('PASS final departure removes active call and all incoming UI; zero browser page errors');

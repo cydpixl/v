@@ -1,0 +1,19 @@
+#call-stage .tile-actions{position:absolute;right:8px;top:8px;z-index:12;display:flex;gap:4px;background:#0b0d12bb;border-radius:7px;padding:3px}
+#call-stage .tile-actions button{color:white}
+#call-stage .call-tile{outline-offset:-3px}
+#call-stage .presentation-options{display:flex;gap:12px;align-items:center;font-size:12px}
+#call-stage .presentation-options label{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#call-stage .presentation-options input[type=range]{width:90px}
+#call-stage .presentation-options[hidden]{display:none}
+#call-stage:fullscreen{display:flex!important;flex-direction:column!important;background:#08090d!important;width:100vw!important;height:100dvh!important;max-height:none!important;min-height:0!important;padding:12px!important}
+#call-stage:fullscreen .call-tiles{flex:1!important;height:0!important;min-height:0!important;max-height:none!important}
+#call-stage:fullscreen .call-resizer{display:none}
+#call-stage #call-tiles.participant-focused{display:grid!important;grid-template-columns:minmax(0,1fr) var(--camera-size,260px)!important;grid-template-rows:repeat(var(--tile-rows),minmax(0,1fr))!important;align-items:stretch!important;gap:10px!important}
+#call-stage #call-tiles.participant-focused>.call-tile,#call-stage #call-tiles.participant-focused>#vela-movie-player{grid-column:2!important;grid-row:auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;max-width:none!important;aspect-ratio:auto!important;align-self:stretch!important}
+#call-stage #call-tiles.participant-focused>.focused{grid-column:1!important;grid-row:1/-1!important}
+#call-stage #call-tiles.participant-focused>.call-tile video{object-fit:contain!important}
+#call-stage.side-by-side #call-tiles.participant-focused{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+#call-stage.camera-overlay #call-tiles.participant-focused{position:relative;display:flex!important;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:10px}
+#call-stage.camera-overlay #call-tiles.participant-focused>.focused{position:absolute!important;inset:0;z-index:0}
+#call-stage.camera-overlay #call-tiles.participant-focused>.dimmed{position:relative;z-index:3;width:var(--camera-size,260px)!important;height:auto!important;aspect-ratio:16/9!important;max-height:40%!important;flex:0 1 auto;box-shadow:0 4px 20px #0008}
+#call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen],#call-stage #vela-movie-player.in-call-stage [data-movie-pip]{display:inline-flex!important}

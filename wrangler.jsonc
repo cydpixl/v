@@ -34,10 +34,18 @@
     "bindings": [
       {
         "name": "HUB",
-        "class_name": "UserHub"
+        "class_name": "UserHubV2"
       },
       {
         "name": "ROOM",
+        "class_name": "CallRoomV2"
+      },
+      {
+        "name": "LEGACY_HUB",
+        "class_name": "UserHub"
+      },
+      {
+        "name": "LEGACY_ROOM",
         "class_name": "CallRoom"
       }
     ]
@@ -49,6 +57,10 @@
         "UserHub",
         "CallRoom"
       ]
+    },
+    {
+      "tag": "v2-call-presence",
+      "new_sqlite_classes": ["UserHubV2", "CallRoomV2"]
     }
   ],
   "observability": {
