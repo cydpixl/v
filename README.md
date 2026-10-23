@@ -16,6 +16,8 @@ Direct/group messaging, friends, inline editing, read receipts, photos/files, ca
 
 Movies includes the retained library, catalog search/details, series/episodes, My List, progress, shared uploaded-video playback as an in-call media tile, a glass-style in-call movie browser, late joining, MP4/WebM multipart uploads, and the previous external provider player. The original library storage and playback initialization repair are retained. New uploads share a capped R2 allowance.
 
+The sidebar Library opens uploaded media inside the Vela workspace. Search, Movies/Shows/Continue Watching/Watched filters, and title/release/recent sorting operate on the retained library; progress views keep individual episodes. Saved Messages supports search, opening the original conversation, and removing bookmarks. Uploaded-video controls include ten-second skips, left/right-arrow seeking, Space to play/pause when the video has focus, and a Library picker. Series without catalog metadata browse their uploaded seasons directly. Run `npm run test:library` for library state regressions.
+
 ## Verification and limits
 
 The `scripts/qa-*.mjs` browser checks exercise dedicated QA accounts loaded from ignored `.private/qa.json`; they do not contain credentials. Shared playback tests decode the retained video, synchronize play/pause/seek and late joining. Upload checks compare exact stored bytes and verify authenticated/range access. Call tests use real WebRTC with browser capture fixtures.
