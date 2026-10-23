@@ -11,3 +11,6 @@ CREATE TABLE IF NOT EXISTS expressions(id TEXT PRIMARY KEY,owner TEXT NOT NULL,k
 CREATE TABLE IF NOT EXISTS expression_favorites(uid TEXT NOT NULL,kind TEXT NOT NULL,id TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(uid,kind,id));
 CREATE TABLE IF NOT EXISTS scheduled_messages(id TEXT PRIMARY KEY,conversation TEXT NOT NULL,sender TEXT NOT NULL,text TEXT NOT NULL,reply_to TEXT,deliver_at INTEGER NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS scheduled_messages_due ON scheduled_messages(deliver_at);
+
+CREATE TABLE IF NOT EXISTS expression_packs(id TEXT PRIMARY KEY,name TEXT NOT NULL,shared INTEGER NOT NULL DEFAULT 0 CHECK(shared IN (0,1)));
+CREATE INDEX IF NOT EXISTS expressions_pack ON expressions(pack,created DESC);
