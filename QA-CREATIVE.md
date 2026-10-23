@@ -10,6 +10,7 @@ Verified October 23, 2026:
 - A drawing sent between two dedicated QA accounts appeared exactly once on the recipient and decoded at 1000 × 750. Sender composer text remained intact.
 - All nine coloring pages were present. Puppy PNG loaded at 600 × 600; fill stayed inside an outlined leg. Switching to Garden saved the previous page and loaded the vector page. Gap protection persisted.
 - Imported a real PNG through the native file-chooser flow into Draw on a Photo.
+- Final Blob-based Download saved a valid PNG to disk; its signature and 1000 × 750 dimensions were checked.
 - The studio fit the 1280 × 720 desktop browser: no dialog scroll overflow and Send stayed visible.
 
-Limitations: drafts are local to the current browser/device and origin. Physical pen/touch and mobile devices were not exercised. The in-app browser did not expose a download event for the original data-URL export; the final implementation uses an attached Blob download link instead. Production image-remix checks are recorded after release verification.
+Limitations: drafts are local to the current browser/device and origin. Physical pen/touch and mobile devices were not exercised. Production image-remix checks are recorded after release verification.
