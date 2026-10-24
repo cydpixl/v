@@ -1,10 +1,10 @@
 {
-  "version": "1.3.14",
-  "release": "themes-bodycam-bot-20261024",
+  "version": "1.3.15",
+  "release": "youtube-collections-20261024",
   "changes": [
-    "Graphite, Midnight, Paper and Pine themes with an opening theme chooser",
-    "13 uploaded bodycam videos with original thumbnails",
-    "Slash commands and shared VELA bot video collections",
-    "Cleaner Library navigation and accurate video quality labels"
+    "YouTube playback with original thumbnails and saved progress",
+    "Bodycam restricted to EWU Crime, Midwest Safety and Code Blue Cam",
+    "Daily Dose of Internet category and /dailydose command",
+    "Theme chooser remembers the first selection"
   ]
 }
