@@ -22,3 +22,12 @@ assert.ok(renderLibrary(media,progress,{query:'<script>'}).includes('&lt;script&
 assert.ok(!renderLibrary(media,progress,{query:'<script>'}).includes('value="<script>"'));
 assert.deepEqual(media.map(x=>x.id),['a','e2','e1','b'],'Filtering must not reorder source state');
 console.log('PASS: library grouping, resume order, watched state, search, sort, escaping, empty state and source isolation');
+const bodycam={id:'bc',title:'Police investigation',kind:'movie',category:'bodycam',channel:'EWU Crime Storytime',duration:2691,height:1080,poster:'https://cydpixl.github.io/v/media/bodycam/LovV99dWUmk.jpg'};
+assert.deepEqual(selectLibrary([...media,bodycam],{}, {filter:'bodycam'}).map(x=>x.id),['bc']);
+assert.deepEqual(selectLibrary([bodycam],{}, {query:'EWU bodycam'}).map(x=>x.id),['bc']);
+const collection=renderLibrary([bodycam],{},{filter:'bodycam'});
+assert.ok(collection.includes('data-library-filter="bodycam" aria-pressed="true"'));
+assert.ok(collection.includes('<img src="'+bodycam.poster+'"'));
+assert.ok(collection.includes('EWU Crime Storytime · 45 min · 1080p'));
+assert.ok(!renderLibrary([{...bodycam,poster:'https://untrusted.example/track.jpg'}],{}).includes('https://untrusted.example'));
+console.log('PASS: bodycam filtering, channel search, original thumbnail allowlist and actual media metadata');

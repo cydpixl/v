@@ -17,6 +17,6 @@
 .creative-dialog:has(.creative-paper)>.creative-paper{flex:1 1 0;min-height:80px;max-height:none;padding:12px;overflow:auto}
 .creative-dialog:has(.creative-paper)>.creative-paper canvas{max-height:none}
 .creative-dialog header{padding:14px 20px}.creative-dialog footer{padding:12px 20px}
-.creative-dialog .creative-done{background:var(--vela-orange,#ff6848);color:#160b06}
-.creative-dialog header small{color:var(--vela-orange,#ff6848)}
+.creative-dialog .creative-done{background:var(--vela-orange,var(--brand));color:#160b06}
+.creative-dialog header small{color:var(--vela-orange,var(--brand))}
 html[data-motion=reduced] .creative-dialog{animation:none}

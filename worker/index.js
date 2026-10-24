@@ -1,4 +1,6 @@
 import {messagePreview} from '../src/message-preview.js';
+import {commandAPI} from './commands.js';
+import {VELA_BOT_UID} from '../src/commands.mjs';
 import {storageSQL,STORAGE_CAP} from './storage.js';
 import {movieUploadAPI,cleanupMovieUploads} from './movie-uploads.js';
 import {featureAPI} from './features.js';
@@ -46,10 +48,10 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.3.11',release:'ashlan-shared-emojis-20261023'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.3.14',release:'themes-bodycam-bot-20261024'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
- const helpers={json,fail,body,row,rows,run,access,publish,issueTicket};const feature=await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;
+ const helpers={json,fail,body,row,rows,run,access,publish,issueTicket};const feature=await commandAPI(req,env,uid,{...helpers,members,blocked,limit,ctx})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;
 
  if(p==='/api/ticket'&&method==='POST'){const b=await body(req),scope=clean(b.scope,150);if(scope!=='live'&&!/^call:[a-zA-Z0-9-]+$/.test(scope))fail('Invalid connection scope.');if(scope.startsWith('call:')){const call=await row(env,'SELECT conversation,status FROM calls WHERE id=?',scope.slice(5));if(!call||call.status==='ended'||!currentCall(scope.slice(5)))fail('This call has ended. Start a new call.',410);await access(env,uid,call.conversation);}return json({ticket:await issueTicket(env,uid,scope)});}
  if(p==='/api/file-links'&&method==='POST'){const b=await body(req),ids=[...new Set(Array.isArray(b.ids)?b.ids:[])];if(ids.length>50)fail('Too many files.');const links={};for(const id of ids){if(typeof id!=='string')fail('Invalid file.');const file=await row(env,'SELECT owner,conversation FROM uploads WHERE id=?',id);if(!file)continue;if(file.owner!==uid){if(!file.conversation)fail('File not found.',404);await access(env,uid,file.conversation);}links[id]=url.origin+'/api/files/'+encodeURIComponent(id)+'?ticket='+await issueTicket(env,uid,'file:'+id);}return json({links});}
@@ -137,7 +139,7 @@ async function api(req,env,ctx){
  }
  const msgMatch=p.match(/^\/api\/messages\/([^/]+)$/);
  if(msgMatch){const id=msgMatch[1],m=await row(env,'SELECT * FROM messages WHERE id=?',id);if(!m)fail('Message not found.',404);await access(env,uid,m.conversation);
-  if(method==='DELETE'){if(m.sender!==uid)fail('You can delete only your messages.',403);await env.DB.batch([env.DB.prepare("UPDATE messages SET text='',attachment=NULL,deleted=1 WHERE id=?").bind(id),env.DB.prepare('DELETE FROM reactions WHERE message=?').bind(id)]);}
+  if(method==='DELETE'){if(m.sender!==uid&&!(m.sender===VELA_BOT_UID&&JSON.parse(m.attachment||'{}').requestedBy===uid))fail('You can delete only your messages.',403);await env.DB.batch([env.DB.prepare("UPDATE messages SET text='',attachment=NULL,deleted=1 WHERE id=?").bind(id),env.DB.prepare('DELETE FROM reactions WHERE message=?').bind(id)]);}
   else if(method==='PATCH'){const b=await body(req);
    if('text'in b){if(m.sender!==uid||m.deleted)fail('You can edit only your messages.',403);if(!clean(b.text,4000))fail('A message cannot be empty.');await run(env,'UPDATE messages SET text=?,edited=? WHERE id=?',clean(b.text,4000),Date.now(),id);}
    else if('pinned'in b)await run(env,'UPDATE messages SET pinned=? WHERE id=?',b.pinned?1:0,id);

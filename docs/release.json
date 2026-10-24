@@ -1,1 +1,10 @@
-{"version": "1.3.13", "release": "connections-creative-studio-20261023", "changes": ["Draw Something, Coloring Book, Sketchbook and Draw on a Photo in the chat attachment menu", "Brush, eraser, fill, color picker, palettes, undo and redo", "Persistent sketches and nine original coloring pages", "Send drawings directly through Vela uploads and outbox", "Draw on shared images and send a new version"]}
+{
+  "version": "1.3.14",
+  "release": "themes-bodycam-bot-20261024",
+  "changes": [
+    "Graphite, Midnight, Paper and Pine themes with an opening theme chooser",
+    "13 uploaded bodycam videos with original thumbnails",
+    "Slash commands and shared VELA bot video collections",
+    "Cleaner Library navigation and accurate video quality labels"
+  ]
+}

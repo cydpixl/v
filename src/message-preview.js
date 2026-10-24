@@ -1,4 +1,6 @@
 export function messagePreview(text='',attachment){
+ if(attachment?.kind==='bodycam-library')return 'Bodycam · '+(attachment.items?.length||0)+' videos';
+ if(attachment?.kind==='command-help')return 'VELA commands';
  if(/^(?:\s*<:[a-zA-Z0-9_]{2,32}:[a-zA-Z0-9-]+>\s*)+$/.test(String(text)))return 'Emoji';
  const value=String(text).replace(/<:([a-zA-Z0-9_]{2,32}):[a-zA-Z0-9-]+>/g,':$1:');
  if(value.startsWith('[[vela-film:'))return 'Shared a film';

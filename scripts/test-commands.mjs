@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {COMMANDS,parseCommand,commandMatches,bodycamItems} from '../src/commands.mjs';
+assert.equal(new Set(COMMANDS.map(c=>c.name)).size,COMMANDS.length);
+assert.deepEqual(parseCommand('/body cam EWU'),{name:'bodycam',args:'EWU'});
+assert.deepEqual(parseCommand(' /BODYCAM Seattle '),{name:'bodycam',args:'Seattle'});
+assert.equal(parseCommand('/not-a-command'),null);
+assert.equal(parseCommand('ordinary /bodycam text'),null);
+assert.deepEqual(commandMatches('/',true).map(c=>c.name),['bodycam','help']);
+assert.deepEqual(commandMatches('/bo').map(c=>c.name),['bodycam']);
+const media=[{id:'one',category:'bodycam',title:'Seattle shootout',channel:'PoliceActivity',url:'private',poster:'thumb',height:1080},{id:'two',category:'bodycam',title:'EWU investigation',channel:'EWU Crime Storytime',object_key:'private'},{id:'film',title:'Seattle movie',category:'film'}];
+assert.deepEqual(bodycamItems(media,'Seattle').map(x=>x.id),['one']);
+assert.deepEqual(bodycamItems(media,'ewu storytime').map(x=>x.id),['two']);
+assert.ok(!('url' in bodycamItems(media)[0])&&!('object_key' in bodycamItems(media)[1]),'Bot snapshots exclude private playback data');
+console.log('PASS: command parsing, aliases, categories, search and private media field isolation');
