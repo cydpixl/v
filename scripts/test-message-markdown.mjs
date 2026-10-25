@@ -1,0 +1,11 @@
+import {renderMessageMarkdown as render} from '../src/message-markdown.mjs';
+import assert from 'node:assert/strict';
+const token='<:name_with_underscores:abc-123>';
+assert.equal(render(token),'&lt;:name_with_underscores:abc-123&gt;');
+assert.ok(!render('`'+token+'`').includes('\u0000'));
+assert.ok(!render('['+token+'](https://example.com)').includes('\u0000'));
+assert.ok(render('[[vela-emoji:72:%3C%3Aname_with_underscores%3Aabc-123%3E]]').includes('name_with_underscores'));
+assert.ok(render('**bold** *italic* __underline__ ~~strike~~ ||secret||').includes('<em>italic</em>'));
+assert.ok(!render('<script>alert(1)</script>').includes('<script>'));
+assert.ok(!render('[bad](javascript:alert(1))').includes('href="javascript:'));
+console.log('PASS markdown formatting, literal blocks, token preservation and HTML/link safety');

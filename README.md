@@ -29,3 +29,12 @@ This remains an independent app with unfinished Discord parity. Server creation/
 Emoji attribution: [Twemoji](https://github.com/jdecked/twemoji), CC-BY 4.0 graphics; emoji-mart metadata, MIT. See `public/emoji/ATTRIBUTION.txt`.
 
 Clipboard screenshots: focus the message box and press Ctrl+V (Cmd+V on macOS). Images use the existing private attachment uploader, show a removable thumbnail, and wait for Send. Text paste is preserved. One attachment per message; 25 MB limit. Run `npm run test:clipboard` for clipboard extraction and paste-event checks.
+
+
+## Connections tools · 1.4.1
+
+Vela now includes the Connections chat gallery, voice notes, global search, saved-message actions, conversation pin/mute, private message hiding, read-receipt controls, browser notifications, richer markdown, message links, keyboard/context actions, and sidebar resizing.
+
+Groups support 20 members and owner/admin member management. Calls include camera snapshots and 10–60 second replay clips. Profiles include drawings, playable mini-games, favorite films, custom status, and Lanyard activity previews. Uploads support ten attachments, 512 MB files, a persistent resumable queue, and multipart checkpoints. Media tools include music/shared listening, MKV/MOV conversion, subtitle tracks/editing/preferences, explicit watched flags and watch-time tracking, and diagnostics.
+
+Servers and channels are excluded. Browser notifications require permission; Discord activity requires an account monitored by Lanyard. See [QA-CONNECTIONS.md](QA-CONNECTIONS.md) for verification and the additive database migration required before deployment.

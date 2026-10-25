@@ -1,6 +1,6 @@
 {
   "name": "vela",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,7 +17,8 @@
     "test:expressions": "node scripts/test-expressions.mjs",
     "test:emoji-size": "node scripts/test-emoji-size.mjs",
     "test:connections:api": "node scripts/test-connections-api.mjs",
-    "qa:connections": "node scripts/qa-connections.mjs"
+    "qa:connections": "node scripts/qa-connections.mjs",
+    "test:markdown": "node scripts/test-message-markdown.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",

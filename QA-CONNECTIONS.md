@@ -1,4 +1,4 @@
-# Connections tools in Vela 1.4.0
+# Connections tools in Vela 1.4.1
 
 Scope: port the requested Connections features while excluding servers and channels. Existing chat, calling, films, expressions, games collections, themes, and creative studio remain in place.
 
@@ -34,3 +34,7 @@ The primary checkout also contains separate, unfinished admin-console work. This
 Migration: run `worker/connections.sql` before deploying this Worker. It creates additive tables and migrates prior watched classifications once. It does not remove existing messages or media.
 
 Publishing and production smoke-test evidence is recorded below after deployment.
+
+Replay hardening: recording uses a fixed canvas size (up to 1280×720), preserving aspect ratio when the remote camera changes resolution, so adjacent AVC segments keep a compatible codec description. Capture runs on a timer while the replay buffer is active and clears with the call.
+
+Production evidence (2026-10-25): the additive D1 migration and Worker deployment succeeded. GitHub Pages published the new bundle. Two separate signed-in Chrome contexts on the public site passed message delivery/formatting, Save Message, multipart attachment delivery, profile controls, actual WebRTC camera playback, bundled replay export, and decoding of the exported clip. The final replay revision also passed a local test that changed the live camera resolution during buffering. Browser notifications and a personal Lanyard identity remain dependent on the user’s browser permission/account.

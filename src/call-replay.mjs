@@ -26,11 +26,26 @@ export class CallReplayBuffer {
       if(typeof MediaRecorder==='undefined')throw Error('This browser does not support camera replay.');
       const choices=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm;codecs=vp8','video/webm'];
       this.mime=choices.find(type=>MediaRecorder.isTypeSupported(type));if(!this.mime)throw Error('This browser does not support camera replay.');
-      this.stream=new MediaStream(source.getTracks().filter(track=>track.readyState==='live').map(track=>track.clone()));
-      this.startSegment();
+      // Remote cameras can change resolution after bandwidth adaptation. Keep
+      // the recording dimensions fixed so consecutive AVC segments retain the
+      // same codec description when the replay worker joins them.
+      const owned=new MediaStream(source.getTracks().filter(track=>track.readyState==='live').map(track=>track.clone()));
+      this.source=owned;const video=document.createElement('video');this.video=video;
+      video.muted=true;video.playsInline=true;video.srcObject=new MediaStream(owned.getVideoTracks());
+      (async()=>{
+        await video.play();if(this.key!==key||this.source!==owned)return;
+        if(!video.videoWidth||!video.videoHeight)throw Error('Camera frames are not ready for replay.');
+        const scale=Math.min(1,1280/video.videoWidth,720/video.videoHeight),canvas=document.createElement('canvas');
+        canvas.width=Math.max(2,Math.round(video.videoWidth*scale/2)*2);canvas.height=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
+        this.canvas=canvas;const context=canvas.getContext('2d',{alpha:false});
+        const draw=()=>{if(this.key!==key||this.source!==owned)return;const fit=Math.min(canvas.width/video.videoWidth,canvas.height/video.videoHeight),w=video.videoWidth*fit,h=video.videoHeight*fit;context.fillStyle='#000';context.fillRect(0,0,canvas.width,canvas.height);if(Number.isFinite(w)&&Number.isFinite(h))context.drawImage(video,(canvas.width-w)/2,(canvas.height-h)/2,w,h);};
+        draw();this.frame=setInterval(draw,1000/30);this.stream=canvas.captureStream(30);for(const track of owned.getAudioTracks())this.stream.addTrack(track);
+        this.startSegment();
+      })().catch(error=>{if(this.key===key&&this.source===owned)this.fail(error,key);});
     }catch(error){this.fail(error,key);}
   }
   fail(error,key=this.key) {
+    if(key&&key!==this.key)return;
     this.clear();this.failedKey=key;this.error=error.message||'Camera replay is unavailable.';this.onChange();
   }
   startSegment() {
@@ -50,6 +65,7 @@ export class CallReplayBuffer {
     recorder.start();run.timer=setTimeout(()=>{if(recorder.state!=='inactive')recorder.stop();},SEGMENT_MS);this.onChange();
   }
   async snapshot(seconds=this.seconds()) {
+    if(this.error)throw Error(this.error);
     const run=this.run,end=performance.now(),parts=this.parts.slice();
     if(!this.stream||!run||this.status().seconds<1)throw Error('The camera replay buffer is warming up. Try again in a moment.');
     clearTimeout(run.timer);if(run.recorder.state!=='inactive')run.recorder.stop();
@@ -59,6 +75,9 @@ export class CallReplayBuffer {
     return {parts:recent,end,seconds};
   }
   clear() {
+    clearInterval(this.frame);this.frame=null;
+    this.video?.pause();if(this.video)this.video.srcObject=null;this.video=null;this.canvas=null;
+    this.source?.getTracks().forEach(track=>track.stop());this.source=null;
     const run=this.run;this.stream?.getTracks().forEach(track=>track.stop());this.stream=null;this.key='';this.run=null;this.parts=[];
     if(run){clearTimeout(run.timer);try{if(run.recorder.state!=='inactive')run.recorder.stop();}catch{run.resolve({blob:new Blob(),start:run.start,end:performance.now()});}}
     this.onChange();
