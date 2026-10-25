@@ -1,9 +1,12 @@
 {
-  "version": "1.3.16",
-  "release": "emoji-resizing-20261024",
+  "version": "1.5.0",
+  "release": "glass-workspace-20261025",
   "changes": [
-    "Resize regular and custom emojis from 16 to 128 pixels before sending",
-    "Live composer preview with independent sizes, Reset and Done controls",
-    "Emoji sizes persist in sent messages, drafts, reloads and inline edits"
+    "Unified media workspace with reliable scrolling and Back to chat",
+    "Rebuilt GIF, sticker and emoji pickers",
+    "Twelve themes and glass surfaces",
+    "Discord activity connection in Settings",
+    "Voice recorder with pause, preview and re-record; in-message audio controls",
+    "Music track lists, batch uploads and playback controls"
   ]
 }

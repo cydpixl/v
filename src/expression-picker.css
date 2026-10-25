@@ -1,13 +1,69 @@
-.expression-picker{background:var(--panel,#18191d);color:var(--text,#e8e9ed);height:min(570px,calc(100vh - 90px));max-width:calc(100vw - 24px);position:fixed}
-.expression-picker .expression-search>div:first-child,.expression-picker .expression-search input{background:var(--bg,#121316);color:inherit}.expression-picker .expression-body nav,.expression-picker footer{background:var(--bg,#121316)}
-.expression-picker .expression-results h3{background:var(--panel,#18191d)}.expression-picker button[hidden],.expression-picker section[hidden],.expression-picker div[hidden]{display:none!important}
-.emoji-options{display:flex;gap:12px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border,#34343c);flex-shrink:0;font-size:12px}.emoji-options label{display:flex;gap:6px;white-space:nowrap;align-items:center}.emoji-options input{accent-color:var(--brand,#9baefb)}.emoji-options select{flex:1;min-width:0;padding:6px;background:var(--bg,#121316);color:inherit;border:1px solid var(--border,#34343c);border-radius:5px}.emoji-options button{padding:4px;min-height:28px}
-.expression-picker .expression-grid button{position:relative}.expression-picker .expression-grid img{width:36px;height:36px;object-fit:contain;pointer-events:none}.emoji-favorite-mark{position:absolute;bottom:0;right:2px;font-size:10px;color:var(--brand,#9baefb)}.expression-picker footer .emoji-save{font-size:24px;min-width:36px;color:var(--brand,#9baefb)}
-.expression-collection-status{padding:8px 16px;font-size:12px;background:var(--bg,#121316);color:var(--muted,#aaa);flex-shrink:0}.expression-collection-status button{text-decoration:underline}.expression-media-status{padding:2px 16px 6px;font-size:12px;color:var(--muted,#aaa);flex-shrink:0;min-height:20px}
-.expression-media-nav{overflow-x:auto;flex-shrink:0;padding-bottom:8px}.expression-media-nav button{white-space:nowrap;background:var(--bg,#121316);color:inherit}.expression-media-nav button[aria-pressed=true]{background:var(--brand,#9baefb);color:var(--brand-ink,#161a2b)}
-.gif-quick-search{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;flex-shrink:0;scrollbar-width:thin}.gif-quick-search button{white-space:nowrap;border:1px solid var(--border,#34343c);padding:4px 9px;border-radius:20px;font-size:12px;min-height:28px;text-transform:capitalize}
-.expression-media-tile{border-radius:6px;overflow:hidden;background:var(--bg,#121316);min-height:60px}.expression-media-tile .expression-favorite{opacity:.8;min-height:28px;min-width:28px;padding:2px;font-size:20px}.expression-media-tile .expression-favorite[aria-pressed=true]{color:#fff;background:var(--brand,#526ac7)}.expression-media-tile .expression-send{min-height:60px}.expression-media-tile .expression-send img{width:100%;height:140px;object-fit:contain;transition:transform .13s}.expression-media-tile:hover .expression-send img{transform:scale(1.025)}
-.expression-preview{position:absolute;inset:52px 0 36px;z-index:3;background:var(--panel,#18191d);padding:16px;display:flex;flex-direction:column;gap:12px;align-items:center}.expression-preview .expression-preview-back{align-self:flex-start;font-size:13px}.expression-preview>img{width:100%;flex:1;min-height:0;object-fit:contain}.expression-preview>strong{font-size:13px;text-align:center;max-height:36px;overflow:hidden}.expression-preview>div{display:flex;gap:10px}.expression-preview-error{font-size:12px}.expression-picker .expression-load-more{width:100%;margin:8px 0;background:var(--bg,#121316);color:inherit}
-@media(prefers-reduced-motion:reduce){.expression-media-tile .expression-send img{transition:none}}
-.expression-picker .emoji-options>button,.expression-picker footer>.emoji-save,.expression-picker .expression-tabs>button,.expression-picker .expression-media-nav>button,.expression-picker .gif-quick-search>button,.expression-picker .expression-favorite,.expression-picker .expression-preview button{width:auto;flex-shrink:0}
-.expression-picker .emoji-options{min-height:48px}.expression-picker .emoji-options select{width:0;flex:1 1 0%;min-width:150px}.expression-picker footer>.emoji-save{width:36px;justify-content:center}.expression-picker .expression-preview>div{flex-shrink:0}.expression-picker .expression-preview>strong{flex-shrink:0}
+/* Own the entire picker layout so generic context-menu rules cannot clip it. */
+html[data-theme] .popover-menu.expression-picker{position:fixed;width:520px;max-width:calc(100vw - 24px);height:min(650px,calc(100dvh - 110px));max-height:calc(100dvh - 24px);padding:0;display:flex;flex-direction:column;overflow:hidden;color:var(--text);background:color-mix(in srgb,var(--raised) 94%,transparent);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 70px #0007;backdrop-filter:blur(24px);font-family:inherit;animation:expression-enter .16s ease-out}
+.popover-menu.expression-picker button{width:auto;min-width:0;height:auto;min-height:0;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;border-radius:9px;text-align:center;font:inherit;color:inherit;white-space:normal}
+.popover-menu.expression-picker>header{display:flex;align-items:center;justify-content:space-between;gap:12px;height:64px;min-height:64px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.popover-menu.expression-picker .expression-tabs{display:flex;gap:4px;flex:1}
+.popover-menu.expression-picker .expression-tabs button{font-size:14px;font-weight:600;padding:9px 17px;color:var(--muted)}
+.popover-menu.expression-picker .expression-tabs button[aria-selected=true]{background:var(--accent-soft);color:var(--brand)}
+.popover-menu.expression-picker .emoji-close{width:32px;height:32px;padding:6px;margin:0;color:var(--muted)}
+.popover-menu.expression-picker .expression-search{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border:0;flex:none;position:relative}
+.popover-menu.expression-picker .expression-search>div:first-child{display:flex;align-items:center;gap:10px;width:auto;flex:1 1 auto;min-width:0;height:44px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--muted)}
+.popover-menu.expression-picker .expression-search>div:first-child:focus-within{border-color:var(--brand);outline:0;box-shadow:0 0 0 2px var(--accent-soft)}
+.popover-menu.expression-picker .expression-search input{flex:1;min-width:0;width:100%;height:40px;margin:0;padding:0;border:0;background:transparent;color:var(--text);outline:0;box-shadow:none;font-size:14px}
+.popover-menu.expression-picker .expression-search>.icon-button,.popover-menu.expression-picker .tone-button{width:38px;height:40px;padding:6px;border:1px solid var(--border)}
+.popover-menu.expression-picker .tone-button img{width:25px;height:25px}
+.popover-menu.expression-picker .expression-media-nav,.popover-menu.expression-picker .gif-quick-search{display:flex;gap:5px;padding:0 16px 12px;overflow-x:auto;flex:none;scrollbar-width:none}
+.popover-menu.expression-picker .expression-media-nav button{padding:7px 12px;background:transparent;font-size:12px;color:var(--muted);white-space:nowrap}
+.popover-menu.expression-picker .expression-media-nav button[aria-pressed=true]{background:var(--hover);color:var(--text)}
+.popover-menu.expression-picker .gif-quick-search button{padding:5px 10px;border:1px solid var(--border);border-radius:99px;font-size:11px;text-transform:capitalize;color:var(--muted);white-space:nowrap}
+.popover-menu.expression-picker .expression-media-status{padding:0 16px 8px;min-height:20px;flex:none;font-size:11px;color:var(--muted)}
+.popover-menu.expression-picker .expression-collection-status{padding:10px 16px;font-size:12px;color:var(--muted);flex:none}
+.popover-menu.expression-picker .expression-collection-status button{color:var(--brand);padding:0 4px;text-decoration:underline}
+.popover-menu.expression-picker .expression-media-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;align-items:start;gap:10px;flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 16px 16px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--selected) transparent}
+.popover-menu.expression-picker .expression-media-tile{position:relative;min-width:0;height:auto;min-height:0;border:1px solid var(--border);border-radius:12px;background:var(--panel);overflow:hidden}
+.popover-menu.expression-picker .expression-media-tile .expression-send{display:flex;align-items:center;justify-content:center;width:100%;height:156px;min-height:156px;padding:0;overflow:hidden;background:transparent;border-radius:0}
+.popover-menu.expression-picker .expression-send img{display:block;width:100%;height:100%;max-height:none;object-fit:contain;pointer-events:none;transition:transform .18s ease}
+.popover-menu.expression-picker .expression-send:hover img{transform:scale(1.035)}
+.popover-menu.expression-picker .expression-favorite{position:absolute;top:7px;right:7px;width:28px;height:28px;padding:0;border-radius:8px;background:#10131bbd;color:#fff;font-size:20px;opacity:0;box-shadow:0 2px 8px #0004}
+.popover-menu.expression-picker .expression-media-tile:hover .expression-favorite,.popover-menu.expression-picker .expression-media-tile:focus-within .expression-favorite,.popover-menu.expression-picker .expression-favorite[aria-pressed=true]{opacity:1}
+.popover-menu.expression-picker .expression-favorite[aria-pressed=true]{color:#ffe0a1}
+.popover-menu.expression-picker[aria-label=Stickers] .expression-media-content{grid-template-columns:repeat(3,minmax(0,1fr))}
+.popover-menu.expression-picker[aria-label=Stickers] .expression-send{height:132px;min-height:132px;padding:8px}
+.popover-menu.expression-picker .expression-load-more{grid-column:1/-1;width:100%;min-height:38px;margin:4px 0;background:var(--hover);color:var(--text);font-size:12px}
+.popover-menu.expression-picker .expression-empty-state{grid-column:1/-1;padding:42px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+.popover-menu.expression-picker>footer{display:flex;align-items:center;gap:12px;height:64px;min-height:64px;padding:9px 16px;margin:0;border-top:1px solid var(--border);background:var(--panel);flex:none;font-size:11px;color:var(--muted)}
+.popover-menu.expression-picker.expression-media-picker>footer{height:36px;min-height:36px}
+.popover-menu.expression-picker .expression-preview{position:absolute;inset:64px 0 36px;z-index:4;padding:16px;background:var(--raised);display:flex;flex-direction:column;align-items:center;gap:12px}
+.popover-menu.expression-picker .expression-preview-back{align-self:flex-start;color:var(--muted);font-size:12px;padding:4px 0}
+.popover-menu.expression-picker .expression-preview>img{width:100%;flex:1 1 0;min-height:0;object-fit:contain;border-radius:10px;background:var(--panel)}
+.popover-menu.expression-picker .expression-preview>strong{font-size:13px;max-width:100%;max-height:40px;text-align:center;overflow:hidden;flex:none}
+.popover-menu.expression-picker .expression-preview>div{display:flex;gap:10px;flex:none}
+.popover-menu.expression-picker .expression-preview-error{font-size:12px;color:var(--danger)}
+.popover-menu.expression-picker .expression-preview .primary{min-height:40px;padding:10px 20px}
+.popover-menu.expression-picker .emoji-options{display:flex;align-items:center;gap:12px;flex:none;padding:0 16px 12px;min-height:42px;border:0;font-size:12px}
+.popover-menu.expression-picker .emoji-options label{display:flex;flex-direction:row;align-items:center;gap:6px;margin:0;font-size:12px;white-space:nowrap;letter-spacing:0;font-weight:400}
+.popover-menu.expression-picker .emoji-options select{width:0;min-width:140px;flex:1;height:34px;padding:4px 8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:12px}
+.popover-menu.expression-picker .emoji-options>button{width:32px;height:32px;padding:4px}
+.popover-menu.expression-picker .expression-body{display:flex;flex-direction:column;flex:1 1 0;min-height:0}
+.popover-menu.expression-picker .expression-body nav{display:flex;flex-direction:row;width:100%;gap:4px;flex:none;padding:7px 12px;border-block:1px solid var(--border);background:transparent;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.popover-menu.expression-picker .expression-body nav button{display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;padding:6px;border-radius:8px;color:var(--muted)}
+.popover-menu.expression-picker .expression-body nav button.selected{background:var(--accent-soft);color:var(--brand)}
+.popover-menu.expression-picker .expression-body nav img{width:22px;height:22px;filter:none;opacity:.8}
+.popover-menu.expression-picker .expression-results{flex:1 1 0;min-height:0;overflow:auto;padding:0 12px 14px;scrollbar-width:thin;overscroll-behavior:contain}
+.popover-menu.expression-picker .expression-results h3{position:sticky;top:0;z-index:1;padding:12px 4px 8px;margin:0;background:var(--raised);font-size:11px;font-weight:500;color:var(--muted)}
+.popover-menu.expression-picker .expression-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.popover-menu.expression-picker .expression-grid button{position:relative;display:flex;justify-content:center;align-items:center;width:100%;aspect-ratio:1;padding:5px;border-radius:10px}
+.popover-menu.expression-picker .expression-grid button:hover,.popover-menu.expression-picker .expression-grid button:focus-visible{background:var(--hover);outline:2px solid var(--brand);outline-offset:-2px}
+.popover-menu.expression-picker .expression-grid img{width:42px;height:42px;object-fit:contain;pointer-events:none}
+.popover-menu.expression-picker .emoji-favorite-mark{position:absolute;right:2px;bottom:0;color:var(--brand);font-size:10px}
+.popover-menu.expression-picker .emoji-preview{flex:none;width:44px;height:44px;display:grid;place-items:center}
+.popover-menu.expression-picker .emoji-preview img{width:42px;height:42px;object-fit:contain}
+.popover-menu.expression-picker footer>div{display:flex;flex-direction:column;flex:1;min-width:0;gap:3px}
+.popover-menu.expression-picker footer strong{font-size:13px;color:var(--text);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.popover-menu.expression-picker footer small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.popover-menu.expression-picker footer>.emoji-save{width:36px;height:36px;padding:0;font-size:25px;color:var(--brand)}
+.popover-menu.expression-picker .tone-choices{position:absolute;z-index:5;right:16px;top:62px;display:flex;gap:4px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--raised);box-shadow:0 8px 30px #0005}
+.popover-menu.expression-picker .tone-choices button{width:32px;height:32px;padding:3px}
+.popover-menu.expression-picker .tone-choices img{width:26px;height:26px}
+@keyframes expression-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.popover-menu.expression-picker{animation:none}.popover-menu.expression-picker .expression-send img{transition:none}}

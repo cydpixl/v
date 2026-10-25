@@ -11,7 +11,7 @@ export function bindVideoTools(container,{uid,shared,next,onNext,onError}){
  speed.onchange=()=>{if(shared())return;video.defaultPlaybackRate=video.playbackRate=Number(speed.value);prefs.speed=video.playbackRate;save();};
  autoplay.checked=!!prefs.autoplay;autoplay.onchange=()=>{prefs.autoplay=autoplay.checked;save();};
  nextButton.onclick=()=>Promise.resolve(onNext()).catch(onError);
- const ended=()=>{if(!shared()&&autoplay.checked&&next())nextButton.click();};video.addEventListener('ended',ended);
+ const ended=()=>{if(container.classList.contains('music-playback'))return;if(!shared()&&autoplay.checked&&next())nextButton.click();};video.addEventListener('ended',ended);
  function update(){const together=!!shared(),item=next();speed.disabled=together;autoplay.disabled=together;nextButton.disabled=together||!item;nextButton.title=item?'Next: '+(item.showTitle||item.title):'No more direct videos in this view';speed.title=together?'Shared playback stays at 1× to keep everyone in sync':'Playback speed';speed.value=String(!together&&PLAYBACK_SPEEDS.includes(prefs.speed)?prefs.speed:1);video.defaultPlaybackRate=video.playbackRate=Number(speed.value);volumeChanged();}
  update();return {update,dispose(){video.removeEventListener('volumechange',volumeChanged);video.removeEventListener('ended',ended);bar.remove();}};
 }
