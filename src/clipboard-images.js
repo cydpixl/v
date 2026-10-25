@@ -17,11 +17,12 @@ export function screenshotFile(file) {
   return new File([file], 'Screenshot-' + new Date().toISOString().replace(/[:.]/g, '-') + '.' + extension, {type:file.type,lastModified:file.lastModified});
 }
 
-export function bindImagePaste(composer, {onImage, onMultiple = () => {}, onError = () => {}}) {
+export function bindImagePaste(composer, {onImage, onImages, onMultiple = () => {}, onError = () => {}}) {
   const paste = event => {
     const images = clipboardImages(event.clipboardData);
     if (!images.length) return;
     event.preventDefault();
+    if (onImages && images.length > 1) { Promise.resolve(onImages(images.map(screenshotFile))).catch(onError); return; }
     if (images.length > 1) onMultiple();
     try { Promise.resolve(onImage(screenshotFile(images[0]))).catch(onError); }
     catch (error) { onError(error); }

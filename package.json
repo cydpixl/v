@@ -1,12 +1,12 @@
 {
   "name": "vela",
-  "version": "1.3.17",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "check": "node --check src/app.js && node --check src/call.js && node --check src/emoji-picker.js && node --check src/account-popover.js && node --check src/accounts.js && node --check src/avatar-editor.js && node --check worker/index.js && node --check src/expression-picker.js && node --check worker/features.js && node --check worker/expressions.js && node --check src/speech-gate.js && node --check src/profiles.js && node --check src/movies.js && node --check worker/movie-uploads.js && node --check worker/storage.js && node --check src/camera-capture.js && node --check src/call-resizer.js && node --check src/clipboard-images.js && node --check src/call-presentation.js && node --check src/call-view.js && node --check src/immersive-call.js && node --check src/expression-upload.js && node --check src/rich-composer.js && node --check src/outbox.js && node --check src/message-preview.js && node --check src/saved-messages.js && node --check src/cinema/library.mjs && node --check src/creative-studio.js && node --check src/creative-canvas.mjs && node --check src/slash-commands.js && node --check src/commands.mjs && node --check src/themes.js && node --check src/youtube-player.js && node --check worker/commands.js && node --check src/emoji-size.js",
+    "check": "node --check src/app.js && node --check src/call.js && node --check src/emoji-picker.js && node --check src/account-popover.js && node --check src/accounts.js && node --check src/avatar-editor.js && node --check worker/index.js && node --check src/expression-picker.js && node --check worker/features.js && node --check worker/expressions.js && node --check src/speech-gate.js && node --check src/profiles.js && node --check src/movies.js && node --check worker/movie-uploads.js && node --check worker/storage.js && node --check src/camera-capture.js && node --check src/call-resizer.js && node --check src/clipboard-images.js && node --check src/call-presentation.js && node --check src/call-view.js && node --check src/immersive-call.js && node --check src/expression-upload.js && node --check src/rich-composer.js && node --check src/outbox.js && node --check src/message-preview.js && node --check src/saved-messages.js && node --check src/cinema/library.mjs && node --check src/creative-studio.js && node --check src/creative-canvas.mjs && node --check src/slash-commands.js && node --check src/commands.mjs && node --check src/themes.js && node --check src/youtube-player.js && node --check worker/commands.js && node --check src/emoji-size.js && node --check src/connections.js && node --check src/upload-queue.js && node --check src/profile-extras.js && node --check src/movie-captions.js && node --check worker/connections.js",
     "deploy": "npm run build && wrangler deploy",
     "build:github": "node scripts/build-github.mjs",
     "test:clipboard": "node scripts/test-clipboard.mjs",
@@ -14,15 +14,21 @@
     "test:library": "node scripts/test-library.mjs",
     "test:creative": "node scripts/test-creative.mjs",
     "test:commands": "node scripts/test-commands.mjs",
+    "test:expressions": "node scripts/test-expressions.mjs",
     "test:emoji-size": "node scripts/test-emoji-size.mjs",
-    "test:expressions": "node scripts/test-expressions.mjs"
+    "test:connections:api": "node scripts/test-connections-api.mjs",
+    "qa:connections": "node scripts/qa-connections.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
+    "@mediabunny/aac-encoder": "^1.62.1",
+    "@mediabunny/ac3": "^1.62.1",
+    "@mediabunny/dts": "^1.62.1",
     "@twemoji/api": "^17.0.3",
     "firebase": "^12.3.0",
     "jose": "^6.2.12",
-    "lucide": "^1.48.0"
+    "lucide": "^1.48.0",
+    "mediabunny": "^1.62.1"
   },
   "devDependencies": {
     "@twemoji/svg": "^15.0.0",

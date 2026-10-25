@@ -1,3 +1,4 @@
+import {connectionsAPI,cleanupChatUploads} from './connections.js';
 import {customEmojiIds} from '../src/emoji-size.js';
 import {messagePreview} from '../src/message-preview.js';
 import {commandAPI} from './commands.js';
@@ -32,7 +33,7 @@ async function limit(env,key,max=120,seconds=60){const now=Math.floor(Date.now()
 async function notify(env,uid,event){await Promise.all([env.HUB.getByName(uid).publish(event),env.LEGACY_HUB?.getByName(uid).publish(event)]);}
 const currentCall=id=>String(id).startsWith('v2-');
 const roomForCall=(env,id)=>(currentCall(id)?env.ROOM:env.LEGACY_ROOM).getByName(id);
-async function members(env,cid){return rows(env,'SELECT u.uid,u.handle,u.name,u.avatar,u.status,u.last_seen,m.last_read FROM members m JOIN users u ON u.uid=m.uid WHERE m.conversation=?',cid);}
+async function members(env,cid){return rows(env,'SELECT u.uid,u.handle,u.name,u.avatar,u.status,u.last_seen,json_extract((SELECT data FROM profile_extras WHERE uid=u.uid),"$.status") AS custom_status,CASE WHEN json_extract((SELECT data FROM account_options WHERE uid=u.uid),"$.receipts")=0 THEN 0 ELSE m.last_read END AS last_read FROM members m JOIN users u ON u.uid=m.uid WHERE m.conversation=?',cid);}
 async function access(env,uid,cid){const c=await row(env,'SELECT c.* FROM conversations c JOIN members m ON m.conversation=c.id WHERE c.id=? AND m.uid=?',cid,uid);if(!c)fail('Conversation not found.',404);return c;}
 async function publish(env,cid,event){const list=await rows(env,'SELECT uid FROM members WHERE conversation=?',cid);await Promise.all(list.map(m=>notify(env,m.uid,{...event,conversation:cid})));}
 async function blocked(env,a,b){return !!await row(env,'SELECT 1 FROM blocks WHERE (uid=? AND target=?) OR (uid=? AND target=?)',a,b,b,a);}
@@ -49,15 +50,16 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.3.17',release:'expressions-video-controls-20261025'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.4.0',release:'connections-tools-20261025'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
- const helpers={json,fail,body,row,rows,run,access,publish,issueTicket};const feature=await commandAPI(req,env,uid,{...helpers,members,blocked,limit,ctx})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;
+ const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx};
+ const feature=await connectionsAPI(req,env,uid,helpers)||await commandAPI(req,env,uid,{...helpers,members,blocked})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;
 
  if(p==='/api/ticket'&&method==='POST'){const b=await body(req),scope=clean(b.scope,150);if(scope!=='live'&&!/^call:[a-zA-Z0-9-]+$/.test(scope))fail('Invalid connection scope.');if(scope.startsWith('call:')){const call=await row(env,'SELECT conversation,status FROM calls WHERE id=?',scope.slice(5));if(!call||call.status==='ended'||!currentCall(scope.slice(5)))fail('This call has ended. Start a new call.',410);await access(env,uid,call.conversation);}return json({ticket:await issueTicket(env,uid,scope)});}
  if(p==='/api/file-links'&&method==='POST'){const b=await body(req),ids=[...new Set(Array.isArray(b.ids)?b.ids:[])];if(ids.length>50)fail('Too many files.');const links={};for(const id of ids){if(typeof id!=='string')fail('Invalid file.');const file=await row(env,'SELECT owner,conversation FROM uploads WHERE id=?',id);if(!file)continue;if(file.owner!==uid){if(!file.conversation)fail('File not found.',404);await access(env,uid,file.conversation);}links[id]=url.origin+'/api/files/'+encodeURIComponent(id)+'?ticket='+await issueTicket(env,uid,'file:'+id);}return json({links});}
  if(p==='/api/session'&&method==='POST'){
- 
+
   const token=req.headers.get('Authorization')?.slice(7);return json({ok:true},200,{'Set-Cookie':`__Host-pixl=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3300`});
  }
  if(p==='/api/session'&&method==='DELETE')return json({ok:true},200,{'Set-Cookie':'__Host-pixl=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0'});
@@ -77,7 +79,7 @@ async function api(req,env,ctx){
  }
  const me=await row(env,'SELECT * FROM users WHERE uid=?',uid);if(!me)fail('Choose your username first.',428);
  if(p==='/api/state'&&method==='GET'){
-  const friends=await rows(env,'SELECT f.*,u.uid,u.handle,u.name,u.avatar,u.status AS presence,u.last_seen FROM friends f JOIN users u ON u.uid=CASE WHEN f.a=? THEN f.b ELSE f.a END WHERE f.a=? OR f.b=?',uid,uid,uid);
+  const friends=await rows(env,'SELECT f.*,u.uid,u.handle,u.name,u.avatar,u.status AS presence,u.last_seen,json_extract((SELECT data FROM profile_extras WHERE uid=u.uid),"$.status") AS custom_status FROM friends f JOIN users u ON u.uid=CASE WHEN f.a=? THEN f.b ELSE f.a END WHERE f.a=? OR f.b=?',uid,uid,uid);
   const conversations=await rows(env,'SELECT c.*,m.last_read,(SELECT text FROM messages WHERE conversation=c.id AND deleted=0 ORDER BY created DESC,id DESC LIMIT 1) AS preview,(SELECT attachment FROM messages WHERE conversation=c.id AND deleted=0 ORDER BY created DESC,id DESC LIMIT 1) AS preview_attachment,(SELECT count(*) FROM messages WHERE conversation=c.id AND sender<>? AND created>m.last_read) AS unread FROM conversations c JOIN members m ON m.conversation=c.id WHERE m.uid=? ORDER BY c.updated DESC',uid,uid);
   await Promise.all(conversations.map(async c=>{c.preview_attachment=c.preview_attachment?JSON.parse(c.preview_attachment):null;c.preview=messagePreview(c.preview,c.preview_attachment);c.members=await members(env,c.id);const calls=await rows(env,"SELECT * FROM calls WHERE conversation=? AND id LIKE 'v2-%' AND status IN ('ringing','active') ORDER BY created DESC",c.id);c.call=null;for(const call of calls){c.call=await visibleCall(env,call);if(c.call)break;}}));
   return json({user:me,friends,conversations,blocks:await rows(env,'SELECT target FROM blocks WHERE uid=?',uid)});
@@ -96,7 +98,7 @@ async function api(req,env,ctx){
   await Promise.all([notify(env,f.a,{type:'refresh'}),notify(env,f.b,{type:'refresh'})]);return json({ok:true});
  }
  if(p==='/api/conversations'&&method==='POST'){
-  const b=await body(req),targets=[...new Set([uid,...(Array.isArray(b.members)?b.members:[])])];if(targets.length<2||targets.length>8)fail('Choose 1–7 friends.');
+  const b=await body(req),targets=[...new Set([uid,...(Array.isArray(b.members)?b.members:[])])];if(targets.length<2||targets.length>20)fail('Choose 1–19 friends.');
   for(const target of targets.filter(t=>t!==uid)){if(!await row(env,"SELECT 1 FROM friends WHERE a=? AND b=? AND status='accepted'",...[uid,target].sort())||await blocked(env,uid,target))fail('You can start conversations with friends.',403);}
   const direct=targets.length===2&&!b.group;const id=direct?pair(...targets):uuid(),now=Date.now();
   await env.DB.batch([env.DB.prepare('INSERT OR IGNORE INTO conversations(id,kind,name,owner,created,updated) VALUES(?,?,?,?,?,?)').bind(id,direct?'direct':'group',clean(b.name,60),uid,now,now),...targets.map(t=>env.DB.prepare('INSERT OR IGNORE INTO members(conversation,uid) VALUES(?,?)').bind(id,t))]);
@@ -113,22 +115,22 @@ async function api(req,env,ctx){
  const conversationMatch=p.match(/^\/api\/conversations\/([^/]+)(?:\/(messages|read|typing|calls|leave))?$/);
  if(conversationMatch){
   const cid=decodeURIComponent(conversationMatch[1]),action=conversationMatch[2],c=await access(env,uid,cid);
-  if(!action&&method==='PATCH'){if(c.kind!=='group'||c.owner!==uid)fail('Only the group owner can rename it.',403);const b=await body(req);await run(env,'UPDATE conversations SET name=? WHERE id=?',clean(b.name,60),cid);await publish(env,cid,{type:'refresh'});return json({ok:true});}
+  if(!action&&method==='PATCH'){if(c.kind!=='group'||c.owner!==uid&&!await row(env,'SELECT 1 FROM group_admins WHERE conversation=? AND uid=?',cid,uid))fail('Only the group owner or an admin can rename it.',403);const b=await body(req);await run(env,'UPDATE conversations SET name=? WHERE id=?',clean(b.name,60),cid);await publish(env,cid,{type:'refresh'});return json({ok:true});}
   if(action==='leave'&&method==='POST'){if(c.kind!=='group')fail('Only groups can be left.');await run(env,'DELETE FROM members WHERE conversation=? AND uid=?',cid,uid);if(c.owner===uid){const next=await row(env,'SELECT uid FROM members WHERE conversation=? LIMIT 1',cid);if(next)await run(env,'UPDATE conversations SET owner=? WHERE id=?',next.uid,cid);}await publish(env,cid,{type:'refresh'});return json({ok:true});}
   if(action==='messages'&&method==='GET')return json(await messages(env,cid,Number(url.searchParams.get('before'))||0,clean(url.searchParams.get('q'),100),url.searchParams.has('pins')));
   if(action==='messages'&&method==='POST'){
    await limit(env,'messages:'+uid,40);const b=await body(req),id=clean(b.id,80),text=clean(b.text,4000);if(!/^[a-zA-Z0-9-]{10,80}$/.test(id))fail('Invalid message identifier.');
    const prior=await row(env,'SELECT * FROM messages WHERE id=?',id);if(prior){if(prior.sender!==uid||prior.conversation!==cid)fail('Message identifier is in use.',409);prior.attachment=prior.attachment?JSON.parse(prior.attachment):null;prior.reactions=await rows(env,'SELECT emoji,uid FROM reactions WHERE message=?',id);return json({id,message:prior});}
    const people=await members(env,cid);for(const target of people.filter(m=>m.uid!==uid))if(await blocked(env,uid,target.uid))fail('Messaging is unavailable.',403);
-   const att=b.upload?await row(env,'SELECT * FROM uploads WHERE id=? AND owner=? AND (conversation IS NULL OR conversation=?)',b.upload,uid,cid):null;
+   const uploadIds=b.uploads|| (b.upload?[b.upload]:[]);if(!Array.isArray(uploadIds)||uploadIds.length>10||new Set(uploadIds).size!==uploadIds.length)fail('Choose up to 10 attachments.');const attachments=[];for(const uploadId of uploadIds){const file=await row(env,'SELECT * FROM uploads WHERE id=? AND owner=? AND (conversation IS NULL OR conversation=?)',uploadId,uid,cid);if(!file)fail('Attachment unavailable.',403);attachments.push(file);}const att=attachments[0];
    let expressionAttachment=null;if(b.asset){const a=await expressionAccess(env,uid,b.asset,helpers);expressionAttachment={kind:a.kind,expressionId:a.id,name:a.name,type:a.type,size:a.size};}if(b.gif){const g=await gifById(env,b.gif);expressionAttachment={kind:'gif',name:g.name,url:g.url,type:'image/gif'};}for(const expressionId of new Set(customEmojiIds(text)))await expressionAccess(env,uid,expressionId,helpers);
    if(!text&&!att&&!expressionAttachment)fail('Write a message or attach a file.');if(b.replyTo&&!await row(env,'SELECT 1 FROM messages WHERE id=? AND conversation=?',b.replyTo,cid))fail('Reply not found.');
 
-   const attachment=expressionAttachment?JSON.stringify(expressionAttachment):att?JSON.stringify({id:att.id,name:att.name,type:att.type,size:att.size}):null,now=Date.now();
-   await env.DB.batch([env.DB.prepare('INSERT INTO messages(id,conversation,sender,text,attachment,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,cid,uid,text,attachment,b.replyTo||null,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,cid),...(att?[env.DB.prepare('UPDATE uploads SET conversation=? WHERE id=?').bind(cid,att.id)]:[])]);
-   const message={id,conversation:cid,sender:uid,text,attachment:expressionAttachment||(att?{id:att.id,name:att.name,type:att.type,size:att.size}:null),reply_to:b.replyTo||null,created:now,edited:null,deleted:0,pinned:0,reactions:[]};ctx.waitUntil(publish(env,cid,{type:'message',id,sender:uid,message}).catch(error=>console.error('message-publish',id,error.message)));return json({id,message});
+   const attachment=expressionAttachment?JSON.stringify(expressionAttachment):attachments.length?JSON.stringify(attachments.length===1?{id:att.id,name:att.name,type:att.type,size:att.size}:{kind:'files',files:attachments.map(f=>({id:f.id,name:f.name,type:f.type,size:f.size}))}):null,now=Date.now();
+   await env.DB.batch([env.DB.prepare('INSERT INTO messages(id,conversation,sender,text,attachment,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,cid,uid,text,attachment,b.replyTo||null,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,cid),...attachments.map(f=>env.DB.prepare('UPDATE uploads SET conversation=? WHERE id=?').bind(cid,f.id))]);
+   const message={id,conversation:cid,sender:uid,text,attachment:attachment?JSON.parse(attachment):null,reply_to:b.replyTo||null,created:now,edited:null,deleted:0,pinned:0,reactions:[]};ctx.waitUntil(publish(env,cid,{type:'message',id,sender:uid,message}).catch(error=>console.error('message-publish',id,error.message)));return json({id,message});
   }
-  if(action==='read'&&method==='POST'){await run(env,'UPDATE members SET last_read=? WHERE conversation=? AND uid=?',Date.now(),cid,uid);await publish(env,cid,{type:'read',uid});return json({ok:true});}
+  if(action==='read'&&method==='POST'){const pref=await row(env,'SELECT data FROM account_options WHERE uid=?',uid);const shareReceipts=!pref||JSON.parse(pref.data).receipts!==false;await run(env,'UPDATE members SET last_read=? WHERE conversation=? AND uid=?',Date.now(),cid,uid);if(shareReceipts)await publish(env,cid,{type:'read',uid});return json({ok:true});}
   if(action==='typing'&&method==='POST'){const b=await body(req);await publish(env,cid,{type:'typing',uid,typing:b.typing===true});return json({ok:true});}
   if(action==='calls'&&method==='POST'){
    await limit(env,'calls:'+uid,8);const b=await body(req);const people=await members(env,cid);for(const t of people.filter(p=>p.uid!==uid))if(await blocked(env,uid,t.uid))fail('Calling is unavailable.',403);
@@ -166,7 +168,7 @@ async function api(req,env,ctx){
  if(p==='/api/uploads'&&method==='POST'){
   const size=Number(req.headers.get('Content-Length')),type=req.headers.get('Content-Type')||'application/octet-stream',name=clean(decodeURIComponent(req.headers.get('X-File-Name')||'File'),150);
   if(!Number.isSafeInteger(size)||size<1||size>95*1024*1024)fail('Files can be up to 95 MB.',413);if(!/^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime|x-m4v)|audio\/(mpeg|mp4|ogg|webm|wav)|application\/(pdf|zip|octet-stream)|text\/plain)$/.test(type))fail('That file type is not supported.');
-  
+
   const total=await row(env,'SELECT coalesce(sum(size),0) AS n FROM uploads WHERE owner=? AND created>?',uid,Date.now()-86400000);if(total.n+size>1024*1024*1024)fail('Daily upload allowance reached.',429);
   const id=uuid(),reserved=await row(env,'INSERT INTO uploads(id,owner,name,type,size,created) SELECT ?,?,?,?,?,? WHERE ('+storageSQL+')+?<=? RETURNING id',id,uid,name,type,size,Date.now(),Date.now(),size,STORAGE_CAP);if(!reserved)fail('Storage allowance reached.',507);try{await env.FILES.put(id,req.body,{httpMetadata:{contentType:type},customMetadata:{name,owner:uid}})}catch(error){await run(env,'DELETE FROM uploads WHERE id=?',id);throw error}return json({upload:{id,name,type,size}});
  }
@@ -177,7 +179,7 @@ async function api(req,env,ctx){
  fail('Not found.',404);
 }
 
-export default {async fetch(req,env,ctx){const origin=req.headers.get('Origin');const corsAllowed=origin==='https://cydpixl.github.io'||origin===new URL(req.url).origin||(new URL(req.url).hostname==='127.0.0.1'&&origin&&new URL(origin).hostname==='127.0.0.1');if(req.method==='OPTIONS')return new Response(null,{status:corsAllowed?204:403,headers:corsAllowed?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type,X-File-Name,Range','Access-Control-Max-Age':'3600','Vary':'Origin'}:{}});const response=await handle(req,env,ctx);if(response.status===101||!corsAllowed||!origin)return response;const headers=new Headers(response.headers);headers.set('Access-Control-Allow-Origin',origin);headers.set('Vary','Origin');headers.set('Access-Control-Expose-Headers','Content-Range,Content-Length,Accept-Ranges,Date');return new Response(response.body,{status:response.status,headers});},async scheduled(event,env){await cleanupMovieUploads(env);await run(env,'DELETE FROM rate_limits WHERE expires<?',Math.floor(Date.now()/1000)-3600);const due=await rows(env,'SELECT * FROM scheduled_messages WHERE deliver_at<=? ORDER BY deliver_at LIMIT 100',Date.now());for(const item of due){const member=await row(env,'SELECT 1 FROM members WHERE conversation=? AND uid=?',item.conversation,item.sender);if(!member){await run(env,'DELETE FROM scheduled_messages WHERE id=?',item.id);continue}const now=Date.now();await env.DB.batch([env.DB.prepare('INSERT OR IGNORE INTO messages(id,conversation,sender,text,reply_to,created) VALUES(?,?,?,?,?,?)').bind(item.id,item.conversation,item.sender,item.text,item.reply_to,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,item.conversation),env.DB.prepare('DELETE FROM scheduled_messages WHERE id=?').bind(item.id)]);await publish(env,item.conversation,{type:'message',id:item.id,sender:item.sender});}for(const call of await rows(env,"SELECT id,conversation FROM calls WHERE status<>'ended' AND created<?",Date.now()-14400000)){if(await roomForCall(env,call.id).count())continue;await run(env,"UPDATE calls SET status='ended',ended=? WHERE id=?",Date.now(),call.id);await publish(env,call.conversation,{type:'call-ended',id:call.id});}}};
+export default {async fetch(req,env,ctx){const origin=req.headers.get('Origin');const corsAllowed=origin==='https://cydpixl.github.io'||origin===new URL(req.url).origin||(new URL(req.url).hostname==='127.0.0.1'&&origin&&new URL(origin).hostname==='127.0.0.1');if(req.method==='OPTIONS')return new Response(null,{status:corsAllowed?204:403,headers:corsAllowed?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type,X-File-Name,Range','Access-Control-Max-Age':'3600','Vary':'Origin'}:{}});const response=await handle(req,env,ctx);if(response.status===101||!corsAllowed||!origin)return response;const headers=new Headers(response.headers);headers.set('Access-Control-Allow-Origin',origin);headers.set('Vary','Origin');headers.set('Access-Control-Expose-Headers','Content-Range,Content-Length,Accept-Ranges,Date');return new Response(response.body,{status:response.status,headers});},async scheduled(event,env){await cleanupMovieUploads(env);await cleanupChatUploads(env);await run(env,'DELETE FROM rate_limits WHERE expires<?',Math.floor(Date.now()/1000)-3600);const due=await rows(env,'SELECT * FROM scheduled_messages WHERE deliver_at<=? ORDER BY deliver_at LIMIT 100',Date.now());for(const item of due){const member=await row(env,'SELECT 1 FROM members WHERE conversation=? AND uid=?',item.conversation,item.sender);if(!member){await run(env,'DELETE FROM scheduled_messages WHERE id=?',item.id);continue}const now=Date.now();await env.DB.batch([env.DB.prepare('INSERT OR IGNORE INTO messages(id,conversation,sender,text,reply_to,created) VALUES(?,?,?,?,?,?)').bind(item.id,item.conversation,item.sender,item.text,item.reply_to,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,item.conversation),env.DB.prepare('DELETE FROM scheduled_messages WHERE id=?').bind(item.id)]);await publish(env,item.conversation,{type:'message',id:item.id,sender:item.sender});}for(const call of await rows(env,"SELECT id,conversation FROM calls WHERE status<>'ended' AND created<?",Date.now()-14400000)){if(await roomForCall(env,call.id).count())continue;await run(env,"UPDATE calls SET status='ended',ended=? WHERE id=?",Date.now(),call.id);await publish(env,call.conversation,{type:'call-ended',id:call.id});}}};
 async function handle(req,env,ctx){try{const path=new URL(req.url).pathname;if(path==='/'||path==='/index.html')return Response.redirect('https://cydpixl.github.io/v/',302);if(path.startsWith('/api/'))return await api(req,env,ctx);const res=await env.ASSETS.fetch(req);const headers=new Headers(res.headers);headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('Permissions-Policy','camera=(self), microphone=(self), display-capture=(self)');headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' blob: https:; connect-src 'self' wss: https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; font-src 'self'; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");return new Response(res.body,{status:res.status,headers});}catch(e){if(!e.status)console.error(JSON.stringify({event:'request-error',message:e.message,path:new URL(req.url).pathname}));return json({error:e.status?e.message:'Something went wrong. Please retry.'},e.status||500);}}
 
 export class UserHub extends DurableObject{
@@ -276,6 +278,7 @@ export class CallRoom extends DurableObject{
  }
  async webSocketClose(ws){const owner=ws.deserializeAttachment();if(!owner)return;this.retire(ws);await this.publishPresence();}
  webSocketError(ws){return this.webSocketClose(ws);}
+ async evict(uid){for(const ws of this.liveSockets()){if(ws.deserializeAttachment()?.uid===uid)this.retire(ws,4003,'Group membership removed');}this.ctx.storage.sql.exec('DELETE FROM call_join_reservations WHERE uid=?',uid);await this.publishPresence();}
  async alarm(){
   const changed=this.prune(),room=await this.ctx.storage.get('room');if(!room)return;
   if(this.presence().joining&&!this.liveSockets().length){await this.scheduleCleanup();return;}
@@ -291,6 +294,7 @@ export class UserHubV2 extends UserHub{
  async iceConfiguration(){return super.iceConfiguration();}
 }
 export class CallRoomV2 extends CallRoom{
+ async evict(uid){return super.evict(uid);}
  async snapshot(){return super.snapshot();}
  async count(){return super.count();}
  async reserve(uid,device,call,ready){return super.reserve(uid,device,call,ready);}

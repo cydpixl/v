@@ -9,6 +9,7 @@ export function messagePreview(text='',attachment){
  if(value.startsWith('[[vela-film:'))return 'Shared a film';
  if(value.trim())return value;
  if(!attachment)return '';
+ if(attachment.kind==='files')return attachment.files.length+' attachments';
  if(attachment.kind==='sticker')return 'Sticker';
  if(attachment.kind==='gif')return 'GIF';
  if(attachment.kind==='emoji')return 'Emoji';
