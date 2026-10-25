@@ -49,7 +49,7 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.3.15',release:'youtube-collections-20261024'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.3.17',release:'expressions-video-controls-20261025'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket};const feature=await commandAPI(req,env,uid,{...helpers,members,blocked,limit,ctx})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;

@@ -1,0 +1,8 @@
+#vela-movie-player .movie-extra-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#13151c;color:#dce0eb;border-top:1px solid #ffffff14;font-size:12px}
+#vela-movie-player .movie-extra-controls label{display:flex;gap:7px;align-items:center;white-space:nowrap}
+#vela-movie-player .movie-extra-controls select,#vela-movies .library-playback select{background:#191b21;color:#f3f4f7;border:1px solid #ffffff26;border-radius:5px;padding:6px;font:inherit}
+#vela-movie-player .movie-extra-controls button{font-size:12px;padding:5px 9px;min-height:30px}
+#vela-movie-player .movie-shortcuts{color:#999eac;margin-left:auto;font-size:11px}
+#vela-movie-player.movie-minimized .movie-extra-controls{display:none}
+#vela-movies .library-playback{display:flex;align-items:center;gap:8px;font-size:12px;color:#999eac}
+#vela-movies .library-tools{flex-wrap:wrap}
