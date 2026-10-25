@@ -1,3 +1,4 @@
+import {customEmojiIds} from '../src/emoji-size.js';
 import {messagePreview} from '../src/message-preview.js';
 import {commandAPI} from './commands.js';
 import {VELA_BOT_UID} from '../src/commands.mjs';
@@ -120,7 +121,7 @@ async function api(req,env,ctx){
    const prior=await row(env,'SELECT * FROM messages WHERE id=?',id);if(prior){if(prior.sender!==uid||prior.conversation!==cid)fail('Message identifier is in use.',409);prior.attachment=prior.attachment?JSON.parse(prior.attachment):null;prior.reactions=await rows(env,'SELECT emoji,uid FROM reactions WHERE message=?',id);return json({id,message:prior});}
    const people=await members(env,cid);for(const target of people.filter(m=>m.uid!==uid))if(await blocked(env,uid,target.uid))fail('Messaging is unavailable.',403);
    const att=b.upload?await row(env,'SELECT * FROM uploads WHERE id=? AND owner=? AND (conversation IS NULL OR conversation=?)',b.upload,uid,cid):null;
-   let expressionAttachment=null;if(b.asset){const a=await expressionAccess(env,uid,b.asset,helpers);expressionAttachment={kind:a.kind,expressionId:a.id,name:a.name,type:a.type,size:a.size};}if(b.gif){const g=await gifById(env,b.gif);expressionAttachment={kind:'gif',name:g.name,url:g.url,type:'image/gif'};}for(const match of text.matchAll(/<:[a-zA-Z0-9_]{2,32}:([a-zA-Z0-9-]+)>/g))await expressionAccess(env,uid,match[1],helpers);
+   let expressionAttachment=null;if(b.asset){const a=await expressionAccess(env,uid,b.asset,helpers);expressionAttachment={kind:a.kind,expressionId:a.id,name:a.name,type:a.type,size:a.size};}if(b.gif){const g=await gifById(env,b.gif);expressionAttachment={kind:'gif',name:g.name,url:g.url,type:'image/gif'};}for(const expressionId of new Set(customEmojiIds(text)))await expressionAccess(env,uid,expressionId,helpers);
    if(!text&&!att&&!expressionAttachment)fail('Write a message or attach a file.');if(b.replyTo&&!await row(env,'SELECT 1 FROM messages WHERE id=? AND conversation=?',b.replyTo,cid))fail('Reply not found.');
 
    const attachment=expressionAttachment?JSON.stringify(expressionAttachment):att?JSON.stringify({id:att.id,name:att.name,type:att.type,size:att.size}):null,now=Date.now();
@@ -141,7 +142,7 @@ async function api(req,env,ctx){
  if(msgMatch){const id=msgMatch[1],m=await row(env,'SELECT * FROM messages WHERE id=?',id);if(!m)fail('Message not found.',404);await access(env,uid,m.conversation);
   if(method==='DELETE'){if(m.sender!==uid&&!(m.sender===VELA_BOT_UID&&JSON.parse(m.attachment||'{}').requestedBy===uid))fail('You can delete only your messages.',403);await env.DB.batch([env.DB.prepare("UPDATE messages SET text='',attachment=NULL,deleted=1 WHERE id=?").bind(id),env.DB.prepare('DELETE FROM reactions WHERE message=?').bind(id)]);}
   else if(method==='PATCH'){const b=await body(req);
-   if('text'in b){if(m.sender!==uid||m.deleted)fail('You can edit only your messages.',403);if(!clean(b.text,4000))fail('A message cannot be empty.');await run(env,'UPDATE messages SET text=?,edited=? WHERE id=?',clean(b.text,4000),Date.now(),id);}
+   if('text'in b){if(m.sender!==uid||m.deleted)fail('You can edit only your messages.',403);if(!clean(b.text,4000))fail('A message cannot be empty.');for(const expressionId of new Set(customEmojiIds(clean(b.text,4000))))await expressionAccess(env,uid,expressionId,helpers);await run(env,'UPDATE messages SET text=?,edited=? WHERE id=?',clean(b.text,4000),Date.now(),id);}
    else if('pinned'in b)await run(env,'UPDATE messages SET pinned=? WHERE id=?',b.pinned?1:0,id);
    else if(b.emoji){if(!['👍','❤️','😂','😮','😢','🔥','🎉'].includes(b.emoji))fail('Invalid reaction.');if(await row(env,'SELECT 1 FROM reactions WHERE message=? AND uid=? AND emoji=?',id,uid,b.emoji))await run(env,'DELETE FROM reactions WHERE message=? AND uid=? AND emoji=?',id,uid,b.emoji);else await run(env,'INSERT INTO reactions(message,uid,emoji) VALUES(?,?,?)',id,uid,b.emoji);}
    else if('bookmark'in b){if(b.bookmark)await run(env,'INSERT OR IGNORE INTO bookmarks(uid,message) VALUES(?,?)',uid,id);else await run(env,'DELETE FROM bookmarks WHERE uid=? AND message=?',uid,id);}else fail('Invalid action.');
