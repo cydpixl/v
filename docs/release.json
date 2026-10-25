@@ -1,12 +1,11 @@
 {
-  "version": "1.5.0",
-  "release": "glass-workspace-20261025",
+  "version": "1.5.1",
+  "release": "large-emoji-20261025",
   "changes": [
-    "Unified media workspace with reliable scrolling and Back to chat",
-    "Rebuilt GIF, sticker and emoji pickers",
-    "Twelve themes and glass surfaces",
-    "Discord activity connection in Settings",
-    "Voice recorder with pause, preview and re-record; in-message audio controls",
-    "Music track lists, batch uploads and playback controls"
+    "Resize standard and custom emojis from 16 to 1000 pixels",
+    "Quick sizes and direct pixel input replace the slider",
+    "Remove blue emoji selection and composer outline",
+    "Compact draft previews; large sent emojis fit the conversation width",
+    "Fix standard emoji asset paths"
   ]
 }

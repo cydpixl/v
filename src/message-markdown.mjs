@@ -4,7 +4,7 @@ function inline(text) {
  text=text.replace(/`([^`\n]+)`/g,(_,code)=>stash(`<code>${escape(code)}</code>`));
  text=text.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,(_,label,url)=>stash(`<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(label)}</a>`));
  text=text.replace(/https?:\/\/[^\s<>"'\u0000]+/g,url=>stash(`<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(url)}</a>`));
- text=text.replace(/<:[A-Za-z0-9_]{2,32}:[A-Za-z0-9-]+>|\[\[vela-emoji:\d{1,3}:[^\]\s]{1,800}\]\]/g,value=>stash(escape(value)));
+ text=text.replace(/<:[A-Za-z0-9_]{2,32}:[A-Za-z0-9-]+>|\[\[vela-emoji:\d{1,4}:[^\]\s]{1,800}\]\]/g,value=>stash(escape(value)));
  text=escape(text).replace(/\|\|([^|]+)\|\|/g,'<button type="button" class="text-spoiler" aria-label="Reveal spoiler" aria-expanded="false"><span>$1</span></button>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/__([^_]+)__/g,'<u>$1</u>').replace(/~~([^~]+)~~/g,'<s>$1</s>').replace(/\*([^*]+)\*/g,'<em>$1</em>').replace(/_([^_]+)_/g,'<em>$1</em>');
  return text.replace(/\u0000(\d+)\u0000/g,(_,index)=>tokens[Number(index)]);
 }
