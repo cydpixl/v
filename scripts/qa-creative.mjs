@@ -1,0 +1,74 @@
+import {chromium} from 'playwright';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+
+const qa=JSON.parse(fs.readFileSync('.private/qa.json','utf8'));
+const site=process.env.QA_SITE||'https://cydpixl.github.io/v/';
+const output='output/playwright';fs.mkdirSync(output,{recursive:true});
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const pages=[],errors=[];
+const digest=data=>createHash('sha256').update(data).digest('hex');
+try{
+ for(let i=0;i<2;i++){
+  const context=await browser.newContext({viewport:{width:1536,height:960}});
+  await context.addInitScript(()=>{localStorage.setItem('vela.theme','graphite');localStorage.setItem('vela.theme.chosen','1');});
+  const page=await context.newPage();pages.push(page);page.setDefaultTimeout(30000);
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(site,{waitUntil:'domcontentloaded'});
+  await page.locator('[name=handle]').fill(qa.users[i].handle);
+  await page.locator('[name=password]').fill(qa.password);
+  await page.getByRole('button',{name:'Log In',exact:true}).click();
+  await page.locator('.app-shell').waitFor();
+  await page.locator('.dm-row').first().click();
+  await page.locator('#composer').waitFor();
+ }
+ const [sender,recipient]=pages;
+ const originalName='vela-drawing-1792760355532.png';
+ const original=sender.getByRole('img',{name:originalName,exact:true});await original.waitFor();
+ await sender.waitForFunction(name=>{const image=[...document.images].find(img=>img.alt===name);return image?.complete&&image.naturalWidth>0;},originalName);
+ const sourceURL=await original.getAttribute('src');
+ const sourceResponse=await sender.request.get(sourceURL);assert.equal(sourceResponse.status(),200);
+ const originalHash=digest(await sourceResponse.body());
+ await sender.locator('#composer').fill('Creative QA draft stays in the composer');
+ await original.click({button:'right'});
+ await sender.getByRole('menuitem',{name:'Draw on Image',exact:true}).waitFor();
+ const links=sender.waitForResponse(r=>new URL(r.url()).pathname==='/api/file-links'&&r.request().method()==='POST');
+ await sender.getByRole('menuitem',{name:'Draw on Image',exact:true}).click();
+ assert.equal((await links).status(),200);
+ await sender.locator('#creative-dialog[open]').waitFor();
+ await sender.waitForFunction(()=>{const canvas=document.querySelector('#creative-dialog canvas');return canvas?.width===1000&&!document.querySelector('#creative-dialog [data-done]')?.disabled;});
+ const canvas=sender.locator('#creative-dialog canvas');
+ const before=await canvas.evaluate(c=>c.toDataURL());
+ await sender.locator('[data-color="#97b99c"]').click();
+ await sender.getByRole('button',{name:'64 pixel brush',exact:true}).click();
+ const box=await canvas.boundingBox();assert.ok(box);
+ await sender.mouse.move(box.x+box.width*.2,box.y+box.height*.65);await sender.mouse.down();
+ await sender.mouse.move(box.x+box.width*.8,box.y+box.height*.65,{steps:18});await sender.mouse.up();
+ assert.notEqual(await canvas.evaluate(c=>c.toDataURL()),before,'Real pointer input must change the imported image');
+ await sender.getByRole('button',{name:'Pick color',exact:true}).click();
+ await canvas.click({position:{x:box.width*.5,y:box.height*.65}});
+ assert.equal(await sender.getByLabel('Custom color',{exact:true}).inputValue(),'#97b99c');
+ await sender.screenshot({path:output+'/vela-creative-live.png',animations:'disabled'});
+ const posted=sender.waitForResponse(r=>/\/api\/conversations\/[^/]+\/messages$/.test(new URL(r.url()).pathname)&&r.request().method()==='POST');
+ await sender.getByRole('button',{name:'Done & send',exact:true}).click();
+ const response=await posted;assert.ok(response.ok());
+ const payload=await response.json();const imageName=payload.message?.attachment?.name;
+ assert.ok(imageName?.startsWith('vela-drawing-'));
+ await sender.locator('#creative-dialog').waitFor({state:'hidden'});
+ assert.equal(await sender.locator('#composer').innerText(),'Creative QA draft stays in the composer');
+ const received=recipient.getByRole('img',{name:imageName,exact:true});await received.waitFor();
+ await recipient.waitForFunction(name=>{const image=[...document.images].find(img=>img.alt===name);return image?.complete&&image.naturalWidth===1000;},imageName);
+ assert.equal(await received.count(),1);assert.equal(await recipient.getByRole('img',{name:originalName,exact:true}).count(),1);
+ assert.ok(payload.message.reply_to,'A remixed drawing should reply to the original');
+ assert.equal(payload.message.text,'A new version of your sketch');
+ const originalAgain=await sender.request.get(sourceURL);assert.equal(originalAgain.status(),200);assert.equal(digest(await originalAgain.body()),originalHash);
+ assert.equal(await sender.evaluate(uid=>JSON.parse(localStorage.getItem('pixl.outbox.'+uid)||'[]').length,qa.users[0].uid),0);
+ await sender.locator('#composer').fill('');
+ await received.scrollIntoViewIfNeeded();await recipient.screenshot({path:output+'/vela-creative-recipient.png',animations:'disabled'});
+ assert.deepEqual(errors,[]);
+ const result={passed:true,site,at:new Date().toISOString(),imageName,sourceUnchanged:true,recipientCopies:1,decodedSize:[1000,750],pending:0,errors};
+ fs.writeFileSync(output+'/creative-live-result.json',JSON.stringify(result,null,2)+'\n');
+ console.log('PASS: live shared-image menu, refreshed private link, real drawing, color picking, reply attachment, exactly-once recipient delivery, unchanged original, preserved composer and pending: 0');
+}catch(error){for(let i=0;i<pages.length;i++)await pages[i].screenshot({path:output+`/creative-failure-${i}.png`}).catch(()=>{});throw error;}
+finally{await browser.close();}

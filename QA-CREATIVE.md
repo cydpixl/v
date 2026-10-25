@@ -13,4 +13,6 @@ Verified October 23, 2026:
 - Final Blob-based Download saved a valid PNG to disk; its signature and 1000 × 750 dimensions were checked.
 - The studio fit the 1280 × 720 desktop browser: no dialog scroll overflow and Send stayed visible.
 
-Limitations: drafts are local to the current browser/device and origin. Physical pen/touch and mobile devices were not exercised. Production image-remix checks are recorded after release verification.
+Live verification completed October 24, 2026, against the newer production bundle, retaining subsequent Vela releases. `node scripts/qa-creative.mjs` passed: shared-image menu, fresh private file link, real pointer drawing, color picking, reply attachment, exactly one decoded recipient image, byte-identical original image, preserved composer text, no page errors, and an empty outbox. Screenshots and the machine-readable result are in the ignored `output/playwright/` directory.
+
+Limitations: drafts are local to the current browser/device and origin. Physical pen/touch and mobile devices were not exercised.
