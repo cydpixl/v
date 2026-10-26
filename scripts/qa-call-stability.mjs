@@ -39,7 +39,7 @@ try{
   });
   const p=await ctx.newPage();pages.push(p);p.setDefaultTimeout(30000);p.on('pageerror',e=>errors.push(e.message));
   p.on('response',r=>{if(r.url().includes('/api/')&&r.status()>=400)console.log('API FAILURE',i,new URL(r.url()).pathname,r.status());});
-  p.on('requestfailed',r=>{if(r.url().includes('/api/'))console.log('REQUEST FAILURE',i,new URL(r.url()).pathname,r.failure()?.errorText);});
+  p.on('requestfailed',r=>{if(/\/api\/(?:calls\/|ticket)/.test(r.url()))console.log('REQUEST FAILURE',i,new URL(r.url()).pathname,r.failure()?.errorText);});
   await p.goto(site);await p.locator('[name=handle]').fill(qa.users[i].handle);await p.locator('[name=password]').fill(qa.password);await p.getByRole('button',{name:'Log In',exact:true}).click();
   const cid=[qa.users[0].uid,qa.users[1].uid].sort().join(':');await p.locator('.dm-row[data-open="'+cid+'"]').click();
  }
@@ -75,7 +75,7 @@ try{
   console.log('CHECK live signaling interruption',i+1);
   const p=pages[i%2];
   for(const page of pages)await page.evaluate(()=>{window.savedPeer=[...qaCall.links.values()][0].pc;window.savedTrack=qaCall.camera.getVideoTracks()[0];window.savedDevice=qaCall.device;});
-  await p.evaluate(()=>{window.previousSocket=qaCall.socket;qaCall.socket.close(4000,'QA signaling interruption');});
+  await p.evaluate(index=>{window.previousSocket=qaCall.socket;if(index===0)qaCall.socket.onclose=null;qaCall.socket.close(4000,'QA signaling interruption');},i);
   await p.waitForFunction(()=>qaCall.socket!==previousSocket&&qaCall.socket?.readyState===1,null,{timeout:25000});
   await Promise.all([decoded(a,qa.users[1].uid),decoded(b,qa.users[0].uid)]);
   for(const page of pages)assert.equal(await page.evaluate(()=>qaCall.device===savedDevice&&qaCall.camera.getVideoTracks()[0]===savedTrack&&[...qaCall.links.values()][0].pc===savedPeer),true);

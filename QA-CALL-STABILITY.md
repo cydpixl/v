@@ -4,6 +4,8 @@ Unexpected camera-track endings now trigger bounded recovery. Recovery keeps the
 
 Signaling reconnects reuse the current device identity. The call room preserves participant state for a 15-second reconnect window; explicit leave, group removal and device transfer still take effect immediately. Rejoining after a longer outage resets peer connections cleanly. Signaling requests have deadlines so a stalled request cannot leave recovery stuck forever.
 
+The server explicitly acknowledges socket Close frames. A five-second client watchdog also resumes signaling when a socket remains closing or closed without delivering its close callback; media continues through the reconnect window.
+
 ICE recovery, frame-stall detection and peer rebuilding preserve local tracks. Negotiation messages identify the peer-connection generation so delayed offers, answers and candidates from retired connections cannot damage a replacement connection. Congestion tuning reserves microphone bandwidth, uses current packet-loss samples instead of lifetime loss, caps video bitrate to available bandwidth and lowers camera encoding resolution under congestion. Explicit source-quality screen sharing remains available.
 
 Speaking and statistics use separate events. Call controls retain their DOM nodes when markup is unchanged. Video/audio play requests run only when a bound media element is paused.

@@ -284,6 +284,8 @@ export class CallRoom extends DurableObject{
  }
  async webSocketClose(ws,code){
   const owner=ws.deserializeAttachment();if(!owner||owner.left)return;
+  // Acknowledge Close explicitly, including runtimes with existing sockets.
+  try{ws.close(code>=3000&&code<=4999?code:1000,'Signaling connection closed');}catch{}
   // A lost signaling socket does not stop media. Explicit leave and device
   // transfer still retire immediately; a brief outage keeps the same session.
   if(code!==1000&&code!==1001){
