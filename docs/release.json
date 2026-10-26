@@ -1,10 +1,11 @@
 {
-  "version": "1.5.2",
-  "release": "voice-dock-native-library-20261025",
+  "version": "1.5.3",
+  "release": "call-stability-20261025",
   "changes": [
-    "Keep voice controls inside the resizable sidebar",
-    "Prevent voice controls from covering chat or the account panel",
-    "Show only direct video files in the library and bot collections",
-    "Remove the YouTube player and YouTube-only playback links"
+    "Recover interrupted cameras without enabling a camera turned off by the user",
+    "Preserve peer media across short signaling outages",
+    "Recover stalled or broken peer connections",
+    "Adapt video sending to available bandwidth and protect microphone audio",
+    "Keep speaking and connection updates from rebuilding call controls"
   ]
 }

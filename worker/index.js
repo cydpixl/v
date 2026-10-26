@@ -50,7 +50,7 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.5.2',release:'voice-dock-native-library-20261025'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.5.3',release:'call-stability-20261025'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx};
@@ -202,24 +202,28 @@ export class UserHub extends DurableObject{
  webSocketError(ws){try{ws.close(1011,'Connection interrupted')}catch{}}
 }
 export class CallRoom extends DurableObject{
- constructor(ctx,env){super(ctx,env);ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS call_presence_state(id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,established INTEGER NOT NULL)');ctx.storage.sql.exec('INSERT OR IGNORE INTO call_presence_state VALUES(1,0,0)');ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS call_join_reservations(uid TEXT NOT NULL,device TEXT NOT NULL,expires INTEGER NOT NULL,cancelled INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(uid,device))');}
+ constructor(ctx,env){super(ctx,env);ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS call_presence_state(id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,established INTEGER NOT NULL)');ctx.storage.sql.exec('INSERT OR IGNORE INTO call_presence_state VALUES(1,0,0)');ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS call_join_reservations(uid TEXT NOT NULL,device TEXT NOT NULL,expires INTEGER NOT NULL,cancelled INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(uid,device))');ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS call_reconnect_leases(uid TEXT PRIMARY KEY,device TEXT NOT NULL,state TEXT NOT NULL,joined_at INTEGER NOT NULL,expires INTEGER NOT NULL)');}
  changed(established=false){this.ctx.storage.sql.exec('UPDATE call_presence_state SET revision=MAX(revision+1,?),established=MAX(established,?) WHERE id=1',Date.now(),established?1:0);}
  presence(){const state=this.ctx.storage.sql.exec('SELECT revision,established FROM call_presence_state WHERE id=1').one(),pending=this.ctx.storage.sql.exec('SELECT COUNT(*) AS count FROM call_join_reservations WHERE cancelled=0 AND expires>?',Date.now()).one();return {participants:this.participants(),revision:state.revision,established:!!state.established,joining:pending.count};}
  liveSockets(){return this.ctx.getWebSockets().filter(ws=>{const a=ws.deserializeAttachment();return ws.readyState===1&&a&&!a.left&&Date.now()-(a.lastSeen||a.at||0)<90000;});}
- participants(){return [...new Map(this.liveSockets().map(ws=>{const a=ws.deserializeAttachment();return [a.uid,{uid:a.uid,device:a.device||'legacy',state:a.state||{},joinedAt:a.joinedAt||a.at}];})).values()];}
+ participants(){
+  const peers=new Map(this.ctx.storage.sql.exec('SELECT * FROM call_reconnect_leases WHERE expires>?',Date.now()).toArray().map(a=>[a.uid,{uid:a.uid,device:a.device,state:JSON.parse(a.state),joinedAt:a.joined_at}]));
+  for(const ws of this.liveSockets()){const a=ws.deserializeAttachment();peers.set(a.uid,{uid:a.uid,device:a.device||'legacy',state:a.state||{},joinedAt:a.joinedAt||a.at});}
+  return [...peers.values()];
+ }
  send(event,except){const raw=JSON.stringify(event);for(const ws of this.liveSockets())if(ws!==except)try{ws.send(raw)}catch{}}
- retire(ws,code=1000,reason='Left call'){
+ retire(ws,code=1000,reason='Left call',notify=true){
   const a=ws.deserializeAttachment();if(!a||a.left)return false;
   a.left=true;ws.serializeAttachment(a);this.changed();
-  this.send({type:'peer-left',uid:a.uid,device:a.device||'legacy'},ws);
+  if(notify)this.send({type:'peer-left',uid:a.uid,device:a.device||'legacy'},ws);
   try{ws.close(code,reason)}catch{}
   return true;
  }
- prune(){let changed=false;for(const ws of this.ctx.getWebSockets()){const a=ws.deserializeAttachment();if(a&&!a.left&&(ws.readyState!==1||Date.now()-(a.lastSeen||a.at||0)>=90000))changed=this.retire(ws,4000,'Connection timed out')||changed;}return changed;}
+ prune(){let changed=this.ctx.storage.sql.exec('DELETE FROM call_reconnect_leases WHERE expires<=? RETURNING uid',Date.now()).toArray().length>0;for(const ws of this.ctx.getWebSockets()){const a=ws.deserializeAttachment();if(a&&!a.left&&(ws.readyState!==1||Date.now()-(a.lastSeen||a.at||0)>=90000))changed=this.retire(ws,4000,'Connection timed out')||changed;}return changed;}
  async snapshot(){if(this.prune())await this.publishPresence();return this.presence();}
  async count(){return (await this.snapshot()).participants.length;}
  async scheduleCleanup(){
-  if(this.liveSockets().length){await this.ctx.storage.delete('emptySince');await this.ctx.storage.setAlarm(Date.now()+25000);}
+  if(this.participants().length){await this.ctx.storage.delete('emptySince');const lease=this.ctx.storage.sql.exec('SELECT MIN(expires) AS expires FROM call_reconnect_leases').one();await this.ctx.storage.setAlarm(Math.max(Date.now()+1000,Math.min(Date.now()+25000,lease.expires||Infinity)));}
   else if(this.presence().joining){await this.ctx.storage.delete('emptySince');await this.ctx.storage.setAlarm(Date.now()+25000);}
   else{const since=await this.ctx.storage.get('emptySince')||Date.now();await this.ctx.storage.put('emptySince',since);await this.ctx.storage.setAlarm(Math.max(Date.now()+1000,since+30000));}
  }
@@ -244,6 +248,7 @@ export class CallRoom extends DurableObject{
   await this.scheduleCleanup();
  }
  async leave(uid,device='legacy',transfer=false){
+  if(transfer)this.ctx.storage.sql.exec('DELETE FROM call_reconnect_leases WHERE uid=?',uid);else this.ctx.storage.sql.exec('DELETE FROM call_reconnect_leases WHERE uid=? AND device=?',uid,device);
   this.ctx.storage.sql.exec('INSERT INTO call_join_reservations(uid,device,expires,cancelled) VALUES(?,?,?,1) ON CONFLICT(uid,device) DO UPDATE SET expires=excluded.expires,cancelled=1',uid,device,Date.now()+90000);this.changed();
   for(const ws of this.ctx.getWebSockets(uid)){const a=ws.deserializeAttachment();if(a&&(transfer||(a.device||'legacy')===device))this.retire(ws,transfer?4001:1000,transfer?'Transferred to another device':'Left call');}
   await this.publishPresence();
@@ -252,12 +257,13 @@ export class CallRoom extends DurableObject{
   const uid=req.headers.get('X-User'),call=req.headers.get('X-Call'),cid=req.headers.get('X-Conversation'),caller=req.headers.get('X-Caller'),device=req.headers.get('X-Device')||'legacy';
   await this.ctx.storage.put('room',{call,cid});this.prune();
   const cancelled=this.ctx.storage.sql.exec('SELECT cancelled FROM call_join_reservations WHERE uid=? AND device=? AND expires>?',uid,device,Date.now()).toArray()[0];if(cancelled?.cancelled)return json({error:'This join was cancelled.'},410);
-  const peers=this.participants().filter(p=>p.uid!==uid);if(peers.length>=8)return json({error:'This call is full.'},409);
+  const prior=this.participants().find(p=>p.uid===uid&&p.device===device),peers=this.participants().filter(p=>p.uid!==uid);if(peers.length>=8)return json({error:'This call is full.'},409);
   // Replacement is synchronous: a closing device is never part of the new roster.
-  for(const old of this.ctx.getWebSockets(uid))this.retire(old,4001,'Transferred to another device');
+  for(const old of this.ctx.getWebSockets(uid)){const same=old.deserializeAttachment()?.device===device;this.retire(old,same?4000:4001,same?'Signaling resumed':'Transferred to another device',!same);}
+  this.ctx.storage.sql.exec('DELETE FROM call_reconnect_leases WHERE uid=?',uid);
   const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server,[uid]);
-  const now=Date.now(),state={mic:true,camera:false,screen:false};server.serializeAttachment({uid,call,cid,device,state,joinedAt:now,lastSeen:now,at:now,count:0});this.ctx.storage.sql.exec('DELETE FROM call_join_reservations WHERE uid=? AND device IN (?,?)',uid,device,'legacy');this.changed(peers.length>0||uid!==caller);
-  server.send(JSON.stringify({type:'peers',peers,status:peers.length||uid!==caller?'active':'ringing'}));
+  const now=Date.now(),state=prior?.state||{mic:true,camera:false,screen:false};server.serializeAttachment({uid,call,cid,device,state,joinedAt:prior?.joinedAt||now,lastSeen:now,at:now,count:0});this.ctx.storage.sql.exec('DELETE FROM call_join_reservations WHERE uid=? AND device IN (?,?)',uid,device,'legacy');this.changed(peers.length>0||uid!==caller);
+  server.send(JSON.stringify({type:'peers',peers,resumed:!!prior,status:peers.length||uid!==caller?'active':'ringing'}));
   this.send({type:'peer-joined',uid,device,state},server);
   if(peers.length||uid!==caller)await run(this.env,"UPDATE calls SET status='active',ended=NULL WHERE id=?",call);
   await this.publishPresence();
@@ -272,19 +278,28 @@ export class CallRoom extends DurableObject{
   if(msg.type==='ping'){ws.send(JSON.stringify({type:'roster',peers:this.participants()}));return;}
   if(msg.type==='state'){owner.state={mic:msg.state?.mic===true,camera:msg.state?.camera===true,screen:msg.state?.screen===true,deaf:msg.state?.deaf===true};ws.serializeAttachment(owner);this.changed();this.send({type:'state',uid:owner.uid,device:owner.device,state:owner.state},ws);return;}
   if(msg.type==='sound'&&['message1','camera_on','stream_started','user_join'].includes(msg.sound)){this.send({type:'sound',uid:owner.uid,sound:msg.sound},ws);return;}
-  if(!['description','candidate'].includes(msg.type)||typeof msg.to!=='string')return;
+  if(!['description','candidate','repair'].includes(msg.type)||typeof msg.to!=='string')return;
   if(msg.type==='description'&&(!['offer','answer'].includes(msg.description?.type)||typeof msg.description?.sdp!=='string'||msg.description.sdp.length>60000))return;
   for(const target of this.liveSockets()){const a=target.deserializeAttachment();if(a.uid===msg.to&&(!msg.toDevice||msg.toDevice===a.device))try{target.send(JSON.stringify({...msg,from:owner.uid,device:owner.device,to:msg.to}))}catch{}}
  }
- async webSocketClose(ws){const owner=ws.deserializeAttachment();if(!owner)return;this.retire(ws);await this.publishPresence();}
- webSocketError(ws){return this.webSocketClose(ws);}
- async evict(uid){for(const ws of this.liveSockets()){if(ws.deserializeAttachment()?.uid===uid)this.retire(ws,4003,'Group membership removed');}this.ctx.storage.sql.exec('DELETE FROM call_join_reservations WHERE uid=?',uid);await this.publishPresence();}
+ async webSocketClose(ws,code){
+  const owner=ws.deserializeAttachment();if(!owner||owner.left)return;
+  // A lost signaling socket does not stop media. Explicit leave and device
+  // transfer still retire immediately; a brief outage keeps the same session.
+  if(code!==1000&&code!==1001){
+   owner.left=true;ws.serializeAttachment(owner);
+   this.ctx.storage.sql.exec('INSERT INTO call_reconnect_leases(uid,device,state,joined_at,expires) VALUES(?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET device=excluded.device,state=excluded.state,joined_at=excluded.joined_at,expires=excluded.expires',owner.uid,owner.device||'legacy',JSON.stringify(owner.state||{}),owner.joinedAt||owner.at,Date.now()+15000);this.changed();
+  }else this.retire(ws);
+  await this.publishPresence();
+ }
+ webSocketError(ws){return this.webSocketClose(ws,1006);}
+ async evict(uid){this.ctx.storage.sql.exec('DELETE FROM call_reconnect_leases WHERE uid=?',uid);for(const ws of this.liveSockets()){if(ws.deserializeAttachment()?.uid===uid)this.retire(ws,4003,'Group membership removed');}this.ctx.storage.sql.exec('DELETE FROM call_join_reservations WHERE uid=?',uid);await this.publishPresence();}
  async alarm(){
   const changed=this.prune(),room=await this.ctx.storage.get('room');if(!room)return;
-  if(this.presence().joining&&!this.liveSockets().length){await this.scheduleCleanup();return;}
-  if(this.liveSockets().length){if(changed)await this.publishPresence();else{const call=await row(this.env,'SELECT status,created FROM calls WHERE id=?',room.call);if(call?.status==='ringing'&&call.created<Date.now()-30000)await this.publishPresence();}await this.scheduleCleanup();return;}
+  if(this.presence().joining&&!this.participants().length){await this.scheduleCleanup();return;}
+  if(this.participants().length){if(changed)await this.publishPresence();else{const call=await row(this.env,'SELECT status,created FROM calls WHERE id=?',room.call);if(call?.status==='ringing'&&call.created<Date.now()-30000)await this.publishPresence();}await this.scheduleCleanup();return;}
   const emptySince=await this.ctx.storage.get('emptySince');if(!emptySince||Date.now()-emptySince<30000){await this.publishPresence();return;}
-  await run(this.env,"UPDATE calls SET status='ended',ended=? WHERE id=?",Date.now(),room.call);if(this.liveSockets().length){await this.publishPresence();return;}await publish(this.env,room.cid,{type:'call-ended',id:room.call});await this.ctx.storage.deleteAlarm();
+  await run(this.env,"UPDATE calls SET status='ended',ended=? WHERE id=?",Date.now(),room.call);if(this.participants().length){await this.publishPresence();return;}await publish(this.env,room.cid,{type:'call-ended',id:room.call});await this.ctx.storage.deleteAlarm();
  }
 }
 

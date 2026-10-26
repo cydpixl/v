@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {audioLoss,senderEnvelope} from '../src/call-quality.mjs';
+const lost=audioLoss({received:1000,lost:100},{packetsReceived:1100,packetsLost:100});
+assert.equal(lost.loss,0,'Old packet loss must not keep a recovered network degraded');
+assert.equal(audioLoss(lost,{packetsReceived:1190,packetsLost:110}).loss,.1);
+assert.equal(audioLoss(lost,{packetsReceived:1,packetsLost:0}).loss,0,'New RTP counters reset the sample');
+const audio=senderEnvelope('mic',{available:180000,reduced:true,screen:true});
+assert.equal(audio.maxBitrate,96000,'Camera congestion must preserve the microphone budget');
+const camera=senderEnvelope('camera',{available:900000,screen:true});
+const screen=senderEnvelope('screen',{available:900000,screen:true});
+assert.ok(camera.maxBitrate+screen.maxBitrate<=900000*.8);
+assert.ok(camera.scaleResolutionDownBy>1,'Limited connections lower camera encoding cost');
+assert.equal(senderEnvelope('camera').maxFramerate,30);
+assert.equal(senderEnvelope('screen',{quality:'720'}).maxFramerate,30);
+assert.equal(senderEnvelope('screen',{quality:'auto'}).maxFramerate,60,'Source screen sharing remains available');
+assert.ok(senderEnvelope('camera',{peers:4}).maxBitrate<senderEnvelope('camera').maxBitrate);
+console.log('PASS: recent packet-loss samples, recovered counters, reserved microphone bandwidth, camera/share budgets, frame rates and group scaling');
