@@ -14,6 +14,6 @@ assert.deepEqual(gifPagination({data:[],pagination:{total_count:100}},0,499),{ne
 assert.equal(gifPagination({data:Array(24),pagination:{total_count:10000}},480,499).more,false);
 const media=[{id:'a',title:'Direct',category:'bodycam'},{id:'b',title:'YouTube',playback:'youtube',category:'bodycam'},{id:'c',title:'Other'}];
 assert.deepEqual(selectLibrary(media,{},{filter:'bodycam',playback:'direct'}).map(x=>x.id),['a']);
-assert.deepEqual(selectLibrary(media,{},{playback:'youtube'}).map(x=>x.id),['b']);
+assert.deepEqual(selectLibrary(media,{},{playback:'youtube'}).map(x=>x.id),[]);
 const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('network failed')};await assert.rejects(()=>fetchGiphy('https://api.giphy.com/test'),error=>error.status===502&&!error.message.includes('network failed'));globalThis.fetch=original;
 console.log('PASS: expression search, deduplication, stale-query protection, GIF URL validation, optimized rendition, pagination boundaries, provider recovery and combined direct-video filtering');

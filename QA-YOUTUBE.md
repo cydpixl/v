@@ -1,5 +1,7 @@
 # YouTube collection trial
 
+**Historical trial, retired in 1.5.2.** The current library excludes YouTube-only entries and uses native media playback. See `QA-NATIVE-LIBRARY.md`. The notes below describe the earlier trial.
+
 This release adds 64 YouTube catalog entries with real uploader thumbnails. Bodycam contains 40 videos exclusively from EWU Crime Storytime, Midwest Safety and Code Blue Cam, including the two existing downloaded files from those channels. Daily Dose of Internet contains 27 videos including the existing downloaded Buddy Was 100% Wrong upload. Older uploads are retained in All; other channels are excluded from Bodycam. Duplicate source IDs were removed.
 
 Of the 64 new entries, 51 advertise embedded playback and 13 EWU videos disable embedding. Those 13 are labeled YouTube only and offer an explicit Open on YouTube link. Unavailable/members-only videos were excluded during discovery. YouTube controls playback, ads, region/age checks and quality. This trial offers solo YouTube playback; existing uploaded-file watch-together behavior is retained. No additional video files were uploaded to R2.

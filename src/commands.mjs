@@ -1,3 +1,5 @@
+import {canPlayInVela} from './cinema/library-source.mjs';
+
 export const VELA_BOT_UID='vela-system-bot-v1';
 export const COMMANDS=Object.freeze([
  {name:'bodycam',description:'Post the bodycam collection for everyone in this chat',bot:true,args:'search (optional)'},
@@ -24,5 +26,5 @@ export function commandMatches(query='',botOnly=false){
 export const BODYCAM_CHANNELS=Object.freeze(['EWU Crime Storytime','EWU Crime','Midwest Safety','Code Blue Cam']);
 export function bodycamItems(rows,query='',category='bodycam'){
  const words=query.trim().toLowerCase().split(/\s+/).filter(Boolean);
- return rows.filter(item=>item.category===category&&(category!=='bodycam'||BODYCAM_CHANNELS.includes(item.channel))&&words.every(w=>[item.title,item.channel].join(' ').toLowerCase().includes(w))).map(item=>({id:item.id,title:item.title,poster:item.poster,channel:item.channel,duration:item.duration,height:item.height,playback:item.playback,embedAllowed:item.embedAllowed}));
+ return rows.filter(item=>canPlayInVela(item)&&item.category===category&&(category!=='bodycam'||BODYCAM_CHANNELS.includes(item.channel))&&words.every(w=>[item.title,item.channel].join(' ').toLowerCase().includes(w))).map(item=>({id:item.id,title:item.title,poster:item.poster,channel:item.channel,duration:item.duration,height:item.height,playback:item.playback,embedAllowed:item.embedAllowed}));
 }

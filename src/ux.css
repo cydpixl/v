@@ -6,6 +6,15 @@ html[data-theme] .top-strip,html[data-theme] .server-rail,html[data-theme] .side
 html[data-theme] .home-navigation{margin-bottom:14px;padding-bottom:14px}
 html[data-theme] .home-navigation>button{height:39px;margin:2px 0;font-size:13px}
 html[data-theme] .quick-find{margin-bottom:16px;background:color-mix(in srgb,var(--raised) 75%,transparent)}
+.sidebar{min-width:0;padding-bottom:0}
+#voice-dock{position:static;width:auto;min-width:0;flex:none;margin:8px 8px 0;background:var(--panel);border:1px solid var(--border);border-radius:12px}
+#voice-dock:empty{display:none}
+.voice-dock-info{min-width:0;gap:8px;border-top:0}
+.voice-dock-info>button:first-child{flex:1;min-width:0;padding:0}
+.voice-dock-info>button:first-child>span{flex:1;min-width:0;overflow:hidden}
+.voice-dock-info strong,.voice-dock-info small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice-dock-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:4px 10px 10px}
+.voice-dock-actions>.icon-button{min-width:0;width:100%;background:var(--raised);border-color:var(--border)}
 .sidebar-tools{display:flex;align-items:center;gap:10px;margin:10px 14px;padding:10px 8px;color:var(--muted);font-size:12px;text-align:left;border-radius:8px;flex:none}
 .sidebar-tools:hover{background:var(--hover);color:var(--text)}
 html[data-theme] #account-dock{position:static;width:auto;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin:8px;padding:8px;border:1px solid var(--border);border-radius:12px;z-index:auto;flex:none}

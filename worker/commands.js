@@ -1,3 +1,4 @@
+import {libraryMovie} from '../src/cinema/library-source.mjs';
 import {VELA_BOT_UID,bodycamItems} from '../src/commands.mjs';
 
 export async function commandAPI(req,env,uid,h){
@@ -13,7 +14,7 @@ export async function commandAPI(req,env,uid,h){
  await h.limit(env,'commands:'+uid,12);
  const common={requestedBy:uid,command,query:args};
  const category=command==='dailydose'?'daily-dose':'bodycam';
- const items=command!=='help'?bodycamItems((await h.rows(env,"SELECT id,data FROM movies WHERE json_extract(data,'$.category')=? ORDER BY created DESC LIMIT 150",category)).map(row=>({...JSON.parse(row.data),id:row.id})),args,category):[];
+ const items=command!=='help'?bodycamItems((await h.rows(env,"SELECT id,data,object_key FROM movies WHERE json_extract(data,'$.category')=? ORDER BY created DESC LIMIT 150",category)).map(libraryMovie),args,category):[];
  const attachment=command!=='help'?{...common,kind:category==='bodycam'?'bodycam-library':'daily-dose-library',items}:{...common,kind:'command-help'};
  const now=Date.now(),text=command!=='help'?(category==='bodycam'?'Bodycam':'Daily Dose of Internet')+' · '+items.length+' videos':'VELA commands';
  await env.DB.batch([
