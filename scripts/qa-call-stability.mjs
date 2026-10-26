@@ -81,6 +81,9 @@ try{
   for(const page of pages)assert.equal(await page.evaluate(()=>qaCall.device===savedDevice&&qaCall.camera.getVideoTracks()[0]===savedTrack&&[...qaCall.links.values()][0].pc===savedPeer),true);
  }
  pass('Three live signaling interruptions preserve both cameras and peer connections');
+ await a.evaluate(async()=>{const link=[...qaCall.links.values()][0],send=link.signal.bind(link);link.signal=data=>{if(data.type!=='description')send(data);};await link.offer();link.signal=send;link.lastRecovery=0;link.recover();});
+ await a.waitForFunction(()=>[...qaCall.links.values()].every(l=>l.pc.signalingState==='stable'));
+ await decoded(b,qa.users[0].uid);pass('A dropped negotiation offer is resent and clears the pending connection state');
  await contexts[0].setOffline(true);await a.evaluate(()=>qaCall.socket.close(4000,'QA temporary offline'));await a.waitForTimeout(2500);await contexts[0].setOffline(false);
  await a.waitForFunction(()=>qaCall.socket?.readyState===1,null,{timeout:25000});await decoded(b,qa.users[0].uid);pass('Offline-to-online transition reconnects without a manual rejoin');
 
