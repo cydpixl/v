@@ -1,0 +1,60 @@
+/* Vela Windows media integration. Uses the existing Vela theme tokens. */
+.vela-smtc-card{margin:8px 8px 3px;padding:11px 12px 12px;border:1px solid var(--border);border-radius:10px;background:var(--raised);flex:none;min-width:0;color:var(--text)}
+.vela-smtc-head{display:flex;align-items:center;gap:9px}
+.vela-smtc-symbol{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:7px;background:var(--panel);font-size:19px;color:var(--text)}
+.vela-smtc-caption{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.vela-smtc-caption strong{font-size:12px;line-height:1.2;font-weight:650}
+.vela-smtc-caption small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-smtc-more{height:24px;width:26px;border-radius:5px;color:var(--muted);letter-spacing:1px;font-weight:700}
+.vela-smtc-more:hover,.vela-smtc-more:focus-visible{background:var(--hover);color:var(--text)}
+.vela-smtc-song{padding-top:11px}
+.vela-smtc-main{display:flex;align-items:center;gap:9px;min-width:0}
+.vela-smtc-cover{height:45px;width:45px;min-width:45px;border-radius:6px;background:var(--panel);overflow:hidden;position:relative;display:grid;place-items:center;color:var(--muted)}
+.vela-smtc-cover img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1}
+.vela-smtc-cover span{font-size:20px}
+.vela-smtc-info{min-width:0;display:flex;flex-direction:column;gap:4px;flex:1}
+.vela-smtc-info strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-smtc-info small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-smtc-equalizer{height:16px;display:flex;align-items:center;gap:2px;margin-left:2px}
+.vela-smtc-equalizer i{width:2px;background:var(--text);height:7px;border-radius:2px;animation:vela-smtc-bars 850ms ease-in-out infinite alternate}
+.vela-smtc-equalizer i:nth-child(2){animation-delay:-300ms}.vela-smtc-equalizer i:nth-child(3){animation-delay:-520ms}
+.vela-smtc-card:not(.is-playing) .vela-smtc-equalizer i{animation-play-state:paused;height:4px}
+.vela-smtc-timeline{margin-top:9px}
+.vela-smtc-timeline>div:first-child{display:flex;justify-content:space-between;color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums;margin-bottom:5px}
+.vela-smtc-bar{height:3px;width:100%;overflow:hidden;background:var(--border);border-radius:3px}
+.vela-smtc-bar i{display:block;height:100%;width:0;background:var(--text);border-radius:3px;transition:width 500ms linear}
+.vela-smtc-empty{padding-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
+.vela-smtc-empty button{display:block;margin-top:9px;height:28px;padding:0 12px;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:5px;font-size:11px;font-weight:600}
+.vela-smtc-empty button:hover{background:var(--hover)}
+.vela-smtc-settings-section{border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:18px;margin:16px 0}
+.vela-smtc-settings-section>header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+.vela-smtc-settings-section h3{font-size:16px;margin:0 0 4px}
+.vela-smtc-settings-section header p{font-size:12px;color:var(--muted)}
+.vela-smtc-connection-tag{font-size:10px;letter-spacing:.08em;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:4px 6px}
+.vela-smtc-settings-body{display:flex;flex-direction:column;gap:14px;font-size:13px}
+.vela-smtc-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vela-smtc-setting-row>div{display:flex;flex-direction:column;gap:4px}
+.vela-smtc-setting-row strong{font-size:13px}
+.vela-smtc-setting-row p{font-size:12px;color:var(--muted)}
+.vela-smtc-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.vela-smtc-dot.online{background:#43b67a;box-shadow:0 0 0 3px #43b67a22}
+.vela-smtc-note{font-size:12px;color:var(--muted);line-height:1.6}
+.vela-smtc-field{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--text)}
+.vela-smtc-field select{width:100%;max-width:400px;height:36px;border:1px solid var(--border);border-radius:6px;padding:0 10px;background:var(--raised);color:var(--text)}
+.vela-smtc-check{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text)}
+.vela-smtc-check input{accent-color:var(--brand)}
+.vela-smtc-actions{display:flex;flex-wrap:wrap;gap:8px}
+.vela-smtc-actions button{min-height:34px;padding:7px 15px;border-radius:6px}
+.vela-smtc-settings-body a{align-self:flex-start;font-size:12px}
+.vela-smtc-overlay{position:fixed;inset:0;z-index:10020;display:grid;place-items:center;padding:18px;background:#000a}
+.vela-smtc-dialog{width:min(480px,100%);max-height:90dvh;overflow-y:auto;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:12px;box-shadow:0 18px 70px #0008;animation:vela-smtc-open 180ms cubic-bezier(.2,.7,.2,1)}
+.vela-smtc-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:19px 20px;border-bottom:1px solid var(--border)}
+.vela-smtc-dialog>header small{font-size:10px;letter-spacing:.11em;color:var(--muted)}
+.vela-smtc-dialog h2{margin-top:5px;font-size:20px}
+.vela-smtc-dialog>header button{font-size:25px;height:32px;width:32px;border-radius:7px}
+.vela-smtc-dialog>header button:hover{background:var(--hover)}
+.vela-smtc-dialog .vela-smtc-settings-body{padding:20px}
+@keyframes vela-smtc-open{from{opacity:0;transform:translateY(7px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes vela-smtc-bars{from{height:3px}to{height:15px}}
+@media(max-width:900px){.vela-smtc-card{margin:5px 4px;padding:7px}.vela-smtc-symbol{width:24px;height:24px}.vela-smtc-card .vela-smtc-caption,.vela-smtc-card .vela-smtc-song,.vela-smtc-card .vela-smtc-empty,.vela-smtc-card .vela-smtc-more{display:none!important}}
+@media(prefers-reduced-motion:reduce){.vela-smtc-equalizer i,.vela-smtc-dialog{animation:none!important}.vela-smtc-bar i{transition:none}}
