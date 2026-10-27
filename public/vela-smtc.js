@@ -194,7 +194,7 @@
     return window.velaMusic.api(path,options);
   }
   async function publishMusic(force=false) {
-    if (publishing) {if(force)publishNext=true;return;}
+    if (publishing) {if(force)publishNext=true;return false;}
     if (!state.account) return;
     if (!window.velaMusic?.selfUid?.()) {sharedStatus="Site update is not active yet. Reload Vela after the next build.";renderSettings();return;}
     var now=Date.now(), track=state.enabled && state.share && state.status==="connected" ? state.track : null;
@@ -213,34 +213,32 @@
       var response=await api("/profile-extras/"+encodeURIComponent(window.velaMusic.selfUid()),{method:"PUT",body:{music:record}});
       if (response?.music!==true) throw Error("The Cloudflare music-status update has not been deployed.");
       lastPublished=Date.now();lastSharedSong=signature;sharedStatus=record?"Sharing your music":"";
-    } catch(error){sharedStatus=error.message||"Could not share music";lastPublished=Date.now();}
+      if(record)window.velaMusic?.publishLocal?.({...record,updated:Date.now()});
+      else window.velaMusic?.publishLocal?.(null);
+      return true;
+    } catch(error){sharedStatus=error.message||"Could not share music";lastPublished=Date.now();return false;}
     finally {publishing=false;renderSettings();if(publishNext){publishNext=false;publishMusic(true);}}
-  }
-  function musicMessage(track) {
-    var search = "https://music.apple.com/us/search?term="+encodeURIComponent(track.title+" "+track.artist);
-    return "♫ Now playing: "+track.title+" — "+(track.artist||"Unknown artist")+"\n"+search;
   }
   async function sendToChat() {
     if (!state.track || !(state.track.playing || state.showPaused)) return;
+    var info=card?.querySelector("[data-smtc-send-feedback]");
+    var button=card?.querySelector("[data-smtc-send]");
+    if(button)button.disabled=true;
+    setText(info,"");
     try {
-      var text=musicMessage(state.track);
-      if (window.velaMusic?.send) {
-        await window.velaMusic.send(text);
-      } else {
-        var composer=document.querySelector("#composer"),form=document.querySelector("#composer-form");
-        if (!composer || !form) throw Error("Open a conversation to send the song.");
-        if (document.querySelector("#reply-preview")?.textContent?.trim() || document.querySelector("#upload-preview")?.textContent?.trim()) throw Error("Finish your pending reply or attachment first.");
-        var draft=composer.value||"";
-        composer.value=text;
-        form.requestSubmit();
-        if (draft) {composer.value=draft;composer.dispatchEvent(new Event("input",{bubbles:true}));}
-      }
-      var button=card?.querySelector("[data-smtc-send]");
-      if(button){setText(button,"Sent");setTimeout(function(){setText(button,"Send to chat");},1600);}
+      if(!window.velaMusic?.sendLive)throw Error("Refresh Vela to load the updated music widget.");
+      if(!document.querySelector('#composer-form'))throw Error("Open the conversation you want to share with first.");
+      // Sending a live widget explicitly opts the sender into live sharing.
+      // The original music stays private until this action or the settings switch.
+      if(!state.share){state.share=true;saveSettings();renderSettings();}
+      var published=await publishMusic(true);
+      if(!published)throw Error(sharedStatus||"Music sharing needs the updated Vela server.");
+      await window.velaMusic.sendLive({...state.track,position:getPosition(state.track)});
+      setText(button,"Live widget sent");
+      setTimeout(function(){setText(button,"Send live to chat");},2000);
     } catch(error) {
-      var info=card?.querySelector("[data-smtc-send-feedback]");
-      if(info)setText(info,error.message||"Could not send.");
-    }
+      setText(info,error.message||"Could not send the live widget.");
+    } finally {if(button)button.disabled=false;}
   }
   function peerMarkup(music) {
     var art=music.artwork && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(music.artwork) ? '<img src="'+escapeHTML(music.artwork)+'" alt="Album artwork">' : '<span class="vela-peer-music-symbol">♫</span>';
@@ -270,7 +268,7 @@
   }
   function cardHTML() {
     return '<div class="vela-smtc-head"><span class="vela-smtc-symbol" aria-hidden="true">♫</span><div class="vela-smtc-caption"><strong>Now playing</strong><small data-smtc-status>Not connected</small></div><button type="button" class="vela-smtc-more" data-smtc-settings aria-label="Music connection settings" title="Music settings">•••</button></div>' +
-      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send to chat</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div></div>' +
+      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send live to chat</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div></div>' +
       '<div class="vela-smtc-empty"><span data-smtc-message>Connect SMTC Bridge to show your music.</span><button type="button" data-smtc-action>Connect</button></div>';
   }
   function ensureCard() {
