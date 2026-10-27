@@ -7,6 +7,7 @@ export function messagePreview(text='',attachment){
  if(/^(?:\s*<:[a-zA-Z0-9_]{2,32}:[a-zA-Z0-9-]+>\s*)+$/.test(String(text)))return 'Emoji';
  const value=String(text).replace(/<:([a-zA-Z0-9_]{2,32}):[a-zA-Z0-9-]+>/g,':$1:');
  if(value.startsWith('[[vela-film:'))return 'Shared a film';
+ if(/^\[\[vela-live-music:1:[A-Za-z0-9_-]{8,2800}\]\]$/.test(value))return 'Shared live music';
  if(value.trim())return value;
  if(!attachment)return '';
  if(attachment.kind==='files')return attachment.files.length+' attachments';
