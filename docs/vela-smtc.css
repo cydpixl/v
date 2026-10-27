@@ -58,3 +58,19 @@
 @keyframes vela-smtc-bars{from{height:3px}to{height:15px}}
 @media(max-width:900px){.vela-smtc-card{margin:5px 4px;padding:7px}.vela-smtc-symbol{width:24px;height:24px}.vela-smtc-card .vela-smtc-caption,.vela-smtc-card .vela-smtc-song,.vela-smtc-card .vela-smtc-empty,.vela-smtc-card .vela-smtc-more{display:none!important}}
 @media(prefers-reduced-motion:reduce){.vela-smtc-equalizer i,.vela-smtc-dialog{animation:none!important}.vela-smtc-bar i{transition:none}}
+
+/* Music sharing and inline chat affordances */
+.vela-smtc-share-button{display:block;margin-top:11px;width:100%;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;font-weight:600;transition:background .15s ease,transform .15s ease}
+.vela-smtc-share-button:hover{background:var(--hover)}.vela-smtc-share-button:active{transform:scale(.985)}
+.vela-smtc-send-feedback{display:block;margin-top:5px;font-size:10px;color:var(--muted)}
+.vela-smtc-send-feedback:empty{display:none}
+.vela-peer-music{display:flex;align-items:center;gap:8px;max-width:240px;min-width:0;flex-shrink:1;padding:4px 9px;border:1px solid var(--border);border-radius:7px;background:var(--raised);animation:vela-smtc-open 180ms ease-out}
+.vela-peer-cover{height:27px;width:27px;min-width:27px;border-radius:5px;background:var(--panel);overflow:hidden;display:grid;place-items:center}
+.vela-peer-cover img{height:100%;width:100%;object-fit:cover}.vela-peer-music-symbol{font-size:16px}
+.vela-peer-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.vela-peer-info strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-peer-info small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-peer-state{font-size:9px;color:var(--muted);white-space:nowrap}
+@media(max-width:1130px){.vela-peer-music{max-width:155px}.vela-peer-state{display:none}}
+@media(max-width:650px){.vela-peer-music{max-width:105px;padding:3px 5px}.vela-peer-cover{width:22px;min-width:22px;height:22px}.vela-peer-state{display:none}}
+@media(prefers-reduced-motion:reduce){.vela-peer-music,.vela-smtc-share-button{animation:none;transition:none}}
