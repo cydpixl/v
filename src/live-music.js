@@ -19,12 +19,16 @@ export function createLiveMusicMessage(track){
   duration:Math.max(0,Math.min(86400000,Number(track?.duration)||0)),
   position:Math.max(0,Number(track?.position)||0),
   playing:track?.playing===true,
+  artwork:validCover(track?.artwork)&&track.artwork.length<2100?track.artwork:'',
   at:Date.now()
  };
  if(!snapshot.title)throw Error('Play some music before sharing.');
- const bytes=new TextEncoder().encode(JSON.stringify(snapshot));
- const text=Array.from(bytes,b=>String.fromCharCode(b)).join('');
- return PREFIX+btoa(text).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')+']]';
+ let bytes=new TextEncoder().encode(JSON.stringify(snapshot));
+ let text=Array.from(bytes,b=>String.fromCharCode(b)).join('');
+ let token=PREFIX+btoa(text).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')+']]';
+ if(token.length>2950){snapshot.artwork='';bytes=new TextEncoder().encode(JSON.stringify(snapshot));text=Array.from(bytes,b=>String.fromCharCode(b)).join('');token=PREFIX+btoa(text).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')+']]';}
+ if(token.length>2950)throw Error('Song metadata is too long to share.');
+ return token;
 }
 
 export function parseLiveMusicMessage(raw){
@@ -37,7 +41,7 @@ export function parseLiveMusicMessage(raw){
   if(!v||typeof v.title!=='string'||!v.title.trim()||v.title.length>200||typeof v.artist!=='string'||v.artist.length>200||typeof v.album!=='string'||v.album.length>200
     ||typeof v.duration!=='number'||!Number.isFinite(v.duration)||v.duration<0||v.duration>86400000
     ||typeof v.position!=='number'||!Number.isFinite(v.position)||v.position<0
-    ||typeof v.at!=='number'||!Number.isFinite(v.at)||typeof v.playing!=='boolean')return null;
+    ||typeof v.at!=='number'||!Number.isFinite(v.at)||typeof v.playing!=='boolean'||(v.artwork!==undefined&&v.artwork!==''&&!validCover(v.artwork)))return null;
   return v;
  }catch{return null}
 }
@@ -63,7 +67,7 @@ export function liveMusicMarkup(message,owner){
  const encoded=message.slice(PREFIX.length,-2);
  return '<section class="vela-live-music" data-music-owner="'+e(owner)+'" data-music-snapshot="'+encoded+'" role="group" aria-label="Live listening widget">'+
    '<header class="vlm-label"><span class="vlm-indicator"><i></i> LIVE MUSIC</span><span class="vlm-status" data-vlm-status>Connecting</span></header>'+
-   '<div class="vlm-body"><div class="vlm-cover" data-vlm-cover><span class="vlm-note" aria-hidden="true">♫</span></div>'+
+   '<div class="vlm-body"><div class="vlm-cover" data-vlm-cover><span class="vlm-note" aria-hidden="true" '+(validCover(snapshot.artwork)?'hidden':'')+'>♫</span>'+(validCover(snapshot.artwork)?'<img src="'+e(snapshot.artwork)+'" alt="Album artwork" loading="lazy">':'')+'</div>'+
    '<div class="vlm-details"><strong data-vlm-title title="'+e(snapshot.title)+'">'+e(snapshot.title)+'</strong><span data-vlm-artist>'+e(snapshot.artist||'Unknown artist')+'</span><small data-vlm-album>'+e(snapshot.album||'')+'</small></div>'+
    '<div class="vlm-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>'+
    '<div class="vlm-progress"><div class="vlm-rail"><i data-vlm-bar></i></div><div class="vlm-time"><time data-vlm-elapsed>'+stamp(snapshot.position)+'</time><time data-vlm-duration>'+stamp(snapshot.duration)+'</time></div></div>'+
@@ -82,17 +86,19 @@ function updateWidget(node,entry){
  const snapshot=memoizedSnapshot(node);
  if(!snapshot)return;
  const music=entry?.music;
- const isLive=music&&Number.isFinite(music.updated)&&Date.now()-music.updated<FRESH_MS;
+ const freshProfile=!!(music&&Number.isFinite(music.updated)&&Math.abs(Date.now()-music.updated)<FRESH_MS);
+ const freshSnapshot=Number.isFinite(snapshot.at)&&Date.now()-snapshot.at<45000&&Date.now()-snapshot.at> -15000;
+ const isLive=freshProfile||freshSnapshot;
  const unavailable=entry?.failed;
  const title=node.querySelector('[data-vlm-title]'),artist=node.querySelector('[data-vlm-artist]'),album=node.querySelector('[data-vlm-album]');
- const track=isLive?music:snapshot;
+ const track=freshProfile?music:snapshot;
  set(title,track.title);if(title)title.title=track.title;
  set(artist,track.artist||'Unknown artist');
  set(album,track.album||'');
  const cover=node.querySelector('[data-vlm-cover]');
  if(cover){
    const image=cover.querySelector('img');
-   const artwork=isLive&&validCover(music.artwork)?music.artwork:'';
+   const artwork=freshProfile&&validCover(music.artwork)?music.artwork:validCover(snapshot.artwork)?snapshot.artwork:'';
    if(artwork){
     if(!image){const img=document.createElement('img');img.alt='Current album artwork';img.loading='lazy';cover.append(img);}
     const img=cover.querySelector('img');
@@ -102,8 +108,8 @@ function updateWidget(node,entry){
  const note=node.querySelector('.vlm-note');if(note)note.hidden=!!cover?.querySelector('img');
  let status,footer;
  if(isLive){
-   status=music.playing?'LIVE':'PAUSED';
-   footer=music.playing?'Updates automatically as the music changes':'Playback paused';
+   status=track.playing?'LIVE':'PAUSED';
+   footer=track.playing?'Updates as the music changes':'Playback paused';
  }else if(entry){
    status='OFFLINE';
    footer=unavailable?'Unable to reach live status':'Listening activity ended';
@@ -111,12 +117,13 @@ function updateWidget(node,entry){
    status='CONNECTING';
    footer='Connecting to live listening activity…';
  }
- node.classList.toggle('vlm-playing',!!isLive&&music.playing===true);
+ node.classList.toggle('vlm-playing',!!isLive&&track.playing===true);
  node.classList.toggle('vlm-offline',!!entry&&!isLive);
  set(node.querySelector('[data-vlm-status]'),status);
  set(node.querySelector('[data-vlm-footer]'),footer);
- const pos=isLive?currentPosition(music):Math.min(snapshot.position,snapshot.duration||Infinity);
- const duration=isLive?music.duration:snapshot.duration;
+ const activeRecord=freshProfile?music:{...snapshot,updated:snapshot.at};
+ const pos=isLive?currentPosition(activeRecord):Math.min(snapshot.position,snapshot.duration||Infinity);
+ const duration=freshProfile?music.duration:snapshot.duration;
  const pct=duration>0?Math.max(0,Math.min(100,pos/duration*100)):0;
  const bar=node.querySelector('[data-vlm-bar]');
  if(bar)bar.style.width=pct+'%';
