@@ -6,9 +6,9 @@
   var ENDPOINT = "http://127.0.0.1:5000/now-playing";
   var APPLE_ID = "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App";
   var onWindows = /Windows/i.test(navigator.userAgent) || navigator.userAgentData?.platform === "Windows";
-  var state = { account: "", enabled: false, source: "apple", showPaused: false, track: null, status: "off", error: "", lastSeen: 0 };
+  var state = { account: "", enabled: false, source: "apple", showPaused: false, share: false, track: null, status: "off", error: "", lastSeen: 0 };
   var busy = false, controller = null, pollTimer = null, tickTimer = null, modal = null, card = null;
-  var lastArt = "", lastTitle = "", scanPending = false, destroyed = false;
+  var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", scanPending = false, destroyed = false;
   if (!onWindows) return;
 
   function escapeHTML(value) {
@@ -26,15 +26,17 @@
       state.enabled = saved.enabled === true;
       state.source = saved.source === "any" ? "any" : "apple";
       state.showPaused = saved.showPaused === true;
+      state.share = saved.share === true;
     } catch (_) {
       state.enabled = false;
       state.source = "apple";
       state.showPaused = false;
+      state.share = false;
     }
   }
   function saveSettings() {
     if (!state.account) return;
-    try { localStorage.setItem(storageKey(), JSON.stringify({enabled:state.enabled,source:state.source,showPaused:state.showPaused})); } catch (_) {}
+    try { localStorage.setItem(storageKey(), JSON.stringify({enabled:state.enabled,source:state.source,showPaused:state.showPaused,share:state.share})); } catch (_) {}
   }
   function formatTime(ms) {
     var seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -140,10 +142,12 @@
       state.status = "connected";
       state.error = "";
       state.lastSeen = Date.now();
+      if(state.share)publishMusic();
     } catch (error) {
       state.track = null;
       state.status = "error";
-      state.error = "Cannot reach SMTC Bridge at 127.0.0.1:5000. Start the bridge and allow local-network access.";
+      state.error = "Chrome could not access SMTC Bridge. The bridge may be running: allow Apps on device in Chrome Site settings, then reconnect.";
+      if(state.share)publishMusic(true);
     } finally {
       clearTimeout(timeout);
       controller = null;
@@ -152,6 +156,7 @@
     }
   }
   function disconnect() {
+    if(state.share)publishMusic(true);
     state.enabled = false;
     state.track = null;
     state.status = "off";
@@ -168,9 +173,102 @@
     renderCard();
     await refresh();
   }
+
+  async function compressCover(track) {
+    if (!track?.artwork) return "";
+    if (artSource === track.artwork) return tinyArt;
+    var src = track.artwork;
+    artSource = src; tinyArt = "";
+    try {
+      var img = new Image();
+      await new Promise(function(resolve,reject){img.onload=resolve;img.onerror=reject;img.src=src;});
+      var canvas = document.createElement("canvas");canvas.width=96;canvas.height=96;
+      canvas.getContext("2d").drawImage(img,0,0,96,96);
+      var result = canvas.toDataURL("image/jpeg",.58);
+      if (result.length<=40000 && artSource===src) tinyArt=result;
+    } catch (_) {tinyArt="";}
+    return tinyArt;
+  }
+  async function api(path,options) {
+    if (!window.velaMusic?.api) throw Error("The Vela frontend needs its latest build before sharing can work.");
+    return window.velaMusic.api(path,options);
+  }
+  async function publishMusic(force=false) {
+    if (publishing || !state.account || !window.velaMusic?.selfUid?.()) return;
+    var now=Date.now(), track=state.enabled && state.share && state.status==="connected" ? state.track : null;
+    var playing = track && (track.playing || state.showPaused);
+    var signature = playing ? track.title+"\0"+track.artist+"\0"+track.playing : "";
+    if (!force && now-lastPublished<19000 && lastSharedSong===signature) return;
+    if (!playing && !lastSharedSong && !force) return;
+    publishing=true;
+    try {
+      var record=null;
+      if (playing) record={
+        title:track.title.slice(0,200),artist:track.artist.slice(0,200),album:track.album.slice(0,200),
+        source:track.source.slice(0,150),playing:track.playing,position:getPosition(track),
+        duration:track.duration,artwork:await compressCover(track)
+      };
+      var response=await api("/profile-extras/"+encodeURIComponent(window.velaMusic.selfUid()),{method:"PUT",body:{music:record}});
+      if (response?.music!==true) throw Error("The Cloudflare music-status update has not been deployed.");
+      lastPublished=Date.now();lastSharedSong=signature;sharedStatus=record?"Sharing your music":"";
+    } catch(error){sharedStatus=error.message||"Could not share music";lastPublished=Date.now();}
+    finally {publishing=false;renderSettings();}
+  }
+  function musicMessage(track) {
+    var search = "https://music.apple.com/us/search?term="+encodeURIComponent(track.title+" "+track.artist);
+    return "♫ Now playing: "+track.title+" — "+(track.artist||"Unknown artist")+"\n"+search;
+  }
+  async function sendToChat() {
+    if (!state.track || !(state.track.playing || state.showPaused)) return;
+    try {
+      var text=musicMessage(state.track);
+      if (window.velaMusic?.send) {
+        await window.velaMusic.send(text);
+      } else {
+        var composer=document.querySelector("#composer"),form=document.querySelector("#composer-form");
+        if (!composer || !form) throw Error("Open a conversation to send the song.");
+        if (document.querySelector("#reply-preview")?.textContent?.trim() || document.querySelector("#upload-preview")?.textContent?.trim()) throw Error("Finish your pending reply or attachment first.");
+        var draft=composer.value||"";
+        composer.value=text;
+        form.requestSubmit();
+        if (draft) {composer.value=draft;composer.dispatchEvent(new Event("input",{bubbles:true}));}
+      }
+      var button=card?.querySelector("[data-smtc-send]");
+      if(button){setText(button,"Sent");setTimeout(function(){setText(button,"Send to chat");},1600);}
+    } catch(error) {
+      var info=card?.querySelector("[data-smtc-send-feedback]");
+      if(info)setText(info,error.message||"Could not send.");
+    }
+  }
+  function peerMarkup(music) {
+    var art=music.artwork && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(music.artwork) ? '<img src="'+escapeHTML(music.artwork)+'" alt="Album artwork">' : '<span class="vela-peer-music-symbol">♫</span>';
+    return '<span class="vela-peer-cover">'+art+'</span><span class="vela-peer-info"><strong>'+escapeHTML(music.title)+'</strong><small>'+escapeHTML(music.artist||"Unknown artist")+'</small></span><span class="vela-peer-state">'+(music.playing?"Listening":"Paused")+'</span>';
+  }
+  function renderPeer() {
+    var identity=document.querySelector("#workspace-header .header-identity");
+    var node=identity?.querySelector(".vela-peer-music");
+    if (!identity || !peerUid || !peerState || !Number.isFinite(peerState.updated) || Date.now()-peerState.updated>60000) {
+      node?.remove();return;
+    }
+    if(!node){node=document.createElement("div");node.className="vela-peer-music";node.setAttribute("aria-label","Friend's music activity");identity.append(node);}
+    var signature=JSON.stringify(peerState);
+    if(node.dataset.signature!==signature){node.innerHTML=peerMarkup(peerState);node.dataset.signature=signature;}
+  }
+  async function readPeer() {
+    var uid=window.velaMusic?.conversationPeer?.();
+    if (!uid || uid===window.velaMusic.selfUid?.()) {peerUid="";peerState=null;renderPeer();return;}
+    if(uid!==peerUid){peerUid=uid;peerState=null;renderPeer();}
+    if(peerBusy)return;
+    peerBusy=true;
+    try{
+      var result=await api("/profile-extras/"+encodeURIComponent(uid));
+      if(peerUid===uid){peerState=result.profile?.music||null;renderPeer();}
+    }catch(_){if(peerUid===uid){peerState=null;renderPeer();}}
+    finally{peerBusy=false;}
+  }
   function cardHTML() {
     return '<div class="vela-smtc-head"><span class="vela-smtc-symbol" aria-hidden="true">♫</span><div class="vela-smtc-caption"><strong>Now playing</strong><small data-smtc-status>Not connected</small></div><button type="button" class="vela-smtc-more" data-smtc-settings aria-label="Music connection settings" title="Music settings">•••</button></div>' +
-      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div></div></div>' +
+      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send to chat</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div>' +
       '<div class="vela-smtc-empty"><span data-smtc-message>Connect SMTC Bridge to show your music.</span><button type="button" data-smtc-action>Connect</button></div>';
   }
   function ensureCard() {
@@ -185,6 +283,7 @@
       card.innerHTML = cardHTML();
       dock.before(card);
       card.querySelector("[data-smtc-settings]").addEventListener("click", openSettings);
+      card.querySelector("[data-smtc-send]").addEventListener("click",sendToChat);
       card.querySelector("[data-smtc-action]").addEventListener("click", function () {
         if (state.enabled) refresh(); else openSettings();
       });
@@ -193,11 +292,11 @@
   }
   function settingsHTML() {
     return '<div class="vela-smtc-settings-body"><div class="vela-smtc-setting-row"><div><strong>SMTC Bridge</strong><p data-smtc-settings-state></p></div><span class="vela-smtc-dot"></span></div>' +
-      '<p class="vela-smtc-note">Show media playing on this Windows PC inside Vela. Music is read locally and is not shared with other users.</p>' +
+      '<p class="vela-smtc-note">Show your Windows music in Vela. Enable sharing below to let friends see the track on your profile and in conversations.</p>' +
       '<label class="vela-smtc-field">Media source<select data-smtc-source><option value="apple">Apple Music for Windows</option><option value="any">Current Windows media player</option></select></label>' +
-      '<label class="vela-smtc-check"><input type="checkbox" data-smtc-paused> Show track while paused</label>' +
+      '<label class="vela-smtc-check"><input type="checkbox" data-smtc-paused> Show track while paused</label><label class="vela-smtc-check"><input type="checkbox" data-smtc-share> Share my music with friends</label><p class="vela-smtc-note" data-smtc-sharing-state></p>' +
       '<div class="vela-smtc-actions"><button type="button" class="primary" data-smtc-connect>Connect</button><button type="button" class="secondary" data-smtc-disconnect>Disconnect</button></div>' +
-      '<p class="vela-smtc-note">SMTC Bridge must be running on this computer at <code>127.0.0.1:5000</code>. Your browser may ask permission for local-network access.</p>' +
+      '<p class="vela-smtc-note">SMTC Bridge must be running at <code>127.0.0.1:5000</code>. In Chrome, open Site settings for Vela and allow <strong>Apps on device</strong> (or <strong>Local network access</strong>), then reconnect.</p>' +
       '<a href="http://127.0.0.1:5000/now-playing" target="_blank" rel="noopener noreferrer">Open bridge diagnostics ↗</a></div>';
   }
   function wireSettings(host) {
@@ -209,6 +308,11 @@
       saveSettings();
       renderCard();
       if (state.enabled) refresh();
+    });
+    host.querySelector("[data-smtc-share]").addEventListener("change", function (ev) {
+      state.share=ev.target.checked;saveSettings();
+      if(!state.share){publishMusic(true);}else if(state.enabled){publishMusic(true);}
+      renderSettings();
     });
     host.querySelector("[data-smtc-paused]").addEventListener("change", function (ev) {
       state.showPaused = ev.target.checked;
@@ -227,6 +331,8 @@
       if (source && document.activeElement !== source) source.value = state.source;
       var paused = host.querySelector("[data-smtc-paused]");
       if (paused) paused.checked = state.showPaused;
+      var share=host.querySelector("[data-smtc-share]");if(share)share.checked=state.share;
+      setText(host.querySelector("[data-smtc-sharing-state]"),state.share?(sharedStatus||"Your current track will be visible to other Vela users."):"Private — music stays on this computer.");
       var button = host.querySelector("[data-smtc-connect]");
       setText(button, state.enabled ? "Reconnect" : "Connect");
       var stop = host.querySelector("[data-smtc-disconnect]");
@@ -268,6 +374,7 @@
     if (account !== state.account) {
       controller?.abort();
       state.account = account;
+      lastPublished=0;lastSharedSong="";sharedStatus="";peerUid="";peerState=null;artSource="";tinyArt="";
       state.track = null;
       state.status = "off";
       state.error = "";
@@ -281,6 +388,7 @@
     if (!account) return;
     ensureCard();
     ensureConnectionSettings();
+    renderPeer();
   }
   function scheduleScan() {
     if (scanPending) return;
@@ -290,6 +398,7 @@
   new MutationObserver(scheduleScan).observe(document.body, {childList:true,subtree:true});
   pollTimer = setInterval(function () { if (state.enabled) refresh(); }, 2000);
   tickTimer = setInterval(updateProgress, 500);
-  document.addEventListener("visibilitychange", function () { if (!document.hidden && state.enabled) refresh(); });
+  setInterval(function(){if(document.hidden||!state.account)return;var now=Date.now();if(now-peerPollAt>12000){peerPollAt=now;readPeer();}if(state.share&&state.enabled&&now-lastPublished>19500)publishMusic();renderPeer();},2400);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden){if(state.enabled)refresh();readPeer();} });
   scan();
 })();
