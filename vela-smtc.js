@@ -156,8 +156,8 @@
     }
   }
   function disconnect() {
-    if(state.share)publishMusic(true);
     state.enabled = false;
+    if(state.share)publishMusic(true);
     state.track = null;
     state.status = "off";
     state.error = "";
@@ -194,7 +194,8 @@
     return window.velaMusic.api(path,options);
   }
   async function publishMusic(force=false) {
-    if (publishing || !state.account || !window.velaMusic?.selfUid?.()) return;
+    if (publishing || !state.account) return;
+    if (!window.velaMusic?.selfUid?.()) {sharedStatus="Site update is not active yet. Reload Vela after the next build.";renderSettings();return;}
     var now=Date.now(), track=state.enabled && state.share && state.status==="connected" ? state.track : null;
     var playing = track && (track.playing || state.showPaused);
     var signature = playing ? track.title+"\0"+track.artist+"\0"+track.playing : "";
