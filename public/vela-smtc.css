@@ -74,3 +74,12 @@
 @media(max-width:1130px){.vela-peer-music{max-width:155px}.vela-peer-state{display:none}}
 @media(max-width:650px){.vela-peer-music{max-width:105px;padding:3px 5px}.vela-peer-cover{width:22px;min-width:22px;height:22px}.vela-peer-state{display:none}}
 @media(prefers-reduced-motion:reduce){.vela-peer-music,.vela-smtc-share-button{animation:none;transition:none}}
+
+/* Profile music activity: shared through authenticated profile extras */
+.vela-profile-song{display:flex;gap:10px;align-items:center;border:1px solid var(--border);background:var(--raised);border-radius:9px;padding:10px;margin:10px 0;min-width:0}
+.vela-profile-song img,.vela-profile-song-icon{width:48px;height:48px;min-width:48px;border-radius:6px;object-fit:cover}
+.vela-profile-song-icon{display:grid;place-items:center;background:var(--panel);font-size:24px;color:var(--muted)}
+.vela-profile-song>div{display:flex;flex-direction:column;min-width:0;gap:3px}
+.vela-profile-song strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-profile-song small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vela-profile-song>div>span{font-size:10px;color:var(--muted)}
