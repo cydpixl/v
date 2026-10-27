@@ -4,7 +4,7 @@ import './live-music.css';
 // Live-music messages are stored as normal authenticated Vela messages with a
 // versioned marker. The UI never displays the marker or a music search URL.
 const PREFIX='[[vela-live-music:1:';
-const pattern=/^\[\[vela-live-music:1:([A-Za-z0-9_-]{8,2800})\]\]$/;
+const pattern=/^\[\[vela-live-music:1:([A-Za-z0-9_-]{8,3000})\]\]$/;
 const cache=new Map();
 const pending=new Map();
 let root=null,reader=null,timer=null,lastConversation='';
