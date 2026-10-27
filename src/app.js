@@ -184,13 +184,46 @@ function acceptedMessage(local,result){
 const outboxPump=createOutboxPump({state:()=>S,send:m=>api('/conversations/'+encodeURIComponent(m.conversation)+(m.command?'/commands':'/messages'),{method:'POST',signal:AbortSignal.timeout(15000),body:m.command?{id:m.id,command:m.command,args:m.commandArgs||''}:{id:m.id,text:m.text,upload:m.upload,uploads:m.uploads,asset:m.asset,gif:m.gif,replyTo:m.reply_to}}),accept:acceptedMessage,changed:()=>{persistOutbox();renderMessages();}});
 const flushOutbox=()=>outboxPump.flush();
 
-// Bridge to the local SMTC companion. Shares structured, auto-updating
-// message cards through Vela's durable outbox, without changing a typed draft.
+// Live music cards use Vela's existing message update/broadcast endpoint.
+// No new Worker route is required: the original message ID is updated in place.
+const liveMusicStore=()=>S.user?'vela.music.live-messages.'+S.user.uid:'';
+function liveMusicRecords(){
+ try{
+  const records=JSON.parse(localStorage.getItem(liveMusicStore())||'[]');
+  return Array.isArray(records)?records.filter(x=>x&&/^[\da-f-]{36}$/i.test(x.id)&&typeof x.conversation==='string'&&Date.now()-Number(x.created)<86400000).slice(-3):[];
+ }catch{return []}
+}
+function saveLiveMusicRecords(records){if(S.user)localStorage.setItem(liveMusicStore(),JSON.stringify(records.slice(-3)));}
+let liveMusicUpdating=false,liveMusicLastUpdate=0,liveMusicLastSignature='',liveMusicSyncPending=false;
+async function synchronizeLiveMusic(track,force=false){
+ if(!S.user||!track?.title)return false;
+ const records=liveMusicRecords();if(!records.length)return false;
+ const signature=[track.title,track.artist,track.playing,track.duration].join('\0');
+ if(liveMusicUpdating){if(force||signature!==liveMusicLastSignature)liveMusicSyncPending=true;return false}
+ if(!force&&signature===liveMusicLastSignature&&Date.now()-liveMusicLastUpdate<12000)return true;
+ liveMusicUpdating=true;
+ try{
+  const token=createLiveMusicMessage(track),kept=[];
+  for(const item of records){
+   try{await api('/messages/'+encodeURIComponent(item.id),{method:'PATCH',body:{text:token}});kept.push(item);}
+   catch(error){
+    if(!/\b(403|404)\b/.test(String(error.message||'')))kept.push(item);
+   }
+  }
+  saveLiveMusicRecords(kept);
+  liveMusicLastSignature=signature;liveMusicLastUpdate=Date.now();
+  return kept.length>0;
+ }finally{
+  liveMusicUpdating=false;
+  if(liveMusicSyncPending){liveMusicSyncPending=false;setTimeout(()=>synchronizeLiveMusic(track,true).catch(()=>{}),0);}
+ }
+}
 window.velaMusic={
  api:(path,options)=>api(path,options),
  selfUid:()=>S.user?.uid||null,
  conversationPeer:()=>{const c=active();return S.view==='chat'&&c?.kind!=='group'?other(c)?.uid||null:null;},
  publishLocal:music=>{if(S.user?.uid)refreshOwnLiveMusic(S.user.uid,music);},
+ syncLive:track=>synchronizeLiveMusic(track).catch(()=>false),
  sendLive:async track=>{
   const c=active();
   if(!S.user||S.view!=='chat'||!c)throw Error('Open a conversation to send your live music.');
@@ -199,6 +232,10 @@ window.velaMusic={
   S.outbox.push(message);persistOutbox();renderMessages();
   const scroll=$('#message-scroll');if(scroll)scroll.scrollTop=scroll.scrollHeight;
   await flushOutbox();
+  const records=liveMusicRecords();
+  records.push({id:message.id,conversation:c.id,created:Date.now()});
+  saveLiveMusicRecords(records);
+  liveMusicLastUpdate=Date.now();liveMusicLastSignature=[track.title,track.artist,track.playing,track.duration].join('\0');
   return true;
  }
 };
