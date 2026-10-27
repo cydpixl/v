@@ -8,7 +8,7 @@
   var onWindows = /Windows/i.test(navigator.userAgent) || navigator.userAgentData?.platform === "Windows";
   var state = { account: "", enabled: false, source: "apple", showPaused: false, share: false, track: null, status: "off", error: "", lastSeen: 0 };
   var busy = false, controller = null, pollTimer = null, tickTimer = null, modal = null, card = null;
-  var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, publishNext = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", scanPending = false, destroyed = false;
+  var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, publishNext = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", cardArtSource = "", cardArt = "", scanPending = false, destroyed = false;
   if (!onWindows) return;
 
   function escapeHTML(value) {
@@ -143,6 +143,10 @@
       state.error = "";
       state.lastSeen = Date.now();
       if(state.share)publishMusic();
+      if(state.track&&(state.track.playing||state.showPaused)&&window.velaMusic?.syncLive){
+        const song=state.track;
+        widgetSnapshot(song).then(data=>window.velaMusic.syncLive(data)).catch(()=>{});
+      }
     } catch (error) {
       state.track = null;
       state.status = "error";
@@ -189,6 +193,28 @@
     } catch (_) {tinyArt="";}
     return tinyArt;
   }
+  async function messageArtwork(track) {
+    if(!track?.artwork)return "";
+    if(cardArtSource===track.artwork)return cardArt;
+    const src=track.artwork;
+    cardArtSource=src;cardArt="";
+    try{
+      const image=new Image();
+      await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=src;});
+      const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+      if(!ctx)return "";
+      for(const size of [40,32,24]){
+        canvas.width=size;canvas.height=size;
+        ctx.drawImage(image,0,0,size,size);
+        const url=canvas.toDataURL("image/jpeg",size===40?.36:.27);
+        if(url.length<2100){if(cardArtSource===src)cardArt=url;break;}
+      }
+    }catch(_){cardArt="";}
+    return cardArt;
+  }
+  async function widgetSnapshot(track) {
+    return {...track,position:getPosition(track),artwork:await messageArtwork(track)};
+  }
   async function api(path,options) {
     if (!window.velaMusic?.api) throw Error("The Vela frontend needs its latest build before sharing can work.");
     return window.velaMusic.api(path,options);
@@ -220,26 +246,19 @@
     finally {publishing=false;renderSettings();if(publishNext){publishNext=false;publishMusic(true);}}
   }
   async function sendToChat() {
-    if (!state.track || !(state.track.playing || state.showPaused)) return;
-    var info=card?.querySelector("[data-smtc-send-feedback]");
-    var button=card?.querySelector("[data-smtc-send]");
+    if(!state.track||!(state.track.playing||state.showPaused))return;
+    const info=card?.querySelector("[data-smtc-send-feedback]");
+    const button=card?.querySelector("[data-smtc-send]");
     if(button)button.disabled=true;
     setText(info,"");
-    try {
-      if(!window.velaMusic?.sendLive)throw Error("Refresh Vela to load the updated music widget.");
-      if(!document.querySelector('#composer-form'))throw Error("Open the conversation you want to share with first.");
-      // Sending a live widget explicitly opts the sender into live sharing.
-      // The original music stays private until this action or the settings switch.
-      if(!state.share){state.share=true;saveSettings();renderSettings();}
-      for(var retries=0;publishing&&retries<24;retries++)await new Promise(resolve=>setTimeout(resolve,150));
-      var published=await publishMusic(true);
-      if(!published)throw Error(sharedStatus||"Music sharing needs the updated Vela server.");
-      await window.velaMusic.sendLive({...state.track,position:getPosition(state.track)});
+    try{
+      if(!window.velaMusic?.sendLive)throw Error("Refresh Vela to enable live music cards.");
+      if(!document.querySelector("#composer-form"))throw Error("Open a conversation first.");
+      await window.velaMusic.sendLive(await widgetSnapshot(state.track));
       setText(button,"Live widget sent");
-      setTimeout(function(){setText(button,"Send live to chat");},2000);
-    } catch(error) {
-      setText(info,error.message||"Could not send the live widget.");
-    } finally {if(button)button.disabled=false;}
+      setTimeout(()=>setText(button,"Send live to chat"),1700);
+    }catch(error){setText(info,error.message||"Unable to send live music.");}
+    finally{if(button)button.disabled=false;}
   }
   function peerMarkup(music) {
     var art=music.artwork && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(music.artwork) ? '<img src="'+escapeHTML(music.artwork)+'" alt="Album artwork">' : '<span class="vela-peer-music-symbol">♫</span>';
