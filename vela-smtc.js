@@ -8,7 +8,7 @@
   var onWindows = /Windows/i.test(navigator.userAgent) || navigator.userAgentData?.platform === "Windows";
   var state = { account: "", enabled: false, source: "apple", showPaused: false, share: false, track: null, status: "off", error: "", lastSeen: 0 };
   var busy = false, controller = null, pollTimer = null, tickTimer = null, modal = null, card = null;
-  var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", scanPending = false, destroyed = false;
+  var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, publishNext = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", scanPending = false, destroyed = false;
   if (!onWindows) return;
 
   function escapeHTML(value) {
@@ -147,7 +147,7 @@
       state.track = null;
       state.status = "error";
       state.error = "Chrome could not access SMTC Bridge. The bridge may be running: allow Apps on device in Chrome Site settings, then reconnect.";
-      if(state.share)publishMusic(true);
+      if(state.share&&lastSharedSong)publishMusic(true);
     } finally {
       clearTimeout(timeout);
       controller = null;
@@ -194,7 +194,8 @@
     return window.velaMusic.api(path,options);
   }
   async function publishMusic(force=false) {
-    if (publishing || !state.account) return;
+    if (publishing) {if(force)publishNext=true;return;}
+    if (!state.account) return;
     if (!window.velaMusic?.selfUid?.()) {sharedStatus="Site update is not active yet. Reload Vela after the next build.";renderSettings();return;}
     var now=Date.now(), track=state.enabled && state.share && state.status==="connected" ? state.track : null;
     var playing = track && (track.playing || state.showPaused);
@@ -213,7 +214,7 @@
       if (response?.music!==true) throw Error("The Cloudflare music-status update has not been deployed.");
       lastPublished=Date.now();lastSharedSong=signature;sharedStatus=record?"Sharing your music":"";
     } catch(error){sharedStatus=error.message||"Could not share music";lastPublished=Date.now();}
-    finally {publishing=false;renderSettings();}
+    finally {publishing=false;renderSettings();if(publishNext){publishNext=false;publishMusic(true);}}
   }
   function musicMessage(track) {
     var search = "https://music.apple.com/us/search?term="+encodeURIComponent(track.title+" "+track.artist);
