@@ -133,7 +133,7 @@
     controller = new AbortController();
     var timeout = setTimeout(function () { controller?.abort(); }, 3000);
     try {
-      var response = await fetch(ENDPOINT, {mode:"cors",targetAddressSpace:"loopback",cache:"no-store",signal:controller.signal});
+      var response = await fetch(ENDPOINT, {mode:"cors",targetAddressSpace:"local",cache:"no-store",signal:controller.signal});
       if (!response.ok) throw Error("Bridge returned HTTP " + response.status);
       var payload = await response.json();
       if (!payload || !Array.isArray(payload.sessions)) throw Error("Invalid bridge response");
@@ -231,6 +231,7 @@
       // Sending a live widget explicitly opts the sender into live sharing.
       // The original music stays private until this action or the settings switch.
       if(!state.share){state.share=true;saveSettings();renderSettings();}
+      for(var retries=0;publishing&&retries<24;retries++)await new Promise(resolve=>setTimeout(resolve,150));
       var published=await publishMusic(true);
       if(!published)throw Error(sharedStatus||"Music sharing needs the updated Vela server.");
       await window.velaMusic.sendLive({...state.track,position:getPosition(state.track)});
