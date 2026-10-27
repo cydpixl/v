@@ -182,6 +182,25 @@ function acceptedMessage(local,result){
 }
 const outboxPump=createOutboxPump({state:()=>S,send:m=>api('/conversations/'+encodeURIComponent(m.conversation)+(m.command?'/commands':'/messages'),{method:'POST',signal:AbortSignal.timeout(15000),body:m.command?{id:m.id,command:m.command,args:m.commandArgs||''}:{id:m.id,text:m.text,upload:m.upload,uploads:m.uploads,asset:m.asset,gif:m.gif,replyTo:m.reply_to}}),accept:acceptedMessage,changed:()=>{persistOutbox();renderMessages();}});
 const flushOutbox=()=>outboxPump.flush();
+
+// Native now-playing integration. Uses Vela's authenticated API and existing outbox.
+window.velaMusic={
+ api:(path,options)=>api(path,options),
+ selfUid:()=>S.user?.uid||null,
+ conversationPeer:()=>{const c=active();return S.view==='chat'&&c?.kind!=='group'?other(c)?.uid||null:null;},
+ send:async text=>{
+  const c=active();
+  if(!S.user||S.view!=='chat'||!c)throw Error('Open a conversation to send your music.');
+  const value=String(text||'').trim();
+  if(!value||value.length>2000)throw Error('Invalid music message.');
+  const message={id:crypto.randomUUID(),conversation:c.id,sender:S.user.uid,text:value,created:Date.now(),pending:true};
+  S.outbox.push(message);persistOutbox();renderMessages();
+  const scroll=$('#message-scroll');if(scroll)scroll.scrollTop=scroll.scrollHeight;
+  await flushOutbox();
+  return true;
+ }
+};
+
 function sendExpression(media,preview,cid){
  if(!cid||!S.user)return;
  const attachment={kind:preview.kind,name:preview.name,type:preview.type||'image/gif',size:preview.size,url:preview.url,...(media.asset?{expressionId:media.asset}:{})};
