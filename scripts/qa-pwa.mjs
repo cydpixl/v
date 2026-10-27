@@ -68,7 +68,8 @@ try{
  }
  if(!process.env.QA_WEBKIT&&process.env.QA_CALL==='1'){
   await a.getByRole('button',{name:'Start Video Call',exact:true}).click();await b.getByRole('button',{name:'Join Call',exact:true}).first().click();
-  await b.waitForFunction(()=>[...document.querySelectorAll('#call-stage video')].some(v=>v.videoWidth>0&&v.readyState>=2));
+  await b.waitForFunction(uid=>[...document.querySelectorAll('#call-stage [data-participant="'+uid+'"] video')].some(v=>v.videoWidth>0&&v.readyState>=2),qa.users[0].uid);
+  await a.waitForFunction(uid=>[...document.querySelectorAll('#call-stage [data-participant="'+uid+'"] video')].some(v=>v.videoWidth>0&&v.readyState>=2),qa.users[1].uid);
   assert.ok(await a.getByRole('button',{name:'Send Message',exact:true}).evaluate(x=>x.getBoundingClientRect().bottom<=innerHeight));
   await a.screenshot({path:'output/playwright/pwa-video-call.png'});
   for(const page of [a,b])await page.locator('#call-controls [data-action=leave-call]').click();

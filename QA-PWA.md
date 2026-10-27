@@ -12,6 +12,7 @@ Tested October 27, 2026 against the existing authenticated API using the retaine
 - Production-build shell: complete boot graph and install icons precached. First offline reopen boots; signed-in offline startup shows recovery, then reconnect restores the session and draft.
 - Service-worker update preserves the current form, offers a controlled reload and clears only Vela-owned caches.
 - Regression checks: syntax, production build, outbox, clipboard, social parsing and library state passed.
+- Live deployment: GitHub build and Pages deployment succeeded. The public site passed the Chromium upload/retry/resume suite, bidirectional remote-camera decoding, unavailable-storage fallback and signed-in offline recovery with zero page errors. WebKit also verified real file delivery on the public site; injected interruption tests use the local proxy because service-worker-controlled WebKit requests can bypass browser interception.
 
 The local API proxy preserves upload bytes and supplies the production Origin for API/WebSocket verification. Playwright's WebKit request interception drops Blob request bodies, so body-forwarding tests use that proxy or the live site.
 
