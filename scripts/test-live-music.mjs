@@ -32,7 +32,6 @@ assert.ok(!html.includes('https://music.apple.com'));
 assert.ok(!html.includes('[[vela-live-music'));
 assert.equal(liveMusicMarkup('plain text','firebase-user-id'),null);
 assert.equal(liveMusicMarkup(encoded,''),null);
-assert.equal(liveMusicMarkup(encoded,'bad" onclick="alert(1)'),null===false?null:liveMusicMarkup(encoded,'bad" onclick="alert(1)')); // input is escaped
 const malicious=liveMusicMarkup(encoded,'bad" onclick="alert(1)');
 assert.ok(malicious.includes('&quot;'));
 assert.ok(!malicious.includes('data-music-owner="bad" onclick='));
