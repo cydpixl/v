@@ -1,0 +1,76 @@
+/* Mobile and tablet share a single workspace; desktop keeps its full tool row. */
+.upload-progress{min-width:0;flex-wrap:wrap}
+.upload-progress>span{min-width:0;flex:1;overflow-wrap:anywhere}
+.upload-progress progress{flex-basis:100%;width:100%}
+.attachment-preview strong,.attachment-preview small{display:block}
+.attachment-preview strong{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attachment-preview small{font-size:11px;color:var(--muted);margin-top:3px}
+#upload-preview{max-height:180px;overflow-y:auto;overscroll-behavior:contain}
+.queue-job strong{overflow-wrap:anywhere}.queue-job>div{flex-wrap:wrap}
+.pwa-update{position:fixed;z-index:200;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(440px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;padding:14px;background:var(--raised);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 36px #0006}
+.pwa-update span{flex:1;font-size:13px}.pwa-update button{white-space:nowrap}
+@media(max-width:1099px){
+ html,body,#app{width:100%;height:var(--vela-app-height,100dvh);max-width:100%;overflow:hidden}
+ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+ body{position:fixed;inset:var(--vela-viewport-top,0px) 0 auto;height:var(--vela-app-height,100dvh);overscroll-behavior:none}
+ html[data-theme] .app-shell,.app-shell{width:100%;height:100%;padding:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden}
+ .top-strip,.server-rail,.sidebar-resize{display:none!important}
+ .workspace{grid-column:1;grid-row:1;height:100%;min-width:0;overflow:hidden;position:relative}
+ html[data-theme] .sidebar{position:absolute;left:0;top:0;bottom:0;width:min(86vw,340px);max-width:340px;z-index:21;transform:translateX(-110%);transition:transform .18s ease;box-shadow:20px 0 60px #0007;padding:max(10px,env(safe-area-inset-top)) 0 max(8px,env(safe-area-inset-bottom));background:var(--panel);backdrop-filter:none;overflow-x:hidden;overflow-y:auto}
+ html[data-theme] .nav-open .sidebar{transform:none}
+ .nav-open .workspace:after{content:'';position:absolute;inset:0;z-index:20;background:#0009;backdrop-filter:none;pointer-events:none}
+ #account-dock{position:static;width:auto;min-width:0;margin:6px 8px 0;padding:8px;border:1px solid var(--border);border-radius:10px;flex-wrap:nowrap}
+ .self-profile{min-width:0;flex:1}.self-profile>span:last-child{max-width:none;min-width:0}.self-profile strong,.self-profile small{overflow:hidden;text-overflow:ellipsis}
+ .dock-controls{gap:0}.dock-controls .icon-button{width:34px;height:40px}.dock-controls .device-chevron{display:none}
+ .quick-find{flex:none}.home-navigation{flex:none}.dm-list{min-height:60px;flex:1;overflow-y:auto}.dm-heading{flex:none}
+ #workspace-header{flex:none;height:auto;min-height:calc(58px + env(safe-area-inset-top));padding:calc(6px + env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 6px max(8px,env(safe-area-inset-left));flex-wrap:nowrap;gap:4px}
+ .header-identity{flex:1;min-width:0;gap:8px;flex-wrap:nowrap}
+ .header-identity>.icon-button:first-child{display:inline-flex;width:42px;height:44px}
+ .header-identity>strong{max-width:none;min-width:0;font-size:15px;white-space:nowrap}
+ .header-identity>.muted,.header-identity>svg,.header-divider,.header-search{display:none!important}
+ .header-actions{gap:0;flex:none}.header-actions .icon-button{width:40px;height:44px;min-width:40px}
+ .header-actions>[data-action=pins],.header-actions>[data-action=members],.header-actions>[data-social-compose],.header-actions>.secondary{display:none}
+ .header-actions>[data-action=conversation-more]{display:inline-flex!important}
+ .header-call-buttons{display:flex}.join-active-call{padding:8px;min-height:42px;font-size:12px}
+ #workspace-header:has(.friend-tabs){flex-wrap:wrap}
+ #workspace-header:has(.friend-tabs)>.header-identity{flex-wrap:wrap}
+ .friend-tabs{order:2;flex-basis:100%;margin:0;gap:4px;overflow-x:auto;scrollbar-width:none}
+ .friend-tabs>button{font-size:13px;min-height:40px;white-space:nowrap;padding:8px 12px}
+ .chat-content{height:auto;min-height:0;flex:1;overflow:hidden}
+ .message-scroll{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+ #composer-form{padding:4px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));flex:none}
+ html[data-theme] .composer,.composer{display:flex;flex-wrap:nowrap;gap:2px;align-items:flex-end;min-height:52px;padding:4px;border-radius:14px}
+ .composer .rich-composer{flex:1;min-width:60px;min-height:42px;max-height:132px;font-size:16px;line-height:24px;padding:9px 5px}
+ .rich-composer[data-empty=true]:before{font-size:16px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .composer .icon-button{width:42px;min-width:42px;height:42px;min-height:42px}
+ .composer>[data-action=take-photo],.composer>[data-voice-note],.composer>.composer-gif,.composer>[data-action=sticker],.composer>.schedule-button{display:none}
+ .composer .send-button{order:6}.composer-hint{display:block;min-height:0;font-size:11px}.composer-hint:has(#outbox-status:empty){display:none}
+ .keyboard-open #composer-form{padding-bottom:6px}.keyboard-open .conversation-start{display:none}
+ .message{padding-right:12px;padding-left:12px;min-width:0}.message-text{overflow-wrap:anywhere}.message-text pre{max-width:100%;overflow-x:auto}
+ .message-text img,.image-attachment,.video-attachment{max-width:100%}.file-attachment{min-width:0;max-width:100%}
+ .conversation-start{padding:20px 16px}.conversation-start h1{font-size:24px;overflow-wrap:anywhere}
+ .modal,.theme-dialog{max-height:calc(var(--vela-app-height,100dvh) - 24px);max-width:calc(100vw - 20px);overscroll-behavior:contain}
+ .auth-screen{min-height:100%;height:100%;overflow-y:auto;align-items:flex-start;padding:72px 16px 24px}.auth-card{margin:auto;flex:none;max-width:100%}
+ .modal>header{padding:10px 14px}.modal>header .icon-button{width:44px;height:44px}.modal-content{padding:16px;overflow-wrap:anywhere}
+ .popover-menu{max-width:calc(100vw - 16px);max-height:calc(var(--vela-app-height,100dvh) - 20px);overflow-y:auto;overscroll-behavior:contain}
+ .popover-menu button{min-height:44px}
+ /* iOS does not focus-zoom fields rendered at 16px or larger. */
+ input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select,[contenteditable=true],.modal input:not([type=checkbox]):not([type=radio]):not([type=range]),.modal select,html[data-theme] .desktop-settings .settings-search{font-size:16px!important}
+ html[data-theme] .desktop-settings{width:calc(100vw - 16px);height:calc(var(--vela-app-height,100dvh) - 20px);max-height:calc(var(--vela-app-height,100dvh) - 20px)}
+ html[data-theme] .desktop-settings>header{margin-left:0;height:65px;flex:none}
+ html[data-theme] .desktop-settings>.modal-content{padding:0;overflow:hidden;height:calc(100% - 65px)}
+ html[data-theme] .desktop-settings .settings-layout{display:flex;flex-direction:column;margin:0;height:100%;min-height:0}
+ html[data-theme] .desktop-settings .settings-layout>nav{position:static;width:100%;height:auto;display:flex;flex:none;align-items:center;overflow-x:auto;overflow-y:hidden;padding:8px;gap:8px;border-right:0;border-bottom:1px solid var(--border)}
+ html[data-theme] .desktop-settings .settings-nav-group{display:flex;flex:none;gap:4px;padding:0;margin:0;border:0}
+ html[data-theme] .desktop-settings .settings-nav-group h3,html[data-theme] .desktop-settings .settings-layout>nav .settings-profile,html[data-theme] .desktop-settings .settings-search,html[data-theme] .desktop-settings .settings-version,html[data-theme] .desktop-settings .settings-layout nav hr{display:none}
+ html[data-theme] .desktop-settings .settings-layout>nav button{flex:none;display:flex;align-items:center;gap:6px;width:auto;white-space:nowrap;min-height:44px;font-size:13px;padding:8px 10px}
+ html[data-theme] .desktop-settings .settings-scroll{flex:1;min-height:0;overflow-y:auto;margin:0}
+ html[data-theme] .desktop-settings .settings-layout #settings-page{padding:20px 16px 36px}.device-grid{grid-template-columns:1fr}
+ #call-stage{flex:none;min-height:170px;height:min(34dvh,300px);max-height:45%}.call-controls{flex-wrap:wrap;gap:6px}
+ body.cinema-page-open #vela-movies{height:100%;width:100%;min-height:0}
+ #toasts{max-width:calc(100vw - 24px);bottom:max(84px,env(safe-area-inset-bottom));pointer-events:none}
+}
+@media(max-width:359px){.header-identity>.avatar-profile-button{display:none}.header-actions .icon-button{width:36px;min-width:36px}.composer .icon-button{width:40px;min-width:40px}.composer .rich-composer{min-width:56px}}
+@media(prefers-reduced-motion:reduce){html[data-theme] .sidebar{transition:none}}
+
+@media(min-width:1100px) and (max-width:1299px){.header-actions .header-search,.header-actions>.secondary,.header-actions>[data-social-compose]{display:none}.header-actions,.header-identity{gap:8px}.composer>[data-action=take-photo],.composer>.composer-gif,.composer>[data-action=sticker],.composer>.schedule-button{display:none}}

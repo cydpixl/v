@@ -1,11 +1,11 @@
 {
-  "version": "1.5.3",
-  "release": "call-stability-20261025",
+  "version": "1.5.4",
+  "release": "pwa-repair-20261027",
   "changes": [
-    "Recover interrupted cameras without enabling a camera turned off by the user",
-    "Preserve peer media across short signaling outages",
-    "Recover stalled or broken peer connections",
-    "Adapt video sending to available bandwidth and protect microphone audio",
-    "Keep speaking and connection updates from rebuilding call controls"
+    "Full-width phone and tablet chat with usable typing space and reachable settings",
+    "Prevent text-field focus zoom and keep Send visible when the keyboard opens",
+    "Persistent multipart uploads with byte progress, pause, retry, reload recovery and individual attachment removal",
+    "Portable WebKit file persistence and separate upload metadata checkpoints",
+    "Complete offline app shell, install icons and non-disruptive update notices"
   ]
 }

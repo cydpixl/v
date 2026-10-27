@@ -28,7 +28,7 @@ This remains an independent app with unfinished Discord parity. Server creation/
 
 Emoji attribution: [Twemoji](https://github.com/jdecked/twemoji), CC-BY 4.0 graphics; emoji-mart metadata, MIT. See `public/emoji/ATTRIBUTION.txt`.
 
-Clipboard screenshots: focus the message box and press Ctrl+V (Cmd+V on macOS). Images use the existing private attachment uploader, show a removable thumbnail, and wait for Send. Text paste is preserved. One attachment per message; 25 MB limit. Run `npm run test:clipboard` for clipboard extraction and paste-event checks.
+Clipboard screenshots: focus the message box and press Ctrl+V (Cmd+V on macOS). Images use the existing private attachment uploader, show a removable thumbnail, and wait for Send. Text paste is preserved. Up to ten attachments per message; 512 MB per file. Run `npm run test:clipboard` for clipboard extraction and paste-event checks.
 
 
 ## Connections tools · 1.4.1
@@ -38,3 +38,14 @@ Vela now includes the Connections chat gallery, voice notes, global search, save
 Groups support 20 members and owner/admin member management. Calls include camera snapshots and 10–60 second replay clips. Profiles include drawings, playable mini-games, favorite films, custom status, and Lanyard activity previews. Uploads support ten attachments, 512 MB files, a persistent resumable queue, and multipart checkpoints. Media tools include music/shared listening, MKV/MOV conversion, subtitle tracks/editing/preferences, explicit watched flags and watch-time tracking, and diagnostics.
 
 Servers and channels are excluded. Browser notifications require permission; Discord activity requires an account monitored by Lanyard. See [QA-CONNECTIONS.md](QA-CONNECTIONS.md) for verification and the additive database migration required before deployment.
+
+
+## PWA repairs · 1.5.4
+
+Phones and tablets use a full-width workspace with a navigation drawer. Camera, voice messages, scheduling, and upload management remain available from the + menu; shared media, pins, sharing, and group management are available from Conversation Options. Text fields render at 16px to prevent iOS focus zoom, while intentional accessibility zoom remains available.
+
+Uploads save their source file once in IndexedDB and checkpoint small metadata records separately. Browsers that cannot persist File/Blob use an ArrayBuffer fallback. A pause or failure releases Send, completed files remain individually removable, and resumed background uploads never switch conversations or overwrite a prepared attachment. Successful uploads release their local file bytes.
+
+Builds generate a versioned precache containing the complete boot graph. Offline reopen loads the shell and shows a reconnect screen for authenticated content; reconnect restores the existing session. Private APIs, media, and authenticated responses bypass the shell cache. Updates offer a user-controlled reload and wait for active calls/uploads to finish.
+
+Run `npm run qa:pwa` against a dev server configured for the existing API, and `npm run qa:pwa:shell` against a production preview. `QA_SITE` overrides either URL; `QA_WEBKIT=1` runs the core browser checks in WebKit. QA uses the existing ignored `.private/qa.json` accounts. Browser/device emulation does not establish physical iPhone installed-PWA or background-transfer behavior.

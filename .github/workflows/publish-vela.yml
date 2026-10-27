@@ -10,6 +10,7 @@ on:
       - 'package-lock.json'
       - 'vite.config.js'
       - 'scripts/build-github.mjs'
+      - 'scripts/pwa-shell.mjs'
       - '.github/workflows/publish-vela.yml'
   workflow_dispatch:
 permissions:
