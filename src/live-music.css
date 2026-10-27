@@ -1,5 +1,5 @@
 /* Inline live music widget: deliberately opaque, no synthetic player controls. */
-.vela-live-music{--vlm-border:color-mix(in srgb,var(--text) 13%,var(--border));width:min(365px,100%);margin:6px 0 3px;padding:0;color:var(--text);border:1px solid var(--vlm-border);border-radius:12px;background:var(--raised);overflow:hidden;box-shadow:0 2px 10px #0002;animation:vlm-enter .22s ease-out}
+.vela-live-music{--vlm-border:color-mix(in srgb,var(--text) 13%,var(--border));width:min(365px,100%);margin:6px 0 3px;padding:0;color:var(--text);border:1px solid var(--vlm-border);border-radius:12px;background:var(--raised);overflow:hidden;box-shadow:0 2px 10px #0002}
 .vlm-label{display:flex;align-items:center;justify-content:space-between;padding:12px 13px 10px;gap:10px;border-bottom:1px solid var(--border)}
 .vlm-indicator{font-size:9px;font-weight:750;letter-spacing:1.3px;display:flex;align-items:center;gap:7px}
 .vlm-indicator i{width:7px;height:7px;border-radius:100%;background:var(--muted);display:block}
