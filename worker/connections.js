@@ -16,7 +16,7 @@ export async function connectionsAPI(req,env,uid,h){
  }
  const extras=p.match(/^\/api\/profile-extras\/([^/]+)$/);
  if(extras){const target=decodeURIComponent(extras[1]);if(!await row(env,'SELECT uid FROM users WHERE uid=?',target))fail('Profile not found.',404);if(await row(env,'SELECT 1 FROM blocks WHERE (uid=? AND target=?) OR (uid=? AND target=?)',uid,target,target,uid))fail('Profile unavailable.',403);
-  if(m==='GET'){const profile=parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',target));if(profile.music&&(!Number.isFinite(profile.music.updated)||Date.now()-profile.music.updated>60000))delete profile.music;return json({profile});}
+  if(m==='GET'){const profile=parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',target));if(profile.music){const friend=uid===target||!!await row(env,"SELECT 1 FROM friends WHERE status='accepted' AND ((a=? AND b=?) OR (a=? AND b=?)) LIMIT 1",uid,target,target,uid);if(!friend||!Number.isFinite(profile.music.updated)||Date.now()-profile.music.updated>60000)delete profile.music;}return json({profile});}
   if(m==='PUT'){if(target!==uid)fail('Not allowed.',403);const b=await body(req),data={...parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',uid))};
    if('status'in b)data.status=String(b.status||'').slice(0,100);
    if('discord'in b){if(b.discord&&!/^\d{17,20}$/.test(b.discord))fail('Enter a Discord user ID.');data.discord=b.discord||'';}
