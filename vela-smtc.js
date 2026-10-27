@@ -131,7 +131,7 @@
     controller = new AbortController();
     var timeout = setTimeout(function () { controller?.abort(); }, 3000);
     try {
-      var response = await fetch(ENDPOINT, {mode:"cors",cache:"no-store",signal:controller.signal});
+      var response = await fetch(ENDPOINT, {mode:"cors",targetAddressSpace:"loopback",cache:"no-store",signal:controller.signal});
       if (!response.ok) throw Error("Bridge returned HTTP " + response.status);
       var payload = await response.json();
       if (!payload || !Array.isArray(payload.sessions)) throw Error("Invalid bridge response");
