@@ -1,0 +1,42 @@
+name: Build and publish Vela frontend
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'scripts/build-github.mjs'
+      - '.github/workflows/publish-vela.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: vela-pages-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build:github
+      - name: Update Pages publishing directory
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          if ! git diff --cached --quiet; then
+            git commit -m "build(pages): publish latest Vela frontend [skip ci]"
+            git push origin HEAD:main
+          fi
