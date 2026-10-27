@@ -16,14 +16,23 @@ export async function connectionsAPI(req,env,uid,h){
  }
  const extras=p.match(/^\/api\/profile-extras\/([^/]+)$/);
  if(extras){const target=decodeURIComponent(extras[1]);if(!await row(env,'SELECT uid FROM users WHERE uid=?',target))fail('Profile not found.',404);if(await row(env,'SELECT 1 FROM blocks WHERE (uid=? AND target=?) OR (uid=? AND target=?)',uid,target,target,uid))fail('Profile unavailable.',403);
-  if(m==='GET')return json({profile:parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',target))});
+  if(m==='GET'){const profile=parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',target));if(profile.music&&(!Number.isFinite(profile.music.updated)||Date.now()-profile.music.updated>60000))delete profile.music;return json({profile});}
   if(m==='PUT'){if(target!==uid)fail('Not allowed.',403);const b=await body(req),data={...parse(await row(env,'SELECT data FROM profile_extras WHERE uid=?',uid))};
    if('status'in b)data.status=String(b.status||'').slice(0,100);
    if('discord'in b){if(b.discord&&!/^\d{17,20}$/.test(b.discord))fail('Enter a Discord user ID.');data.discord=b.discord||'';}
+   if('music'in b){
+    if(b.music===null)data.music=null;
+    else{
+     const music=b.music;
+     if(!music||typeof music!=='object'||typeof music.title!=='string'||music.title.length>200||!music.title.trim()||typeof music.artist!=='string'||music.artist.length>200||typeof music.album!=='string'||music.album.length>200||typeof music.source!=='string'||music.source.length>150||typeof music.playing!=='boolean'||typeof music.position!=='number'||typeof music.duration!=='number'||!Number.isFinite(music.position)||!Number.isFinite(music.duration)||music.position<0||music.duration<0||music.duration>86400000)fail('Invalid music activity.',400);
+     if(music.artwork&&(!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(music.artwork)||music.artwork.length>40000))fail('Invalid music artwork.',400);
+     data.music={title:music.title.trim(),artist:music.artist.trim(),album:music.album.trim(),source:music.source,playing:music.playing,position:Math.min(music.position,music.duration||music.position),duration:music.duration,artwork:music.artwork||'',updated:Date.now()};
+    }
+   }
    if('drawing'in b){if(b.drawing&&!/^data:image\/png;base64,[a-zA-Z0-9+/=]+$/.test(b.drawing)||String(b.drawing||'').length>250000)fail('Drawing is too large.');data.drawing=b.drawing||'';}
    if('games'in b){if(!Array.isArray(b.games)||b.games.some(x=>!['tic-tac-toe','connect-four','pong'].includes(x)))fail('Invalid games.');data.games=[...new Set(b.games)].slice(0,3);}
    if('films'in b){if(!Array.isArray(b.films)||b.films.length>5)fail('Choose up to five titles.');data.films=b.films.map(x=>{if(!/^\d+$/.test(String(x.id))||!['movie','tv'].includes(x.type))fail('Invalid title.');return {id:String(x.id),type:x.type,title:String(x.title||'').slice(0,200),poster:/^https:\/\//.test(x.poster||'')?String(x.poster).slice(0,500):''};});}
-   await run(env,'INSERT INTO profile_extras(uid,data) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET data=excluded.data',uid,JSON.stringify(data));return json({ok:true});}
+   await run(env,'INSERT INTO profile_extras(uid,data) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET data=excluded.data',uid,JSON.stringify(data));return json({ok:true,...('music'in b?{music:true}:{})});}
  }
  const admin=p.match(/^\/api\/groups\/([^/]+)\/members$/);
  if(admin){const cid=decodeURIComponent(admin[1]),c=await access(env,uid,cid);if(c.kind!=='group')fail('Not a group.');const isOwner=c.owner===uid,isAdmin=isOwner||!!await row(env,'SELECT 1 FROM group_admins WHERE conversation=? AND uid=?',cid,uid);
