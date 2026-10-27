@@ -16,6 +16,9 @@
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
+  function setText(node, value) {
+    if (node && node.textContent !== value) node.textContent = value;
+  }
   function storageKey() { return "vela.smtc.v1." + state.account; }
   function readSettings() {
     try {
@@ -82,8 +85,8 @@
     var elapsed = card.querySelector("[data-smtc-elapsed]");
     var total = card.querySelector("[data-smtc-total]");
     if (progress) progress.style.width = (state.track.duration ? Math.min(100, position / state.track.duration * 100) : 0) + "%";
-    if (elapsed) elapsed.textContent = formatTime(position);
-    if (total) total.textContent = formatTime(state.track.duration);
+    setText(elapsed, formatTime(position));
+    setText(total, formatTime(state.track.duration));
   }
   function renderCard() {
     if (!card || !card.isConnected) return;
@@ -94,12 +97,12 @@
     empty.hidden = !!visible;
     card.classList.toggle("is-playing", !!(visible && state.track.playing));
     var sub = card.querySelector("[data-smtc-status]");
-    if (sub) sub.textContent = activityLabel();
+    setText(sub, activityLabel());
     if (visible) {
       var track = state.track;
       var title = card.querySelector("[data-smtc-title]"), artist = card.querySelector("[data-smtc-artist]"), art = card.querySelector("[data-smtc-art]");
-      if (title) { title.textContent = track.title; title.title = track.title; }
-      if (artist) { artist.textContent = track.artist || track.album || "Unknown artist"; artist.title = track.artist; }
+      if (title) { setText(title, track.title); title.title = track.title; }
+      if (artist) { setText(artist, track.artist || track.album || "Unknown artist"); artist.title = track.artist; }
       if (art && (lastArt !== track.artwork || !lastTitle)) {
         lastArt = track.artwork;
         art.hidden = !track.artwork;
@@ -114,11 +117,11 @@
     } else {
       lastTitle = "";
       var message = card.querySelector("[data-smtc-message]");
-      if (message) message.textContent = state.status === "error" ? state.error :
+      setText(message, state.status === "error" ? state.error :
         !state.enabled ? "Connect SMTC Bridge to show your music." :
-        state.track && !state.track.playing ? "Playback is paused." : "Play something in Apple Music to begin.";
+        state.track && !state.track.playing ? "Playback is paused." : "Play something in Apple Music to begin.");
       var action = card.querySelector("[data-smtc-action]");
-      if (action) { action.hidden = state.enabled && state.status !== "error"; action.textContent = state.enabled ? "Retry connection" : "Connect"; }
+      if (action) { action.hidden = state.enabled && state.status !== "error"; setText(action, state.enabled ? "Retry connection" : "Connect"); }
     }
     renderSettings();
   }
@@ -219,13 +222,13 @@
   function renderSettings() {
     document.querySelectorAll(".vela-smtc-settings-body").forEach(function (host) {
       var label = host.querySelector("[data-smtc-settings-state]");
-      if (label) label.textContent = activityLabel();
+      setText(label, activityLabel());
       var source = host.querySelector("[data-smtc-source]");
       if (source && document.activeElement !== source) source.value = state.source;
       var paused = host.querySelector("[data-smtc-paused]");
       if (paused) paused.checked = state.showPaused;
       var button = host.querySelector("[data-smtc-connect]");
-      if (button) button.textContent = state.enabled ? "Reconnect" : "Connect";
+      setText(button, state.enabled ? "Reconnect" : "Connect");
       var stop = host.querySelector("[data-smtc-disconnect]");
       if (stop) stop.disabled = !state.enabled;
       var dot = host.querySelector(".vela-smtc-dot");
