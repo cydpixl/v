@@ -141,7 +141,7 @@
     }
   }
   async function refresh(force) {
-    if (!state.enabled || busy || !state.account || document.hidden || !document.querySelector(".app-shell") || (!force && Date.now()<nextRefresh)) return;
+    if (!state.enabled || busy || !state.account || (document.hidden&&!state.share&&!window.velaMusic?.hasLiveShares?.()) || !document.querySelector(".app-shell") || (!force && Date.now()<nextRefresh)) return;
     busy = true;
     var epoch = requestEpoch, account = state.account, request = new AbortController();
     controller = request;
@@ -156,9 +156,9 @@
       if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
       state.track = normalized(selectSession(payload));
       state.status = "connected"; state.error = ""; state.lastSeen = Date.now();
-      failures = 0; permissionDenied = false; nextRefresh = Date.now()+1500;
+      failures = 0; permissionDenied = false; nextRefresh = Date.now()+(document.hidden?8000:1500);
       if(state.share)publishMusic();
-      if(state.track&&(state.track.playing||state.showPaused)&&window.velaMusic?.syncLive){
+      if(state.track&&window.velaMusic?.syncLive){
         var song=state.track;
         widgetSnapshot(song).then(function(data){if(epoch===requestEpoch&&account===state.account)window.velaMusic.syncLive(data);}).catch(function(){});
       }

@@ -1,4 +1,5 @@
 import {kindMessage} from '../src/kind-message.mjs';
+import {liveMusicAPI} from './live-music.js';
 import {socialAPI} from './social.js';
 import {connectionsAPI,cleanupChatUploads} from './connections.js';
 import {customEmojiIds} from '../src/emoji-size.js';
@@ -52,10 +53,11 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.5.3',release:'social-sharing-20261027'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.5.6',release:'persistent-live-player-kind-rewrite-20261031'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx};
+ const music=await liveMusicAPI(req,env,uid,helpers);if(music)return music;
  const social=await socialAPI(req,env,uid,helpers);if(social)return social;
  const feature=await connectionsAPI(req,env,uid,helpers)||await commandAPI(req,env,uid,{...helpers,members,blocked})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;
 

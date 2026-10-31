@@ -21,9 +21,9 @@ try {
   await page.locator('.dm-row[data-open="'+cid+'"]').click();await page.locator('#composer').waitFor();
  }
  const [a,b]=pages,stamp=Date.now();
- await a.locator('#composer').fill(`QA ${stamp}: You're stupid. This is fucking amazing.`);await a.getByRole('button',{name:'Send Message',exact:true}).click();
+ await a.locator('#composer').fill(`QA ${stamp}: I appreciate you idiot retard. This is fucking amazing.`);await a.getByRole('button',{name:'Send Message',exact:true}).click();
  await a.locator('.message.pending').waitFor({state:'detached'});await b.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
- await b.locator('.message-text').filter({hasText:`QA ${stamp}: You're smart. This is freaking amazing.`}).waitFor();
+ await b.locator('.message-text').filter({hasText:`QA ${stamp}: I appreciate you, wonderful friend. This is freaking amazing.`}).waitFor();
  console.log('PASS phone composer → recipient gets rewritten message');
  await a.getByRole('button',{name:'Start Video Call',exact:true}).click();callStarted=true;await b.locator('.join-active-call').click();
  for(const page of pages)await page.locator('#voice-dock strong').filter({hasText:'Voice Connected'}).waitFor();

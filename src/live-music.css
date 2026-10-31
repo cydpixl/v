@@ -33,3 +33,27 @@
 @keyframes vlm-enter{from{opacity:.7;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:580px){.vela-live-music{width:min(340px,100%)}.vlm-body{gap:9px}.vlm-cover{width:52px;height:52px}.vlm-details strong{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.vela-live-music,.vlm-bars i,.vlm-playing .vlm-indicator i{animation:none!important}.vlm-rail i{transition:none}}
+
+/* The artwork and track lead; only Pin and Jump are actionable here. Audio
+   continues in the Windows player, so this surface has no pretend playback. */
+.vela-live-music{width:min(440px,100%);border-radius:16px;box-shadow:none;background:color-mix(in srgb,var(--raised) 90%,var(--panel))}
+.vlm-label{padding:10px 16px;border-bottom:0}.vlm-indicator{font-size:9px;letter-spacing:.1em}.vlm-body{padding:4px 16px 14px;gap:14px}.vlm-cover{width:72px;height:72px;border-radius:11px}.vlm-details{gap:6px}.vlm-details strong{font-size:16px;letter-spacing:-.02em}.vlm-bars{color:var(--green,#43b67a)}.vlm-playing .vlm-bars i{background:currentColor}
+.vlm-progress{padding:0 16px}.vlm-rail{height:3px}.vlm-playing .vlm-rail i{background:var(--green,#43b67a)}.vlm-footer{padding:10px 16px;font-size:10px;border-color:color-mix(in srgb,var(--text) 7%,transparent)}
+.vlm-actions{display:flex;align-items:center;gap:4px;flex:none}.vlm-actions button{height:34px;min-width:34px;padding:0 8px;border-radius:8px;background:var(--panel);color:var(--muted);font-size:11px;white-space:nowrap}.vlm-actions button:hover{background:var(--hover);color:var(--text)}.vlm-actions button[aria-pressed=true]{color:var(--green,#43b67a);background:color-mix(in srgb,var(--green,#43b67a) 12%,var(--panel))}
+.vela-live-music:not([data-layout=dock]) .vlm-body{flex-wrap:wrap}.vela-live-music:not([data-layout=dock]) .vlm-details{min-width:100px}.vela-live-music:not([data-layout=dock]) .vlm-actions{margin-left:auto}
+#live-music-dock{flex:none;min-width:0;padding:8px 20px 10px;border-bottom:1px solid var(--border);background:var(--bg);z-index:3}
+#live-music-dock>header{display:flex;align-items:center;gap:10px;justify-content:space-between;min-height:20px;margin-bottom:3px;color:var(--muted);font-size:10px;letter-spacing:.03em}
+#live-music-dock>header select{flex:1;width:0;min-width:0;max-width:60%;font-size:11px!important;padding:2px 6px;height:26px;min-height:0;background:var(--panel)}
+#live-music-dock>header>span{flex:none}#live-music-dock .music-dock-status{font-size:9px;font-weight:600;margin-left:auto}#live-music-dock .music-dock-status.is-live{color:var(--green,#43b67a)}
+#live-music-dock .vela-live-music{width:100%;margin:0;padding:0;background:transparent;border:0;border-radius:0}
+#live-music-dock .vlm-label,#live-music-dock .vlm-footer,#live-music-dock .vlm-details small{display:none}
+#live-music-dock .vlm-body{padding:0;gap:12px;flex-wrap:nowrap}#live-music-dock .vlm-cover{width:44px;height:44px;border-radius:8px}#live-music-dock .vlm-details{gap:3px}#live-music-dock .vlm-details strong{font-size:13px}#live-music-dock .vlm-details span{font-size:11px}#live-music-dock .vlm-progress{padding:6px 0 0 56px}#live-music-dock .vlm-time{padding-top:3px;font-size:9px}#live-music-dock .vlm-bars{margin:0 5px}
+@media(max-width:1099px){
+ #live-music-dock{padding:6px 10px 7px}#live-music-dock>header select{font-size:16px!important}#live-music-dock .vlm-actions button{min-height:38px;height:38px;min-width:38px;padding:0 6px}#live-music-dock .vlm-bars{display:none}
+ .vela-live-music:not([data-layout=dock]) .vlm-cover{width:56px;height:56px}.vela-live-music:not([data-layout=dock]) .vlm-details strong{font-size:14px}
+}
+@media(max-width:1099px) and (max-height:560px){
+ .workspace:has(#live-music-dock:not([hidden])) #call-stage:not([hidden]):not(.expanded){height:170px!important}
+ #live-music-dock{padding:4px 10px}#live-music-dock>header{min-height:14px;margin:0;font-size:9px}#live-music-dock .vlm-cover{width:36px;height:36px}#live-music-dock .vlm-progress{padding:3px 0 0 48px}#live-music-dock .vlm-time{display:none}
+ .workspace:has(#live-music-dock:not([hidden])) .message-scroll{padding-bottom:0}
+}

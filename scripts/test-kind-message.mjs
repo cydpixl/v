@@ -15,6 +15,20 @@ const cases = [
  ['You are smart and beautiful.','You are smart and beautiful.'],
  ['fυck sh1t b1tch','frick shoot friend'],
  ['😀 fucking great ❤️','😀 freaking great ❤️'],
+ ['I appreciate you idiot retard','I appreciate you, wonderful friend'],
+ ['fuck you idiot retard','I appreciate you, wonderful friend'],
+ ['idiot retard','wonderful friend'],
+ ['you idiot','you, bright friend'],
+ ["you're stupid idiot retard","you're wonderful"],
+ ["you are stupid and ugly","you're wonderful"],
+ ['retard','capable friend'],
+ ['IDIOT RETARD','WONDERFUL FRIEND'],
+ ['r-e-t-a-r-d','capable friend'],
+ ["You're not an idiot. You're not retarded.","You're not an idiot. You're not retarded."],
+ ['I do not think you are stupid','I do not think you are stupid'],
+ ['It is not ugly but you are stupid',"It is not ugly but you're smart"],
+ ['`idiot retard` https://example.com/retard','`idiot retard` https://example.com/retard'],
+ ['[[vela-live-music:1:idiot_retard_123]]','[[vela-live-music:1:idiot_retard_123]]'],
 ];
 for (const [input,expected] of cases) {
  assert.equal(kindMessage(input),expected,input);

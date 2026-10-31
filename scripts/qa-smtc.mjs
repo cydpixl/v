@@ -16,8 +16,11 @@ try{
  mode='offline';await page.locator('[data-smtc-connect]').click();await page.getByText('Waiting for SMTC Bridge',{exact:true}).first().waitFor();
  mode='playing';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await page.waitForFunction(()=>!document.querySelector('.vela-smtc-song').hidden);
  mode='paused';await page.locator('[data-smtc-connect]').click();await page.getByText('Playback is paused.',{exact:true}).waitFor();await page.locator('[data-smtc-paused]').check();assert.equal(await page.locator('.vela-smtc-song').isVisible(),true);
+ await page.evaluate(()=>{window.velaMusic={hasLiveShares:()=>true,syncLive:track=>{window.backgroundMusic=track;}};Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});});
+ await page.locator('[data-smtc-connect]').click();await page.waitForFunction(()=>window.backgroundMusic?.paused===true&&window.backgroundMusic?.playing===false);
+ await page.evaluate(()=>delete document.hidden);
  await page.locator('[data-smtc-disconnect]').click();await page.reload();await page.addScriptTag({content:script});assert.equal(await page.locator('[data-smtc-status]').textContent(),'Automatic detection off');
- console.log('PASS bridge: auto-connect, old-settings migration, active player, offline recovery, pause, no entry fields, private sharing, persisted opt-out');
+ console.log('PASS bridge: auto-connect, old-settings migration, active player, offline recovery, paused/background chat sync, no entry fields, private sharing, persisted opt-out');
  if(process.env.QA_NATIVE_BRIDGE){
   const native=await browser.newPage();native.on('console',m=>console.log('NATIVE',m.text()));native.on('requestfailed',r=>console.log('NATIVE FAILED',r.url(),r.failure()));await native.route('**/native-bridge-harness',route=>route.fulfill({contentType:'text/html',body:'<div class="app-shell"><aside class="sidebar"><div id="account-dock"><div class="self-profile"><small>native-bridge-test</small></div></div></aside></div>'}));
   await native.context().grantPermissions(['local-network-access']);

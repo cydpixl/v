@@ -1,9 +1,10 @@
 {
-  "version": "1.5.5",
-  "release": "kind-messages-mobile-calls-smtc-20261031",
+  "version": "1.5.6",
+  "release": "persistent-live-player-kind-rewrite-20261031",
   "changes": [
-    "Automatic clean-word replacements and compliments for common personal insults, including edits and scheduled messages",
-    "Visible mobile video calls and reachable touch controls without desktop resizing or floating chat",
-    "Automatic Windows SMTC player detection, reconnect, browser-access recovery and optional private sharing"
+    "Rewrite standalone and chained insults, including the reported trailing idiot/retard example",
+    "Persistent pinned live-music player above chat with album art, progress, pin and jump controls",
+    "Saved music cards recover after reload without a one-day expiry or three-card cap",
+    "Live music continues updating in background tabs and while paused; sending again reuses the saved player"
   ]
 }

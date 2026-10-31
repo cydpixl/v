@@ -8,11 +8,11 @@ assert.ok(login.idToken,'QA account authenticated');
 const cid=qa.users.slice(0,2).map(u=>u.uid).sort().join(':'),id=crypto.randomUUID(),scheduled=crypto.randomUUID();
 async function api(path,method='GET',body){const r=await fetch(backend+'/api'+path,{method,headers:{Authorization:'Bearer '+login.idToken,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();assert.ok(r.ok,data.error||`HTTP ${r.status}`);return data;}
 try{
- const sent=await api('/conversations/'+encodeURIComponent(cid)+'/messages','POST',{id,text:"You're stupid. This is F-U-C-K-I-N-G great."});
- assert.equal(sent.message.text,"You're smart. This is FREAKING great.");
+ const sent=await api('/conversations/'+encodeURIComponent(cid)+'/messages','POST',{id,text:"I appreciate you idiot retard. This is F-U-C-K-I-N-G great."});
+ assert.equal(sent.message.text,"I appreciate you, wonderful friend. This is FREAKING great.");
  const again=await api('/conversations/'+encodeURIComponent(cid)+'/messages','POST',{id,text:'you are ugly'});assert.equal(again.message.text,sent.message.text);
- await api('/messages/'+id,'PATCH',{text:"You're retarded. You're ugly."});
- const history=await api('/conversations/'+encodeURIComponent(cid)+'/messages');assert.equal(history.messages.find(m=>m.id===id).text,"You're capable. You're beautiful.");
+ await api('/messages/'+id,'PATCH',{text:"idiot retard. You're retarded. You're ugly."});
+ const history=await api('/conversations/'+encodeURIComponent(cid)+'/messages');assert.equal(history.messages.find(m=>m.id===id).text,"wonderful friend. You're capable. You're beautiful.");
  await api('/scheduled-messages','POST',{id:scheduled,conversation:cid,text:'This is fucking awesome.',deliverAt:Date.now()+3600000});
  const pending=await api('/scheduled-messages');assert.equal(pending.items.find(m=>m.id===scheduled).text,'This is freaking awesome.');
  console.log('PASS server API: raw profanity/insult rewrite, idempotent retry, edit rewrite and scheduled-message rewrite');

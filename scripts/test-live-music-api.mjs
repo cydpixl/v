@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {liveMusicAPI} from '../worker/live-music.js';
+const db=new DatabaseSync(':memory:');
+db.exec('CREATE TABLE messages(id TEXT PRIMARY KEY,conversation TEXT,sender TEXT,text TEXT,pinned INTEGER,created INTEGER,edited INTEGER,deleted INTEGER);CREATE TABLE members(conversation TEXT,uid TEXT);');
+for(const [cid,uid] of [['room','alice'],['room','bob'],['private','mallory']])db.prepare('INSERT INTO members VALUES(?,?)').run(cid,uid);
+function message(id,cid,sender,created,pinned=0,deleted=0,text='[[vela-live-music:1:fixture]]'){db.prepare('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?)').run(id,cid,sender,text,pinned,created,null,deleted);}
+message('old-pin','room','alice',1,1);message('new-live','room','alice',2);message('bob-live','room','bob',3);message('removed','room','bob',4,1,1);message('private','private','mallory',5,1);
+for(let i=0;i<70;i++)message('history-'+i,'room','alice',100+i,0,0,'ordinary message');
+const h={rows:async(_,sql,...args)=>db.prepare(sql).all(...args),json:value=>value,access:async(_,uid,cid)=>{if(!db.prepare('SELECT 1 FROM members WHERE conversation=? AND uid=?').get(cid,uid))throw Error('denied');}};
+const request=path=>new Request('https://vela.test/api'+path);
+const found=await liveMusicAPI(request('/conversations/room/live-music'),{},'alice',h);
+assert.deepEqual(found.messages.map(m=>m.id),['old-pin','bob-live','new-live']);
+const recovered=await liveMusicAPI(request('/live-music-shares'),{},'alice',h);
+assert.deepEqual(recovered.messages.map(m=>m.id).sort(),['new-live','old-pin']);
+assert.ok(recovered.messages.every(m=>m.created<100),'no one-day or latest-history-page expiry');
+await assert.rejects(()=>liveMusicAPI(request('/conversations/private/live-music'),{},'alice',h),/denied/);
+db.prepare("DELETE FROM members WHERE uid='alice'").run();assert.deepEqual((await liveMusicAPI(request('/live-music-shares'),{},'alice',h)).messages,[]);
+assert.equal(await liveMusicAPI(request('/unrelated'),{},'alice',h),null);
+db.close();console.log('PASS saved music: pinned/older history, latest per sender, no expiry, deleted messages, member access and account isolation');
