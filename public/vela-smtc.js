@@ -6,7 +6,8 @@
   var ENDPOINT = "http://127.0.0.1:5000/now-playing";
   var APPLE_ID = "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App";
   var onWindows = /Windows/i.test(navigator.userAgent) || navigator.userAgentData?.platform === "Windows";
-  var state = { account: "", enabled: false, source: "apple", showPaused: false, share: false, track: null, status: "off", error: "", lastSeen: 0 };
+  var state = { account: "", enabled: true, source: "any", showPaused: false, share: false, track: null, status: "off", error: "", lastSeen: 0 };
+  var requestEpoch = 0, failures = 0, nextRefresh = 0, permissionDenied = false;
   var busy = false, controller = null, pollTimer = null, tickTimer = null, modal = null, card = null;
   var lastArt = "", lastTitle = "", sharedStatus = "", lastPublished = 0, lastSharedSong = "", publishing = false, publishNext = false, peerUid = "", peerState = null, peerBusy = false, peerPollAt = 0, artSource = "", tinyArt = "", cardArtSource = "", cardArt = "", scanPending = false, destroyed = false;
   if (!onWindows) return;
@@ -23,20 +24,20 @@
   function readSettings() {
     try {
       var saved = JSON.parse(localStorage.getItem(storageKey()) || "{}");
-      state.enabled = saved.enabled === true;
-      state.source = saved.source === "any" ? "any" : "apple";
+      state.enabled = saved.version === 2 ? saved.enabled !== false : true;
+      state.source = saved.version === 2 && saved.source === "apple" ? "apple" : "any";
       state.showPaused = saved.showPaused === true;
       state.share = saved.share === true;
     } catch (_) {
-      state.enabled = false;
-      state.source = "apple";
+      state.enabled = true;
+      state.source = "any";
       state.showPaused = false;
       state.share = false;
     }
   }
   function saveSettings() {
     if (!state.account) return;
-    try { localStorage.setItem(storageKey(), JSON.stringify({enabled:state.enabled,source:state.source,showPaused:state.showPaused,share:state.share})); } catch (_) {}
+    try { localStorage.setItem(storageKey(), JSON.stringify({version:2,enabled:state.enabled,source:state.source,showPaused:state.showPaused,share:state.share})); } catch (_) {}
   }
   function formatTime(ms) {
     var seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -61,7 +62,7 @@
     };
   }
   function selectSession(payload) {
-    var sessions = Array.isArray(payload?.sessions) ? payload.sessions : [];
+    var sessions = Array.isArray(payload?.sessions) ? payload.sessions.filter(function(s){return normalized(s);}) : [];
     if (state.source === "apple") return sessions.find(function (s) { return s.source_app_id === APPLE_ID; });
     return sessions.find(function (s) { return s.source_app_id === payload.current_session_id && Number(s.playback_info?.PlaybackStatus) === 4; })
       || sessions.find(function (s) { return Number(s.playback_info?.PlaybackStatus) === 4; })
@@ -74,8 +75,8 @@
     return Math.max(0, Math.min(track.duration || Infinity, track.position + delta));
   }
   function activityLabel() {
-    if (!state.enabled) return "Not connected";
-    if (state.status === "error") return "Bridge unavailable";
+    if (!state.enabled) return "Automatic detection off";
+    if (state.status === "error") return permissionDenied ? "Device access blocked" : "Waiting for SMTC Bridge";
     if (!state.track) return state.status === "loading" ? "Connecting…" : "No active music";
     if (!state.track.playing) return "Paused";
     return state.source === "apple" ? "Listening to Apple Music" : "Listening now";
@@ -92,6 +93,7 @@
   }
   function renderCard() {
     if (!card || !card.isConnected) return;
+    card.dataset.connection = state.enabled ? state.status : "off";
     var song = card.querySelector(".vela-smtc-song");
     var empty = card.querySelector(".vela-smtc-empty");
     var visible = state.enabled && state.track && (state.track.playing || state.showPaused);
@@ -120,46 +122,67 @@
       lastTitle = "";
       var message = card.querySelector("[data-smtc-message]");
       setText(message, state.status === "error" ? state.error :
-        !state.enabled ? "Connect SMTC Bridge to show your music." :
-        state.track && !state.track.playing ? "Playback is paused." : "Play something in Apple Music to begin.");
+        !state.enabled ? "Automatic detection is off." :
+        state.track && !state.track.playing ? "Playback is paused." : "Bridge connected. Play music in any Windows player.");
       var action = card.querySelector("[data-smtc-action]");
-      if (action) { action.hidden = state.enabled && state.status !== "error"; setText(action, state.enabled ? "Retry connection" : "Connect"); }
+      if (action) { action.hidden = state.enabled && state.status !== "error"; setText(action, state.enabled ? "Check now" : "Enable auto-detect"); }
     }
     renderSettings();
   }
-  async function refresh() {
-    if (!state.enabled || busy || !state.account || document.hidden || !document.querySelector(".app-shell")) return;
+  async function bridgePermission() {
+    if (!navigator.permissions?.query) return;
+    for (var name of ["loopback-network", "local-network-access"]) {
+      try {
+        var result = await navigator.permissions.query({name:name});
+        permissionDenied = result.state === "denied";
+        result.onchange = function () { permissionDenied = this.state === "denied"; nextRefresh = 0; if (!permissionDenied) refresh(); };
+        return;
+      } catch (_) {}
+    }
+  }
+  async function refresh(force) {
+    if (!state.enabled || busy || !state.account || document.hidden || !document.querySelector(".app-shell") || (!force && Date.now()<nextRefresh)) return;
     busy = true;
-    controller = new AbortController();
-    var timeout = setTimeout(function () { controller?.abort(); }, 3000);
+    var epoch = requestEpoch, account = state.account, request = new AbortController();
+    controller = request;
+    var timeout = setTimeout(function () { request.abort(); }, 3000);
     try {
-      var response = await fetch(ENDPOINT, {mode:"cors",targetAddressSpace:"local",cache:"no-store",signal:controller.signal});
+      // A literal loopback IP already identifies its address space. Forcing the
+      // experimental targetAddressSpace option breaks some Chrome releases.
+      var response = await fetch(ENDPOINT, {mode:"cors",credentials:"omit",cache:"no-store",signal:request.signal});
       if (!response.ok) throw Error("Bridge returned HTTP " + response.status);
       var payload = await response.json();
       if (!payload || !Array.isArray(payload.sessions)) throw Error("Invalid bridge response");
-      var session = selectSession(payload);
-      state.track = normalized(session);
-      state.status = "connected";
-      state.error = "";
-      state.lastSeen = Date.now();
+      if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
+      state.track = normalized(selectSession(payload));
+      state.status = "connected"; state.error = ""; state.lastSeen = Date.now();
+      failures = 0; permissionDenied = false; nextRefresh = Date.now()+1500;
       if(state.share)publishMusic();
       if(state.track&&(state.track.playing||state.showPaused)&&window.velaMusic?.syncLive){
-        const song=state.track;
-        widgetSnapshot(song).then(data=>window.velaMusic.syncLive(data)).catch(()=>{});
+        var song=state.track;
+        widgetSnapshot(song).then(function(data){if(epoch===requestEpoch&&account===state.account)window.velaMusic.syncLive(data);}).catch(function(){});
       }
     } catch (error) {
-      state.track = null;
-      state.status = "error";
-      state.error = "Chrome could not access SMTC Bridge. The bridge may be running: allow Apps on device in Chrome Site settings, then reconnect.";
+      if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
+      await bridgePermission();
+      if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
+      state.track = null; state.status = "error";
+      failures++;
+      nextRefresh = Date.now()+(permissionDenied?30000:Math.min(15000,1000*Math.pow(2,Math.min(failures,4))));
+      state.error = permissionDenied
+        ? "Allow Apps on device in your browser’s site settings. Vela will reconnect automatically."
+        : "Open SMTC Bridge on this computer. Vela will pick it up automatically.";
       if(state.share&&lastSharedSong)publishMusic(true);
     } finally {
       clearTimeout(timeout);
-      controller = null;
+      if(controller===request)controller=null;
       busy = false;
       renderCard();
     }
   }
+
   function disconnect() {
+    requestEpoch++; nextRefresh=0; failures=0;
     state.enabled = false;
     if(state.share)publishMusic(true);
     state.track = null;
@@ -170,12 +193,13 @@
     renderCard();
   }
   async function connect() {
+    nextRefresh=0; failures=0;
     state.enabled = true;
     state.status = "loading";
     state.error = "";
     saveSettings();
     renderCard();
-    await refresh();
+    await refresh(true);
   }
 
   async function compressCover(track) {
@@ -287,9 +311,9 @@
     finally{peerBusy=false;}
   }
   function cardHTML() {
-    return '<div class="vela-smtc-head"><span class="vela-smtc-symbol" aria-hidden="true">♫</span><div class="vela-smtc-caption"><strong>Now playing</strong><small data-smtc-status>Not connected</small></div><button type="button" class="vela-smtc-more" data-smtc-settings aria-label="Music connection settings" title="Music settings">•••</button></div>' +
+    return '<div class="vela-smtc-head"><span class="vela-smtc-symbol" aria-hidden="true">♫</span><div class="vela-smtc-caption"><strong>Now playing <span class="vela-smtc-auto">AUTO</span></strong><small data-smtc-status role="status">Detecting Windows music…</small></div><button type="button" class="vela-smtc-more" data-smtc-settings aria-label="Music connection settings" title="Music settings">•••</button></div>' +
       '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send live to chat</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div></div>' +
-      '<div class="vela-smtc-empty"><span data-smtc-message>Connect SMTC Bridge to show your music.</span><button type="button" data-smtc-action>Connect</button></div>';
+      '<div class="vela-smtc-empty"><span data-smtc-message>Looking for SMTC Bridge…</span><button type="button" data-smtc-action>Check now</button></div>';
   }
   function ensureCard() {
     var sidebar = document.querySelector(".app-shell .sidebar");
@@ -305,18 +329,18 @@
       card.querySelector("[data-smtc-settings]").addEventListener("click", openSettings);
       card.querySelector("[data-smtc-send]").addEventListener("click",sendToChat);
       card.querySelector("[data-smtc-action]").addEventListener("click", function () {
-        if (state.enabled) refresh(); else openSettings();
+        connect();
       });
     }
     renderCard();
   }
   function settingsHTML() {
     return '<div class="vela-smtc-settings-body"><div class="vela-smtc-setting-row"><div><strong>SMTC Bridge</strong><p data-smtc-settings-state></p></div><span class="vela-smtc-dot"></span></div>' +
-      '<p class="vela-smtc-note">Show your Windows music in Vela. Enable sharing below to let friends see the track on your profile and in conversations.</p>' +
-      '<label class="vela-smtc-field">Media source<select data-smtc-source><option value="apple">Apple Music for Windows</option><option value="any">Current Windows media player</option></select></label>' +
+      '<p class="vela-smtc-note">Open SMTC Bridge and play music. Vela detects your active player automatically — no address, port, token or setup form. Sharing with friends is optional.</p>' +
+      '<label class="vela-smtc-field">Media source<select data-smtc-source><option value="any">Automatic · current Windows player</option><option value="apple">Apple Music only</option></select></label>' +
       '<label class="vela-smtc-check"><input type="checkbox" data-smtc-paused> Show track while paused</label><label class="vela-smtc-check"><input type="checkbox" data-smtc-share> Share my music with friends</label><p class="vela-smtc-note" data-smtc-sharing-state></p>' +
-      '<div class="vela-smtc-actions"><button type="button" class="primary" data-smtc-connect>Connect</button><button type="button" class="secondary" data-smtc-disconnect>Disconnect</button></div>' +
-      '<p class="vela-smtc-note">SMTC Bridge must be running at <code>127.0.0.1:5000</code>. In Chrome, open Site settings for Vela and allow <strong>Apps on device</strong> (or <strong>Local network access</strong>), then reconnect.</p>' +
+      '<div class="vela-smtc-actions"><button type="button" class="primary" data-smtc-connect>Check now</button><button type="button" class="secondary" data-smtc-disconnect>Turn off auto-detect</button></div>' +
+      '<p class="vela-smtc-note">Detection starts when you sign in and reconnects when the bridge restarts. If your browser asks to access apps on this device, choose Allow. Music stays private until you enable sharing.</p>' +
       '<a href="http://127.0.0.1:5000/now-playing" target="_blank" rel="noopener noreferrer">Open bridge diagnostics ↗</a></div>';
   }
   function wireSettings(host) {
@@ -354,7 +378,7 @@
       var share=host.querySelector("[data-smtc-share]");if(share)share.checked=state.share;
       setText(host.querySelector("[data-smtc-sharing-state]"),state.share?(sharedStatus||"Your current track will be visible to other Vela users."):"Private — music stays on this computer.");
       var button = host.querySelector("[data-smtc-connect]");
-      setText(button, state.enabled ? "Reconnect" : "Connect");
+      setText(button, state.enabled ? "Check now" : "Enable auto-detect");
       var stop = host.querySelector("[data-smtc-disconnect]");
       if (stop) stop.disabled = !state.enabled;
       var dot = host.querySelector(".vela-smtc-dot");
@@ -392,6 +416,7 @@
     var accountNode = document.querySelector("#account-dock .self-profile small");
     var account = (accountNode?.textContent || "").trim().toLowerCase();
     if (account !== state.account) {
+      requestEpoch++; nextRefresh=0; failures=0; permissionDenied=false;
       controller?.abort();
       state.account = account;
       lastPublished=0;lastSharedSong="";sharedStatus="";peerUid="";peerState=null;artSource="";tinyArt="";
@@ -402,7 +427,7 @@
       lastTitle = "";
       if (account) {
         readSettings();
-        if (state.enabled) { state.status = "loading"; refresh(); }
+        if (state.enabled) { state.status = "loading"; refresh(true); }
       } else { state.enabled = false; card = null; }
     }
     if (!account) return;
@@ -416,9 +441,11 @@
     requestAnimationFrame(scan);
   }
   new MutationObserver(scheduleScan).observe(document.body, {childList:true,subtree:true});
-  pollTimer = setInterval(function () { if (state.enabled) refresh(); }, 2000);
+  pollTimer = setInterval(function () { if (state.enabled) refresh(); }, 1000);
   tickTimer = setInterval(updateProgress, 500);
   setInterval(function(){if(document.hidden||!state.account)return;var now=Date.now();if(now-peerPollAt>12000){peerPollAt=now;readPeer();}if(state.share&&state.enabled&&now-lastPublished>19500)publishMusic();renderPeer();},2400);
-  document.addEventListener("visibilitychange", function () { if (!document.hidden){if(state.enabled)refresh();readPeer();} });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden){if(state.enabled)refresh(true);readPeer();} });
+  window.addEventListener("online",function(){if(state.enabled)refresh(true);});
+  window.addEventListener("focus",function(){if(state.enabled)refresh(true);});
   scan();
 })();

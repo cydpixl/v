@@ -6,7 +6,7 @@ export function closeImmersiveCall(){session?.close();}
 
 export async function toggleImmersiveCall(stage){
  if(!stage?.isConnected||stage.hidden)throw Error('Join a call or open a movie first.');
- if(session&&document.fullscreenElement===session.root){await document.exitFullscreen();return;}
+ if(session){if(document.fullscreenElement===session.root)await document.exitFullscreen();else session.close();return;}
  session?.close();
  if(document.fullscreenElement)await document.exitFullscreen();
  const root=document.createElement('section');root.id='call-immersive';root.tabIndex=-1;root.setAttribute('aria-label','Fullscreen call');
@@ -52,14 +52,14 @@ export async function toggleImmersiveCall(stage){
    if(bottom)messages.scrollTop=messages.scrollHeight;
   }catch(reason){if(!closed){error.hidden=false;error.textContent=reason.message;}}finally{chatBusy=false;}
  }
- function toggleChat(){chat.hidden=!chat.hidden;if(!chat.hidden){chatConversation=conversation?.id;chat.querySelector('strong').textContent=conversation?.name||'Chat';input.value=drafts.get(chatConversation)||'';input.disabled=!chatConversation;form.querySelector('button').disabled=!chatConversation;if(!chatConversation){error.hidden=false;error.textContent='Open a conversation to chat.';}root.__chatFetch=0;refreshChat();input.focus();}else root.focus({preventScroll:true});}
+ function toggleChat(){if(matchMedia('(max-width:1099px)').matches)return;chat.hidden=!chat.hidden;if(!chat.hidden){chatConversation=conversation?.id;chat.querySelector('strong').textContent=conversation?.name||'Chat';input.value=drafts.get(chatConversation)||'';input.disabled=!chatConversation;form.querySelector('button').disabled=!chatConversation;if(!chatConversation){error.hidden=false;error.textContent='Open a conversation to chat.';}root.__chatFetch=0;refreshChat();input.focus();}else root.focus({preventScroll:true});}
  let draftRequest;input.oninput=()=>drafts.set(conversation?.id,input.value);
  form.onsubmit=async event=>{event.preventDefault();const text=input.value.trim();if(!text||!chatConversation||!configuration.send)return;const submit=form.querySelector('button');submit.disabled=true;error.hidden=true;try{if(!draftRequest||draftRequest.text!==text)draftRequest={text,id:crypto.randomUUID()};await configuration.send(chatConversation,text,draftRequest.id);if(closed)return;input.value='';drafts.delete(chatConversation);draftRequest=null;root.__chatFetch=0;await refreshChat();}catch(reason){if(!closed){error.hidden=false;error.textContent=reason.message;}}finally{if(!closed){submit.disabled=false;input.focus();}}};
  input.onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();event.stopPropagation();form.requestSubmit();}};
  chat.querySelector('[aria-label="Close chat"]').onclick=()=>{chat.hidden=true;root.focus({preventScroll:true});};
- root.querySelector('.immersive-exit').onclick=()=>document.exitFullscreen().catch(()=>{});
+ root.querySelector('.immersive-exit').onclick=()=>{if(document.fullscreenElement===root)document.exitFullscreen().catch(close);else close();};
  root.addEventListener('pointermove',reveal,{signal:abort.signal});
- camera.addEventListener('pointerdown',event=>{if(event.button!==0)return;const r=camera.getBoundingClientRect(),s=root.getBoundingClientRect();drag={x:event.clientX,y:event.clientY,left:r.left-s.left,top:r.top-s.top};camera.setPointerCapture(event.pointerId);event.preventDefault();},{signal:abort.signal});
+ camera.addEventListener('pointerdown',event=>{if(matchMedia('(max-width:1099px)').matches||event.button!==0)return;const r=camera.getBoundingClientRect(),s=root.getBoundingClientRect();drag={x:event.clientX,y:event.clientY,left:r.left-s.left,top:r.top-s.top};camera.setPointerCapture(event.pointerId);event.preventDefault();},{signal:abort.signal});
  camera.addEventListener('pointermove',event=>{if(!drag)return;dragged=true;camera.style.left=drag.left+event.clientX-drag.x+'px';camera.style.top=drag.top+event.clientY-drag.y+'px';camera.style.right='auto';clampCamera();event.stopPropagation();},{signal:abort.signal});
  const endDrag=()=>{drag=null;};camera.addEventListener('pointerup',endDrag,{signal:abort.signal});camera.addEventListener('pointercancel',endDrag,{signal:abort.signal});
  camera.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const r=camera.getBoundingClientRect(),s=root.getBoundingClientRect(),step=event.shiftKey?40:10;dragged=true;camera.style.left=r.left-s.left+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0)+'px';camera.style.top=r.top-s.top+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0)+'px';clampCamera();},{signal:abort.signal});
@@ -67,6 +67,6 @@ export async function toggleImmersiveCall(stage){
  document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement===root)entered=true;else if(entered)close();},{signal:abort.signal});
  window.addEventListener('resize',clampCamera,{signal:abort.signal});
  function close(){if(closed)return;if(conversation?.id&&input.value)drafts.set(conversation.id,input.value);closed=true;clearInterval(timer);clearTimeout(controlsTimer);abort.abort();for(const saved of captured.values())saved.stream.getTracks().forEach(t=>t.stop());for(const element of [video,cameraVideo]){element.pause();element.srcObject=null;element.removeAttribute('src');element.load();}root.remove();if(session?.root===root)session=null;}
- session={root,close};sync();if(closed)throw Error('This call is no longer active.');timer=setInterval(sync,300);
- try{await root.requestFullscreen({navigationUI:'hide'});entered=true;root.focus({preventScroll:true});}catch(reason){close();throw reason;}
+ session={root,close};reveal();sync();if(closed)throw Error('This call is no longer active.');timer=setInterval(sync,300);
+ try{if(!root.requestFullscreen)throw Error('Element fullscreen unavailable');await root.requestFullscreen({navigationUI:'hide'});entered=true;root.focus({preventScroll:true});}catch(reason){if(matchMedia('(max-width:1099px)').matches){root.classList.add('mobile-fullscreen');root.focus({preventScroll:true});}else{close();throw reason;}}
 }

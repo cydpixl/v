@@ -73,4 +73,35 @@
 @media(max-width:359px){.header-identity>.avatar-profile-button{display:none}.header-actions .icon-button{width:36px;min-width:36px}.composer .icon-button{width:40px;min-width:40px}.composer .rich-composer{min-width:56px}}
 @media(prefers-reduced-motion:reduce){html[data-theme] .sidebar{transition:none}}
 
+/* A bounded call pane leaves room for chat and the keyboard on every phone. */
+@media(max-width:1099px){
+ #call-stage:not([hidden]),#call-stage[data-resized=true]:not([hidden]):not(.expanded),#call-stage.has-movie:not([hidden]):not(.expanded){height:clamp(190px,42%,420px)!important;min-height:0!important;max-height:52%!important;flex:0 0 auto!important;padding:6px 8px 8px;gap:6px;overflow:hidden}
+ #call-stage .call-resizer{display:none!important}
+ .workspace.is-calling:has(#call-stage:not(.other-conversation)) #conversation-call-presence{display:none}
+ .workspace.is-calling .typing-label:empty{display:none}
+ #call-stage .call-statusline{position:static;min-height:24px;height:24px;width:100%;flex:none;font-size:11px;background:transparent}
+ #call-stage .call-tiles{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(90px,1fr);padding:0;gap:6px;flex:1;min-height:0;overflow:auto}
+ #call-stage .call-tiles>.call-tile{width:100%;height:100%;min-width:0!important;min-height:0!important;max-width:none;max-height:none;aspect-ratio:auto}
+ #call-stage .call-tiles>.call-tile:only-child{grid-column:1/-1}
+ #call-stage .call-tile video{width:100%;height:100%;object-fit:contain}
+ #call-stage #call-tiles.participant-focused{grid-template-columns:minmax(0,1fr) minmax(80px,28%)!important;grid-template-rows:repeat(var(--tile-rows),minmax(0,1fr))!important;grid-auto-rows:minmax(70px,1fr)}
+ #call-stage #call-tiles.participant-focused>.focused{grid-column:1!important;grid-row:1/-1!important}
+ #call-stage #call-tiles.participant-focused>.dimmed{grid-column:2!important;grid-row:auto!important}
+ #call-stage .tile-label{font-size:10px;max-width:calc(100% - 8px);left:4px;bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #call-stage .tile-avatar .avatar{width:48px;height:48px;font-size:20px}
+ #call-stage .call-controls{display:flex;flex:none;flex-wrap:nowrap;justify-content:center;gap:6px;padding:0;min-height:44px;height:44px}
+ #call-stage .call-device-group,#call-stage .call-action-group{display:flex;align-items:center;gap:2px;height:44px;padding:0;border:0;background:transparent}
+ #call-stage .split-control{display:flex;align-items:center;min-width:0;height:44px;background:var(--raised);border:1px solid var(--border);border-radius:10px}
+ #call-stage .call-controls .icon-button{height:42px;width:42px;min-width:42px;border-radius:10px;background:var(--raised)}
+ #call-stage .call-controls [data-action=audio-menu],#call-stage .call-controls [data-action=camera-menu],#call-stage .call-controls [data-action=call-movies],#call-stage .call-controls [data-action=share],#call-stage .call-controls [data-action=stop-share],#call-stage .call-controls [data-action=call-pip]{display:none}
+ #call-stage .end-call{display:flex;align-items:center;justify-content:center;width:48px;height:44px;flex:none;border-radius:10px;background:#d22d46;color:white}
+ #call-stage.voice-only:not([hidden]){height:200px!important;max-height:45%!important}
+ #call-stage.expanded:not([hidden]){height:calc(100% - 60px)!important;max-height:none!important;flex:1!important}
+ .keyboard-open #call-stage:not([hidden]){height:180px!important;max-height:48%!important}
+ #call-immersive{z-index:1000}
+ #call-immersive .immersive-chat{display:none!important}
+ #call-immersive .immersive-camera{top:max(60px,env(safe-area-inset-top));right:10px;width:25vw;max-width:150px;cursor:default;touch-action:auto}
+ #call-immersive .immersive-exit{opacity:1;pointer-events:auto;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));min-height:44px}
+}
+
 @media(min-width:1100px) and (max-width:1299px){.header-actions .header-search,.header-actions>.secondary,.header-actions>[data-social-compose]{display:none}.header-actions,.header-identity{gap:8px}.composer>[data-action=take-photo],.composer>.composer-gif,.composer>[data-action=sticker],.composer>.schedule-button{display:none}}
