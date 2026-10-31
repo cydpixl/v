@@ -17,3 +17,5 @@ CREATE TABLE IF NOT EXISTS uploads(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name 
 CREATE TABLE IF NOT EXISTS rate_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS scheduled_messages(id TEXT PRIMARY KEY,conversation TEXT NOT NULL,sender TEXT NOT NULL,text TEXT NOT NULL,reply_to TEXT,deliver_at INTEGER NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS scheduled_messages_due ON scheduled_messages(deliver_at);
+
+CREATE TABLE IF NOT EXISTS read_receipts(uid TEXT NOT NULL,conversation TEXT NOT NULL,last_read INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(uid,conversation));

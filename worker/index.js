@@ -1,3 +1,4 @@
+import {privateStatus,publicPresence} from './presence-privacy.js';
 import {kindMessage} from '../src/kind-message.mjs';
 import {liveMusicAPI} from './live-music.js';
 import {socialAPI} from './social.js';
@@ -36,7 +37,7 @@ async function limit(env,key,max=120,seconds=60){const now=Math.floor(Date.now()
 async function notify(env,uid,event){await Promise.all([env.HUB.getByName(uid).publish(event),env.LEGACY_HUB?.getByName(uid).publish(event)]);}
 const currentCall=id=>String(id).startsWith('v2-');
 const roomForCall=(env,id)=>(currentCall(id)?env.ROOM:env.LEGACY_ROOM).getByName(id);
-async function members(env,cid){return rows(env,'SELECT u.uid,u.handle,u.name,u.avatar,u.status,u.last_seen,json_extract((SELECT data FROM profile_extras WHERE uid=u.uid),"$.status") AS custom_status,CASE WHEN json_extract((SELECT data FROM account_options WHERE uid=u.uid),"$.receipts")=0 THEN 0 ELSE m.last_read END AS last_read FROM members m JOIN users u ON u.uid=m.uid WHERE m.conversation=?',cid);}
+async function members(env,cid){return (await rows(env,'SELECT u.uid,u.handle,u.name,u.avatar,u.status,u.last_seen,json_extract((SELECT data FROM profile_extras WHERE uid=u.uid),"$.status") AS custom_status,CASE WHEN json_extract((SELECT data FROM account_options WHERE uid=u.uid),"$.receipts")=0 THEN 0 ELSE COALESCE((SELECT r.last_read FROM read_receipts r WHERE r.uid=m.uid AND r.conversation=m.conversation),m.last_read) END AS last_read FROM members m JOIN users u ON u.uid=m.uid WHERE m.conversation=?',cid)).map(person=>publicPresence(person));}
 async function access(env,uid,cid){const c=await row(env,'SELECT c.* FROM conversations c JOIN members m ON m.conversation=c.id WHERE c.id=? AND m.uid=?',cid,uid);if(!c)fail('Conversation not found.',404);return c;}
 async function publish(env,cid,event){const list=await rows(env,'SELECT uid FROM members WHERE conversation=?',cid);await Promise.all(list.map(m=>notify(env,m.uid,{...event,conversation:cid})));}
 async function blocked(env,a,b){return !!await row(env,'SELECT 1 FROM blocks WHERE (uid=? AND target=?) OR (uid=? AND target=?)',a,b,b,a);}
@@ -53,7 +54,7 @@ async function visibleCall(env,call){
 }
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
- if(p==='/api/health')return json({service:'Vela',version:'1.5.6',release:'persistent-live-player-kind-rewrite-20261031'});
+ if(p==='/api/health')return json({service:'Vela',version:'1.5.7',release:'private-minus-status-20261031'});
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env);if(method!=='GET')await limit(env,'write:'+uid,100);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx};
@@ -80,6 +81,7 @@ async function api(req,env,ctx){
   const avatar=clean(b.avatar??existing?.avatar,700000);if(avatar&&!/^https:\/\//.test(avatar)&&!/^data:image\/(png|jpeg|webp|gif);base64,/.test(avatar)&&!avatar.startsWith('/api/avatar/'))fail('Invalid avatar.');
   const status=['online','idle','dnd','invisible'].includes(b.status)?b.status:existing?.status||'online';
   await run(env,'INSERT INTO users(uid,handle,name,avatar,status,last_seen,created) VALUES(?,?,?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET handle=excluded.handle,name=excluded.name,avatar=excluded.avatar,status=excluded.status,last_seen=excluded.last_seen',uid,handle,name,avatar,status,Date.now(),existing?.created||Date.now());
+  if(existing&&existing.status!==status){const peers=await rows(env,'SELECT DISTINCT b.uid FROM members a JOIN members b ON b.conversation=a.conversation WHERE a.uid=? AND b.uid<>?',uid,uid);ctx.waitUntil(Promise.all(peers.map(peer=>notify(env,peer.uid,{type:'refresh'}))).catch(()=>{}));}
   return json({user:await row(env,'SELECT * FROM users WHERE uid=?',uid)});
  }
  const me=await row(env,'SELECT * FROM users WHERE uid=?',uid);if(!me)fail('Choose your username first.',428);
@@ -87,7 +89,7 @@ async function api(req,env,ctx){
   const friends=await rows(env,'SELECT f.*,u.uid,u.handle,u.name,u.avatar,u.status AS presence,u.last_seen,json_extract((SELECT data FROM profile_extras WHERE uid=u.uid),"$.status") AS custom_status FROM friends f JOIN users u ON u.uid=CASE WHEN f.a=? THEN f.b ELSE f.a END WHERE f.a=? OR f.b=?',uid,uid,uid);
   const conversations=await rows(env,'SELECT c.*,m.last_read,(SELECT text FROM messages WHERE conversation=c.id AND deleted=0 ORDER BY created DESC,id DESC LIMIT 1) AS preview,(SELECT attachment FROM messages WHERE conversation=c.id AND deleted=0 ORDER BY created DESC,id DESC LIMIT 1) AS preview_attachment,(SELECT count(*) FROM messages WHERE conversation=c.id AND sender<>? AND created>m.last_read) AS unread FROM conversations c JOIN members m ON m.conversation=c.id WHERE m.uid=? ORDER BY c.updated DESC',uid,uid);
   await Promise.all(conversations.map(async c=>{c.preview_attachment=c.preview_attachment?JSON.parse(c.preview_attachment):null;c.preview=messagePreview(c.preview,c.preview_attachment);c.members=await members(env,c.id);const calls=await rows(env,"SELECT * FROM calls WHERE conversation=? AND id LIKE 'v2-%' AND status IN ('ringing','active') ORDER BY created DESC",c.id);c.call=null;for(const call of calls){c.call=await visibleCall(env,call);if(c.call)break;}}));
-  return json({user:me,friends,conversations,blocks:await rows(env,'SELECT target FROM blocks WHERE uid=?',uid)});
+  return json({user:me,friends:friends.map(person=>publicPresence(person,uid)),conversations,blocks:await rows(env,'SELECT target FROM blocks WHERE uid=?',uid)});
  }
  if(p==='/api/friends'&&method==='POST'){
   const b=await body(req),target=await row(env,'SELECT * FROM users WHERE handle=?',clean(b.handle,20).toLowerCase());if(!target)fail('No account has that username.',404);if(target.uid===uid)fail('That is your own username.');if(await blocked(env,uid,target.uid))fail('This request is unavailable.',403);
@@ -135,8 +137,8 @@ async function api(req,env,ctx){
    await env.DB.batch([env.DB.prepare('INSERT INTO messages(id,conversation,sender,text,attachment,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,cid,uid,text,attachment,b.replyTo||null,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,cid),...attachments.map(f=>env.DB.prepare('UPDATE uploads SET conversation=? WHERE id=?').bind(cid,f.id))]);
    const message={id,conversation:cid,sender:uid,text,attachment:attachment?JSON.parse(attachment):null,reply_to:b.replyTo||null,created:now,edited:null,deleted:0,pinned:0,reactions:[]};ctx.waitUntil(publish(env,cid,{type:'message',id,sender:uid,message}).catch(error=>console.error('message-publish',id,error.message)));return json({id,message});
   }
-  if(action==='read'&&method==='POST'){const pref=await row(env,'SELECT data FROM account_options WHERE uid=?',uid);const shareReceipts=!pref||JSON.parse(pref.data).receipts!==false;await run(env,'UPDATE members SET last_read=? WHERE conversation=? AND uid=?',Date.now(),cid,uid);if(shareReceipts)await publish(env,cid,{type:'read',uid});return json({ok:true});}
-  if(action==='typing'&&method==='POST'){const b=await body(req);await publish(env,cid,{type:'typing',uid,typing:b.typing===true});return json({ok:true});}
+  if(action==='read'&&method==='POST'){const pref=await row(env,'SELECT data FROM account_options WHERE uid=?',uid);const shareReceipts=!privateStatus(me.status)&&(!pref||JSON.parse(pref.data).receipts!==false),now=Date.now();await run(env,'INSERT OR IGNORE INTO read_receipts(uid,conversation,last_read) SELECT uid,conversation,last_read FROM members WHERE conversation=? AND uid=?',cid,uid);await run(env,'UPDATE members SET last_read=? WHERE conversation=? AND uid=?',now,cid,uid);if(shareReceipts){await run(env,'INSERT INTO read_receipts(uid,conversation,last_read) VALUES(?,?,?) ON CONFLICT(uid,conversation) DO UPDATE SET last_read=excluded.last_read',uid,cid,now);}if(shareReceipts)await publish(env,cid,{type:'read',uid});return json({ok:true});}
+  if(action==='typing'&&method==='POST'){const b=await body(req);if(privateStatus(me.status))return json({ok:true});await publish(env,cid,{type:'typing',uid,typing:b.typing===true});return json({ok:true});}
   if(action==='calls'&&method==='POST'){
    await limit(env,'calls:'+uid,8);const b=await body(req);const people=await members(env,cid);for(const t of people.filter(p=>p.uid!==uid))if(await blocked(env,uid,t.uid))fail('Calling is unavailable.',403);
    const existing=await rows(env,"SELECT * FROM calls WHERE conversation=? AND id LIKE 'v2-%' AND status IN ('ringing','active') ORDER BY created DESC",cid);

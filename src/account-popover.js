@@ -1,6 +1,6 @@
 import {escape as e,avatar} from './util.js';
 import {icon} from './icons.js';
-const statuses=[['online','Online',''],['idle','Idle',''],['dnd','Do Not Disturb','You will not receive desktop notifications'],['invisible','Invisible','You will appear offline']];
+const statuses=[['online','Online',''],['idle','Idle',''],['dnd','Do Not Disturb','Appear offline · hide read receipts and typing'],['invisible','Invisible','Appear offline · hide read receipts and typing']];
 export function accountPopover({anchor,profile,accounts,edit,setStatus,manage,switchAccount,copy,onclose}){
  const card=document.createElement('section');card.className='account-popover';card.id='account-popover';card.setAttribute('role','dialog');card.setAttribute('aria-label','Manage profile and status');
  const status=statuses.find(x=>x[0]===profile.status)||statuses[0];

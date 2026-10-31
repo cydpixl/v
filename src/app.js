@@ -163,7 +163,7 @@ async function refresh(){
  if(refreshing){dirty=true;return;}refreshing=true;const requestedAt=Date.now(),uid=S.user?.uid;
  try{
   const data=await api('/state');if(!S.user||S.user.uid!==uid)return;
-  S.user=data.user;S.friends=data.friends;S.conversations=data.conversations;S.blocks=data.blocks;
+  S.user=data.user;S.friends=data.friends;S.conversations=data.conversations;S.blocks=data.blocks;document.querySelectorAll('[data-profile] .presence').forEach(dot=>{const person=user(dot.closest('[data-profile]').dataset.profile);dot.className='presence '+(online(person)?person.presence||person.status||'online':'offline');});
   for(const c of S.conversations){const event=callEvents.get(c.id);if(event&&(event.receivedAt>=requestedAt||c.call?.id===event.id&&event.revision>(c.call.revision||0)))c.call=event.call;}
   prefetchConversations(S.conversations);renderSidebar();updateDock();
   if(!['chat','movies','library','bookmarks'].includes(S.view)&&S.tab!=='add')renderContent();
