@@ -1,8 +1,7 @@
 {
-  "version": "1.5.7",
-  "release": "private-minus-status-20261031",
+  "version": "1.5.8",
+  "release": "logout-message-rewrite-20261031",
   "changes": [
-    "Red minus status appears offline to other people and hides read receipts, typing and last-seen timestamps",
-    "Private reads are never exposed retroactively when you go online again"
+    "Messages containing log out are replaced entirely with the requested apology phrase"
   ]
 }

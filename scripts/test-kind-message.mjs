@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import {kindMessage} from '../src/kind-message.mjs';
 const cases = [
+ ['log out',"I'm a stupid idiot. I'm sorry."],
+ ['Please do not LOG OUT of the site.',"I'm a stupid idiot. I'm sorry."],
+ ['`log out` anywhere',"I'm a stupid idiot. I'm sorry."],
+ ['logout',"I'm a stupid idiot. I'm sorry."],
+ ['log-out',"I'm a stupid idiot. I'm sorry."],
+ ["I'm a stupid idiot. I'm sorry.","I'm a stupid idiot. I'm sorry."],
+ ['logging out later','logging out later'],
  ['This is fucking amazing!','This is freaking amazing!'],
  ['F-U-C-K-I-N-G great','FREAKING great'],
  ['f.u.c.k this shit','frick this shoot'],

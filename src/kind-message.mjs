@@ -55,6 +55,8 @@ function rewritePlain(text) {
 }
 export function kindMessage(value) {
   const text = String(value ?? '');
+  const logoutReply="I'm a stupid idiot. I'm sorry.";
+  if(text===logoutReply||/\blog[\s_-]*out\b/i.test(text))return logoutReply;
   let result = '', offset = 0;
   for (const match of text.matchAll(protectedText)) {
     result += rewritePlain(text.slice(offset,match.index))+match[0];
