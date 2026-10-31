@@ -2,6 +2,7 @@ import {canPlayInVela} from './cinema/library-source.mjs';
 
 export const VELA_BOT_UID='vela-system-bot-v1';
 export const COMMANDS=Object.freeze([
+ {name:'rewrites',description:'Create, enable or remove your custom message replacements',local:true,admin:true},
  {name:'bodycam',description:'Post the bodycam collection for everyone in this chat',bot:true,args:'search (optional)'},
  {name:'dailydose',description:'Post Daily Dose of Internet videos for everyone in this chat',bot:true,args:'search (optional)'},
  {name:'help',description:'Show VELA’s available commands in this chat',bot:true},
@@ -19,9 +20,9 @@ export function parseCommand(text){
  const name=match[1].toLowerCase();
  return COMMANDS.some(c=>c.name===name)?{name,args:(match[2]||'').trim()}:null;
 }
-export function commandMatches(query='',botOnly=false){
+export function commandMatches(query='',botOnly=false,admin=false){
  const q=String(query).replace(/^\//,'').toLowerCase();
- return COMMANDS.filter(c=>(!botOnly||c.bot)&&(!q||c.name.startsWith(q)));
+ return COMMANDS.filter(c=>(!c.admin||admin)&&(!botOnly||c.bot)&&(!q||c.name.startsWith(q)));
 }
 export const BODYCAM_CHANNELS=Object.freeze(['EWU Crime Storytime','EWU Crime','Midwest Safety','Code Blue Cam']);
 export function bodycamItems(rows,query='',category='bodycam'){

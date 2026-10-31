@@ -1,7 +1,11 @@
 {
-  "version": "1.5.9",
-  "release": "flexible-logout-rewrite-20261031",
+  "version": "1.6.0",
+  "release": "admin-rules-query-budget-20261031",
   "changes": [
-    "Recognize spaced letters, punctuation, close typos and related log-out phrases for whole-message replacement"
+    "Remove all built-in profanity and logout rewrites; messages stay as typed by default",
+    "Site-admin custom replacement editor in the new slash button and /rewrites command",
+    "Site administrator may edit other members messages with audit history",
+    "Indexed live-player lookups and fewer background refreshes to reduce database reads",
+    "Explain database quota outages and display the reset time"
   ]
 }

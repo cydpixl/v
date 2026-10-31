@@ -3,7 +3,7 @@ import {COMMANDS,commandMatches} from './commands.mjs';
 import './slash-commands.css';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function bindSlashCommands(editor){
+export function bindSlashCommands(editor,{admin=false}={}){
  const abort=new AbortController(),options={signal:abort.signal},popup=document.createElement('section');
  popup.id='vela-slash-picker';popup.className='slash-picker';popup.hidden=true;popup.setAttribute('aria-label','Slash commands');editor.closest('form').append(popup);
  let selected=0,botOnly=false,rows=[],dismissed=false;
@@ -12,7 +12,7 @@ export function bindSlashCommands(editor){
  function paint(){
   const value=editor.value;
   if(dismissed||!/^\/[a-z]*$/i.test(value)||document.activeElement!==editor){close();return;}
-  rows=commandMatches(value,botOnly);selected=Math.min(selected,Math.max(0,rows.length-1));popup.hidden=false;
+  rows=commandMatches(value,botOnly,admin);selected=Math.min(selected,Math.max(0,rows.length-1));popup.hidden=false;
   editor.setAttribute('aria-controls',popup.id);editor.setAttribute('aria-expanded','true');editor.setAttribute('aria-autocomplete','list');
   popup.innerHTML=`<header><strong>Commands</strong><span>↑ ↓ to browse · Tab to select</span></header><nav aria-label="Command category"><button type="button" data-command-category="all" aria-pressed="${!botOnly}">All commands</button><button type="button" data-command-category="bot" aria-pressed="${botOnly}">VELA Bot</button></nav><div role="listbox" aria-label="Available commands">${rows.map((c,i)=>`<button type="button" role="option" id="vela-command-${c.name}" aria-selected="${selected===i}" data-command="${c.name}"><span class="slash-command-icon">${c.bot?'V':'/'}</span><span><strong>/${c.name}${c.args?` <small>${esc(c.args)}</small>`:''}</strong><em>${esc(c.description)}</em></span><b>${c.bot?'VELA':'Built-in'}</b></button>`).join('')||'<p>No matching commands</p>'}</div>`;
   if(rows[selected])editor.setAttribute('aria-activedescendant','vela-command-'+rows[selected].name);

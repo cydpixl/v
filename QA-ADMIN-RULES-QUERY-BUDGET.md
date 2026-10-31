@@ -1,0 +1,13 @@
+# VELA 1.6.0
+
+All previous profanity, insult and logout substitutions are removed. Messages remain as typed by default. The site administrator can use the new `/` composer button or `/rewrites` to create, preview, reorder, enable, disable or delete custom replacements. Rules support contains/exact/flexible matching, whole-message or phrase replacement, and everyone/member/admin targets. Global replacements start disabled with an empty list. API validation and revision checks prevent invalid rules and accidental overwrite from another editor window.
+
+The existing @pixl profile was verified in the database and its immutable account UID was provisioned in `site_admins`. User-supplied profile fields do not grant that role. The admin can edit other authors' messages in conversations they can access; normal members still cannot. Edits retain the original sender, receive an edited timestamp, and create a before/after audit record for admin edits of other authors.
+
+The live outage was confirmed in Cloudflare D1 logs: the account exceeded its free daily row-read allowance. D1 insights attributed 3,946,215 reads to the old live-player window query across 1,452 executions (about 2,717 rows per call). That query has been replaced by per-member indexed lookups and a separately indexed pin lookup. The browser avoids repeated empty-chat polls, rate-limits ordinary refreshes and uses message events for immediate player updates. A 5,000-message SQLite fixture confirms the query plan uses partial indexes without scanning message history.
+
+New indexes are installed idempotently by the existing minute cron after D1 allows queries again. Database-limit failures now return a specific 503 response, a reset timestamp and Retry-After; the frontend explains the user's local reset time instead of a generic connection error. No paid-plan upgrade was authorized or performed.
+
+Validation: syntax checks, production/Pages builds, Worker bundle dry run, custom rules and targets/revisions, normal-member access denial, audited cross-author edits, immutable-author preservation, no built-in rewrites, indexed history reads, slash parser, and a browser fixture covering the new `/` menu/editor, preview/save/disable, admin editing, normal-member UI restrictions and quota-reset messaging. Live account validation is blocked until the quota resets at 00:00 UTC (8:00 PM Eastern on October 31, 2026).
+
+Commands: `node scripts/test-message-admin.mjs`, `node scripts/test-kind-message.mjs`, `node scripts/test-live-music-api.mjs`, `node scripts/test-commands.mjs`, and `node scripts/qa-message-admin.mjs`. After the quota reset, `node scripts/test-kind-api.mjs` verifies unrestricted text and member authorization against the live API.
