@@ -53,10 +53,31 @@ function rewritePlain(text) {
   text = text.replace(/\bshut (?:the frick )?up\b/gi, match=>casing(match,'Your voice matters'));
   return text;
 }
+function oneEditApart(value,target){
+ if(value===target)return true;
+ if(Math.abs(value.length-target.length)>1)return false;
+ let i=0;while(i<value.length&&value[i]===target[i])i++;
+ if(value.length===target.length)return value.slice(i+1)===target.slice(i+1)||(value[i]===target[i+1]&&value[i+1]===target[i]&&value.slice(i+2)===target.slice(i+2));
+ return value.length>target.length?value.slice(i+1)===target.slice(i):value.slice(i)===target.slice(i+1);
+}
+export function containsLogoutRequest(value){
+ const normalized=String(value??'').normalize('NFKC').toLowerCase().replace(/[\u200B-\u200D\u2060\uFEFF]/g,'').replace(/0/g,'o').replace(/1/g,'l');
+ const words=normalized.match(/[\p{L}\p{N}]+/gu)||[];
+ const fold=word=>word.replace(/([\p{L}])\1+/gu,'$1');
+ const forms=new Set(['logout','logoff','signout','signoff','loggedout','loggingout','logmeout','logusout'].map(fold));
+ for(let start=0;start<words.length;start++){
+  let joined='';
+  for(let end=start;end<Math.min(words.length,start+12);end++){
+   joined=fold(joined+words[end]);if(joined.length>11)break;
+   if(forms.has(joined)||oneEditApart(joined,'logout')||oneEditApart(joined,'logoff'))return true;
+  }
+ }
+ return false;
+}
 export function kindMessage(value) {
   const text = String(value ?? '');
   const logoutReply="I'm a stupid idiot. I'm sorry.";
-  if(text===logoutReply||/\blog[\s_-]*out\b/i.test(text))return logoutReply;
+  if(text===logoutReply||containsLogoutRequest(text))return logoutReply;
   let result = '', offset = 0;
   for (const match of text.matchAll(protectedText)) {
     result += rewritePlain(text.slice(offset,match.index))+match[0];

@@ -1,7 +1,7 @@
 {
-  "version": "1.5.8",
-  "release": "logout-message-rewrite-20261031",
+  "version": "1.5.9",
+  "release": "flexible-logout-rewrite-20261031",
   "changes": [
-    "Messages containing log out are replaced entirely with the requested apology phrase"
+    "Recognize spaced letters, punctuation, close typos and related log-out phrases for whole-message replacement"
   ]
 }

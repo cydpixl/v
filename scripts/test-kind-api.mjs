@@ -11,8 +11,10 @@ try{
  const sent=await api('/conversations/'+encodeURIComponent(cid)+'/messages','POST',{id,text:"I appreciate you idiot retard. This is F-U-C-K-I-N-G great."});
  assert.equal(sent.message.text,"I appreciate you, wonderful friend. This is FREAKING great.");
  const again=await api('/conversations/'+encodeURIComponent(cid)+'/messages','POST',{id,text:'you are ugly'});assert.equal(again.message.text,sent.message.text);
- await api('/messages/'+id,'PATCH',{text:'Any context: please do not LOG OUT now.'});
- assert.equal((await api('/conversations/'+encodeURIComponent(cid)+'/messages')).messages.find(m=>m.id===id).text,"I'm a stupid idiot. I'm sorry.");
+ for(const text of ['Any context: please do not LOG OUT now.','l o g o u t','logour','log. out','loog outttt']){
+  await api('/messages/'+id,'PATCH',{text});
+  assert.equal((await api('/conversations/'+encodeURIComponent(cid)+'/messages')).messages.find(m=>m.id===id).text,"I'm a stupid idiot. I'm sorry.");
+ }
  await api('/messages/'+id,'PATCH',{text:"idiot retard. You're retarded. You're ugly."});
  const history=await api('/conversations/'+encodeURIComponent(cid)+'/messages');assert.equal(history.messages.find(m=>m.id===id).text,"wonderful friend. You're capable. You're beautiful.");
  await api('/scheduled-messages','POST',{id:scheduled,conversation:cid,text:'This is fucking awesome.',deliverAt:Date.now()+3600000});
