@@ -9,6 +9,10 @@ self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||url.origin!==self.location.origin||!url.href.startsWith(ROOT)||url.pathname.includes('/api/')||url.pathname.includes('/media/')||url.searchParams.has('ticket')||request.headers.has('Authorization'))return;
+ // Nested shop pages must never replace the Vela app shell in its cache.
+ if(url.pathname.startsWith(new URL('shop/',ROOT).pathname)){
+  event.respondWith((async()=>{const cache=await caches.open(CACHE);try{const response=await fetch(request);if(response.ok)event.waitUntil(cache.put(request,response.clone()));return response;}catch{return await cache.match(request,{ignoreVary:true})||new Response('Reconnect to open the shop.',{status:503,headers:{'Content-Type':'text/plain'}});}})());return;
+ }
  if(request.mode==='navigate'){
   event.respondWith((async()=>{
    const cache=await caches.open(CACHE);

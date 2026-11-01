@@ -1,5 +1,7 @@
+import {parseShopMessage} from './shop-message.mjs';
 import {plainEmojis} from './emoji-size.js';
 export function messagePreview(text='',attachment){
+ const shop=parseShopMessage(text);if(shop)return 'Shared '+shop.name+' from Shop';
  text=plainEmojis(text);
  if(attachment?.kind==='bodycam-library')return 'Bodycam · '+(attachment.items?.length||0)+' videos';
  if(attachment?.kind==='daily-dose-library')return 'Daily Dose of Internet · '+(attachment.items?.length||0)+' videos';

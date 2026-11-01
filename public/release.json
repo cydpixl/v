@@ -1,7 +1,10 @@
 {
   "version": "1.6.0",
-  "release": "admin-rules-query-budget-20261031",
+  "release": "shop-chat-integration-20261101",
   "changes": [
+    "Ashlan Shop in a new Shop section",
+    "Send cosmetic and bundle cards directly to conversations",
+    "Open shared items in Shop, including snapshots after offers rotate out",
     "Remove all built-in profanity and logout rewrites; messages stay as typed by default",
     "Site-admin custom replacement editor in the new slash button and /rewrites command",
     "Site administrator may edit other members messages with audit history",

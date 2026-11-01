@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090909">
+  <meta name="description" content="Browse the live Fortnite Item Shop. Explore daily cosmetics, prices, bundles, and save your favorite items.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ashlan Shop — Fortnite Item Shop">
+  <meta property="og:description" content="Today's Fortnite Item Shop. No account required.">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="preconnect" href="https://fortnite-api.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.fortnite-api.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=8"><link rel="stylesheet" href="./game.css?v=8">
+  <title>Ashlan Shop — Today's Fortnite Item Shop</title>
+<link rel="stylesheet" href="./vela-embed.css"></head>
+<body><a class="skip-link" href="#shop-content">Skip to shop</a>
+  <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.4 16.4 4.5 4.5"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M4 8.2h16l-1.4 12H5.4L4 8.2Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 8.5c0 4.2-8.8 10.4-8.8 10.4S3.2 12.7 3.2 8.5a4.8 4.8 0 0 1 8.8-2.6 4.8 4.8 0 0 1 8.8 2.6Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.5V12l3.5 2"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.5 6.1M20 4v7h-7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8v.2"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.5 14.5 9 21 11.5 14.5 14 12 20.5 9.5 14 3 11.5 9.5 9 12 2.5Z"/></symbol>
+  </svg>
+
+  <header class="site-header" id="header">
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="Ashlan Shop home" id="brand-link"><span class="brand-mark"><span>A</span></span><span class="brand-word">ASHLAN<span>SHOP</span></span></a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-link is-active" type="button" data-view="shop">Shop</button>
+        <button class="nav-link" type="button" data-sandbox="locker">Locker<span id="locker-count" hidden></span></button><button class="nav-link" type="button" data-sandbox="vbucks">V-Bucks</button><button class="nav-link" type="button" data-page="library">Library</button><details class="more-menu"><summary>Explore<svg class="explore-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg></summary><div class="more-menu-panel"><button class="nav-link" type="button" data-page="news">News</button><button class="nav-link" type="button" data-page="map">Map</button><button class="nav-link" type="button" data-page="modes">Modes</button><button class="nav-link" type="button" data-view="new">New today</button>
+        <button class="nav-link nav-favorites" type="button" data-view="favorites">My List <span class="fav-count" id="fav-count" hidden>0</span></button></div></details>
+      </nav>
+      <div class="header-actions">
+        <div class="search-wrap" id="search-wrap">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <input id="search" type="search" placeholder="Search the item shop" aria-label="Search items in today's shop" autocomplete="off" enterkeyhint="search" spellcheck="false">
+          <kbd class="search-hint" aria-hidden="true">/</kbd>
+        </div>
+        <button id="mobile-search" class="icon-button mobile-search" type="button" aria-label="Open search"><svg class="icon"><use href="#i-search"/></svg></button>
+        <button id="header-heart" class="icon-button heart-shortcut" type="button" title="My List" aria-label="Open My List"><svg class="icon"><use href="#i-heart"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="account-strip"><span class="account-name">ASHLAN</span><button id="wallet-balance" type="button" aria-label="Add V-Bucks"><img src="https://fortnite-api.com/images/vbuck.png" alt=""><strong id="balance-count">0</strong><span>+</span></button></div><main id="top">
+    <section class="hero is-loading" id="hero" aria-label="Featured cosmetic">
+      <div class="hero-glow" id="hero-glow"></div>
+      <div class="hero-backdrop" id="hero-backdrop"></div>
+      <div class="hero-art-wrap"><img id="hero-art" class="hero-art" alt="" fetchpriority="high" decoding="async"></div>
+      <div class="hero-dim"></div>
+      <div class="hero-content page-width">
+        <div class="hero-copy">
+          <div class="hero-eyebrow"><span class="live-dot"></span><span>FORTNITE ITEM SHOP</span><span class="eyebrow-divider"></span><span id="hero-date">TODAY</span></div>
+          <p class="hero-brand">ASHLAN SHOP<span> / DAILY SELECTION</span></p><h1 id="hero-title">Today's Item Shop<span class="loading-cursor">.</span></h1>
+          <p id="hero-description">The latest cosmetics, bundles and more. Updated automatically every day.</p>
+          <div class="hero-meta" id="hero-meta"><span class="hero-label">LIVE SHOP</span><span class="meta-sep"></span><span id="hero-type">All cosmetics</span><span class="meta-sep"></span><span class="hero-price" id="hero-price">Updated daily</span></div>
+          <div class="hero-buttons"><button class="button button-primary" type="button" id="hero-info"><svg class="icon"><use href="#i-info"/></svg> View item</button><a href="#shop-content" class="button button-outline" id="hero-browse">Browse shop <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+        </div>
+      </div>
+      <div class="hero-bottom page-width"><span id="hero-caption">DAILY ROTATION</span><div class="hero-timer"><svg class="icon"><use href="#i-clock"/></svg><span>New shop in</span><strong id="hero-countdown">--:--:--</strong></div></div>
+    </section>
+
+    <button type="button" id="filter-toggle" class="filter-toggle" aria-label="Show shop filters" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg><span>Filters</span><b id="filter-count" hidden>0</b></button><nav id="section-rail" class="section-rail" aria-label="Shop sections"></nav><section class="shop-shell page-width" id="shop-content" aria-label="Item shop listings">
+      <div class="section-intro">
+        <div><p class="eyebrow-small" id="section-overline">ASHLAN SANDBOX</p><h2 id="section-heading">Item Shop</h2></div><button class="button button-primary" id="get-vbucks" type="button">Ⓥ Get V-Bucks</button>
+        <div class="shop-summary"><span class="status-pill" id="status-pill"><span class="status-light"></span><span id="status-label">Connecting</span></span><span class="summary-sep"></span><span id="item-count">Loading items</span></div>
+      </div>
+      <div class="category-bar" id="category-bar" role="toolbar" aria-label="Filter by item type">
+        <button type="button" class="category is-active" data-filter="all">All items</button>
+        <button type="button" class="category" data-filter="outfit">Outfits</button>
+        <button type="button" class="category" data-filter="emote">Emotes</button>
+        <button type="button" class="category" data-filter="pickaxe">Pickaxes</button>
+        <button type="button" class="category" data-filter="bundle">Bundles</button>
+        <button type="button" class="category" data-filter="music">Jam Tracks</button><button type="button" class="category" data-filter="car">Vehicles</button><button type="button" class="category" data-filter="instrument">Instruments</button><button type="button" class="category" data-filter="other">More</button>
+        <div class="category-end"><button class="sort-button" type="button" id="sort-button" aria-label="Change sort order"><span id="sort-label">Shop order</span><svg class="icon"><use href="#i-chevron"/></svg></button></div>
+      </div>
+      <div class="advanced-filters" id="advanced-filters"><div class="filter-fields"><label>Section<select id="filter-section"><option value="">All sections</option></select></label><label>Rarity / series<select id="filter-rarity"><option value="">All rarities</option></select></label><label>V-Bucks<select id="filter-price"><option value="">Any price</option><option value="0:500">Up to 500</option><option value="501:1000">501 – 1,000</option><option value="1001:1500">1,001 – 1,500</option><option value="1501:2500">1,501 – 2,500</option><option value="2501:999999">Over 2,500</option></select></label><label>Collection<select id="filter-collection"><option value="">Everything</option><option value="owned">Owned</option><option value="unowned">Not owned</option><option value="new">Added today</option><option value="sale">On sale</option></select></label><label>Preview<select id="filter-media"><option value="">Any item</option><option value="animation">Official animation</option><option value="audio">Audio preview</option><option value="any">Any preview</option></select></label><label>Sort by<select id="filter-sort"><option value="shop">Shop order</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="az">Name: A–Z</option><option value="leaving">Leaving soon</option></select></label></div><div class="filter-panel-bottom"><span id="filter-results" role="status"></span><button id="reset-filters" type="button">Reset filters</button></div></div>
+      <div class="notice" id="notice" hidden><svg class="icon"><use href="#i-info"/></svg><span id="notice-text"></span><button id="retry-button" class="notice-retry" type="button">Try again</button></div>
+      <div class="shop-results" id="shop-results" aria-live="polite" aria-busy="true"><div class="skeleton-row"><div class="skeleton-heading"></div><div class="skeleton-cards"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div></div><div class="skeleton-row"><div class="skeleton-heading"></div><div class="skeleton-cards"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div></div></div>
+    </section>
+    <section id="explore-shell" class="explore-shell page-width" hidden aria-label="Explore Fortnite"></section><section id="sandbox-shell" class="sandbox-shell page-width" hidden aria-label="Locker and V-Bucks"></section></main>
+
+  <footer class="footer"><div class="page-width footer-inner"><div class="footer-brand"><span class="footer-brand-name">ASHLAN SHOP</span><span>Your daily Fortnite item shop.</span></div><div class="footer-right"><button type="button" id="footer-refresh">Refresh shop <svg class="icon"><use href="#i-refresh"/></svg></button></div></div></footer>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true" hidden>
+    <div class="modal-shade" data-close="true"></div>
+    <div class="modal-panel" id="modal-panel">
+      <button class="modal-close" type="button" id="modal-close" aria-label="Close details"><svg class="icon"><use href="#i-close"/></svg></button>
+      <div class="modal-art-frame" id="modal-art-frame"><img id="modal-image" class="modal-image" alt=""><video id="stage-video" class="stage-video" autoplay muted loop playsinline hidden aria-label="Animated cosmetic preview"></video><div id="stage-showcase" class="stage-showcase" hidden></div></div>
+      <div class="modal-content">
+        <p class="eyebrow-small" id="modal-category">ITEM SHOP</p>
+        <h2 id="modal-title"></h2>
+        <div class="modal-tags" id="modal-tags"></div>
+        <p id="modal-description" class="modal-description"></p>
+        <div class="modal-price-row"><div class="modal-price" id="modal-price"></div><div class="modal-old-price" id="modal-old-price"></div></div>
+        <div class="purchase-area"><p id="purchase-status" role="status"></p><button id="purchase-item" class="purchase-button" type="button">Purchase</button></div><div class="modal-includes" id="modal-includes" hidden><h3>Included items</h3><div id="included-list" class="included-list"></div></div>
+        <button id="vela-send-item" class="purchase-button vela-send-item" type="button" hidden>Send to chat</button><div id="modal-media" class="modal-media"></div><div class="modal-details" id="modal-details"></div>
+        <button type="button" class="button button-primary modal-save" id="modal-save"><svg class="icon"><use href="#i-heart"/></svg><span>Save to My List</span></button>
+        <button class="button button-outline share-item" id="share-item" type="button">Copy item link ↗</button>
+      </div>
+    </div>
+  </div>
+  <aside id="audio-player" class="audio-player" aria-label="Audio preview player" hidden><img id="player-art" alt=""><div class="player-copy"><strong id="player-title"></strong><span id="player-artist"></span></div><audio id="track-audio" preload="none"></audio><button id="player-toggle" class="player-toggle" type="button" aria-label="Pause preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><div class="player-timeline"><input id="player-seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Preview position" disabled><div><span id="player-elapsed">0:00</span><span id="player-duration">0:00</span></div></div><button id="player-mute" class="player-mute" type="button" aria-label="Mute preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-5 4H3v6h3l5 4ZM15 8q5 4 0 8M18 5q8 7 0 14"/></svg></button><input id="player-volume" type="range" min="0" max="1" value="1" step="0.05" aria-label="Preview volume"><button id="player-close" class="icon-button" aria-label="Close audio preview">×</button></aside><div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js?v=8" defer></script><script src="./explore.js?v=8" defer></script><script src="./wallet.js?v=8" defer></script><script src="./sandbox.js?v=8" defer></script>
+<script src="./vela-embed.js" defer></script></body>
+</html>
