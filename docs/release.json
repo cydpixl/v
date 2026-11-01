@@ -1,14 +1,11 @@
 {
-  "version": "1.6.0",
-  "release": "shop-chat-integration-20261101",
+  "version": "1.7.0",
+  "release": "music-chat-shop-20261101",
   "changes": [
-    "Ashlan Shop in a new Shop section",
-    "Send cosmetic and bundle cards directly to conversations",
-    "Open shared items in Shop, including snapshots after offers rotate out",
-    "Remove all built-in profanity and logout rewrites; messages stay as typed by default",
-    "Site-admin custom replacement editor in the new slash button and /rewrites command",
-    "Site administrator may edit other members messages with audit history",
-    "Indexed live-player lookups and fewer background refreshes to reduce database reads",
-    "Explain database quota outages and display the reset time"
+    "Simpler chat layout and compact Now Playing beside the composer",
+    "Browse and search Apple music with direct Send and custom song cards",
+    "Your weekly listening history and opt-in friend history",
+    "Improved saved-message navigation, search recovery and session-safe retries",
+    "Keep Ashlan Shop browsing and shareable item cards"
   ]
 }
