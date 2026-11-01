@@ -20,3 +20,5 @@ Physical phones, calls, and uploads are outside this change and were not reteste
 Removed the server-style rail, social publishing navigation/actions, and lower profile card. Account, input/output, mute/deafen and settings remain in the top utility bar. Old conversation content remains readable. Idle music activity is compact; automatic detection still follows the signed-in account.
 
 Desktop browser checks: no visible scrollbar tracks; conversation keyboard scrolling still changes scroll position; sidebar resizing uses two columns; account popover fits below its top anchor; mute toggle and User Settings still work; Shop and shared item detail remain reachable; no horizontal page overflow at 1280 by 720.
+
+The compact shell was rebased onto VELA 1.7.0 (f095ae8), preserving Music, song cards, listening history, and the latest chat/outbox improvements. The SMTC bootstrap URL and precache entry are versioned together so the relocated account hook updates reliably.
