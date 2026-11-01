@@ -17,3 +17,10 @@ Validation:
 Browser tests use local fixture accounts and the existing Firebase QA login. The API suite requires a local Worker with TEST_AUTH=local-only and an API ticket secret, and the three worker SQL schemas. The scheduled check dispatches through Wrangler Local Explorer after the test message becomes due.
 
 Physical installed iPhone/Android PWA testing was not performed.
+
+Production verification:
+- Published source commit 49fd304; frontend publish commit 5cfbd91.
+- Worker deployment bbc82d26-f077-474e-a1a0-4b4a827667f4.
+- Frontend release.json and Worker health both report 1.7.3 / status-block-controls-20261101.
+- GitHub frontend build and Pages deployment completed successfully.
+- Two real QA accounts on https://cydpixl.github.io/v/ passed status save, live directional blocking, blocked composer, named settings/unblock, restored message delivery and phone account controls with zero browser JavaScript errors. Original account statuses/block settings were restored and the verification message was deleted.
