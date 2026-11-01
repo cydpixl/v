@@ -27,6 +27,7 @@ import {bindCallResizer} from './call-resizer.js';
 import './call-workspace.css';
 import './call-presence.css';
 import {createMovies} from './movies.js';
+import {needsMovieConversion,convertMovie,releaseConvertedFile} from './movie-conversion.mjs';
 import {createProfiles} from './profiles.js';
 import {editAvatar} from './avatar-editor.js';
 import {accountPopover} from './account-popover.js';
@@ -61,8 +62,8 @@ const $=s=>document.querySelector(s),root=$('#app'),layers=$('#layers');
 const S={session:0,user:null,friends:[],conversations:[],blocks:[],active:null,view:'friends',tab:'online',messages:[],more:false,query:'',reply:null,upload:null,outbox:[],prefs:{},incoming:null};
 let disposeCallResizer,disposeComposer,disposeSlash;let initialThemePromptShown=false;
 function showOpeningTheme(){if(initialThemePromptShown)return;initialThemePromptShown=true;if(localStorage.getItem('vela.theme.chosen')||localStorage.getItem('vela.theme'))return;openThemes();}
-let uploadRequest=0,uploading=false,uploadName='',uploadPercent=0,uploadFailure=null;
-function invalidateUpload(){uploadRequest++;uploading=false;uploadName='';uploadFailure=null;}
+let uploadRequest=0,uploading=false,uploadName='',uploadPercent=0,uploadFailure=null,uploadStage='Uploading',uploadPreparation=null;
+function invalidateUpload(){uploadPreparation?.abort();uploadPreparation=null;uploadRequest++;uploading=false;uploadName='';uploadFailure=null;}
 let engine,live,liveRetry,liveGeneration=0,liveFailures=0,refreshTimer,refreshing=false,dirty=false,typingTimer,lastTyping=0,authMode='login',refreshId=0,callLayout='grid',focusTile=null;
 const messageCache=new Map(),messageRequests=new Map(),messagePrefetching=new Set();
 const callEvents=new Map();
@@ -307,23 +308,33 @@ async function uploadFiles(files){
  if(!files.length||!S.active||!S.user)return;
  const cid=S.active,uid=S.user.uid,request=++uploadRequest,results=[...selectedUploads()];
  const current=()=>request===uploadRequest&&S.active===cid&&S.user?.uid===uid&&S.view==='chat';
- uploading=true;uploadFailure=null;uploadName=files.length===1?files[0].name:files.length+' files';uploadPercent=0;renderUpload();
+ uploading=true;uploadStage='Uploading';uploadFailure=null;uploadName=files.length===1?files[0].name:files.length+' files';uploadPercent=0;renderUpload();
  try{
   if(results.length+files.length>10)throw Error('Send up to 10 attachments per message. Remove an attachment or send this batch first.');
   files=await validateChatSelection(files);
-  for(const [index,file]of files.entries()){
+  for(const [index,selected]of files.entries()){
    if(!current())break;
-   const {upload}=await connections.queue.add(file,cid,{onProgress:p=>{if(current()){uploadPercent=Math.round((index+p/100)/files.length*100);renderUpload();}}});
-   results.push(upload);
-   if(!current())break;
-   setUploads(results);await hydrateFiles([{attachment:S.upload}]);
+   let file=selected;
+   try{
+    if(needsMovieConversion(file)){
+     const controller=uploadPreparation=new AbortController();uploadStage='Preparing video';uploadName=file.name;uploadPercent=0;renderUpload();
+     file=await convertMovie(file,crypto.randomUUID(),{signal:controller.signal,onProgress:p=>{if(!current()){controller.abort();return;}uploadPercent=Math.round(p*100);renderUpload();}});
+     if(uploadPreparation===controller)uploadPreparation=null;
+    }
+    if(!current())break;
+    uploadStage='Uploading';uploadName=files.length===1?file.name:files.length+' files';uploadPercent=Math.round(index/files.length*100);renderUpload();
+    const {upload}=await connections.queue.add(file,cid,{onProgress:p=>{if(current()){uploadPercent=Math.round((index+p/100)/files.length*100);renderUpload();}}});
+    results.push(upload);
+    if(!current())break;
+    setUploads(results);await hydrateFiles([{attachment:S.upload}]);
+   }finally{await releaseConvertedFile(file);}
   }
  }catch(error){if(current()){if(error.uploadJob&&error.code!=='UPLOAD_CANCELLED')uploadFailure={name:uploadName,job:error.uploadJob};toast(error.message);}}
- finally{if(request===uploadRequest){uploading=false;uploadName='';renderUpload();}}
+ finally{if(request===uploadRequest){uploadPreparation=null;uploading=false;uploadName='';renderUpload();}}
 }
 function renderUpload(){
  const preview=$('#upload-preview'),files=selectedUploads();if(uploadFailure&&connections.queue.list().find(j=>j.id===uploadFailure.job)?.status==='done')uploadFailure=null;
- if(preview)preview.innerHTML=(uploading?`<div class="upload-progress" role="status"><span>Uploading ${e(uploadName)} · ${uploadPercent}%</span><button type="button" class="text-button" data-action="upload-manager">Manage</button><progress value="${uploadPercent}" max="100" aria-label="Upload progress"></progress></div>`:uploadFailure?`<div class="upload-progress" role="status"><span>${e(uploadFailure.name)} · Saved in Uploads</span><button type="button" class="text-button" data-action="upload-manager">Resume / Retry</button>${button('close','Dismiss upload status','dismiss-upload-error')}</div>`:'')+files.map(file=>`<div class="upload-progress attachment-preview">${file.type.startsWith('image/')&&file.url?`<img class="upload-thumbnail" src="${e(file.url)}" alt="${e(file.name)} preview">`:icon('file')}<span><strong>${e(file.name)}</strong><small>${bytes(file.size)}</small></span><button type="button" class="icon-button" data-remove-attachment="${e(file.id)}" aria-label="Remove ${e(file.name)}">${icon('close')}</button></div>`).join('');
+ if(preview)preview.innerHTML=(uploading?`<div class="upload-progress" role="status"><span>${e(uploadStage)} ${e(uploadName)} · ${uploadPercent}%</span><button type="button" class="text-button" data-action="upload-manager">Manage</button><progress value="${uploadPercent}" max="100" aria-label="Upload progress"></progress></div>`:uploadFailure?`<div class="upload-progress" role="status"><span>${e(uploadFailure.name)} · Saved in Uploads</span><button type="button" class="text-button" data-action="upload-manager">Resume / Retry</button>${button('close','Dismiss upload status','dismiss-upload-error')}</div>`:'')+files.map(file=>`<div class="upload-progress attachment-preview">${file.type.startsWith('image/')&&file.url?`<img class="upload-thumbnail" src="${e(file.url)}" alt="${e(file.name)} preview">`:icon('file')}<span><strong>${e(file.name)}</strong><small>${bytes(file.size)}</small></span><button type="button" class="icon-button" data-remove-attachment="${e(file.id)}" aria-label="Remove ${e(file.name)}">${icon('close')}</button></div>`).join('');
  preview?.querySelectorAll('[data-remove-attachment]').forEach(b=>b.onclick=()=>{setUploads(selectedUploads().filter(f=>f.id!==b.dataset.removeAttachment));renderUpload();});
  const send=$('#composer-form .send-button');if(send)send.disabled=uploading;
 }

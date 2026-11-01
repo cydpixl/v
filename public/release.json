@@ -1,7 +1,8 @@
 {
-  "version": "1.7.1",
-  "release": "upload-first-20261101",
+  "version": "1.7.2",
+  "release": "playable-chat-videos-20261101",
   "changes": [
+    "Prepare MKV and MOV chat uploads as playable MP4 video",
     "Upload file first with extra tools under More options",
     "Copy message replaces hover Forward; remove Copy Message Link",
     "Resumable attachments up to 1 GB and downloadable MKV support",
