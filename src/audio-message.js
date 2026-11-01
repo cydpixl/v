@@ -6,7 +6,7 @@ export function retainAudioMessages(host){
 }
 export function enhanceAudioMessages(host){
  for(const audio of host.querySelectorAll('audio')){
-  if(audio.closest('.voice-message'))continue;
+  if(audio.closest('.voice-message,.song-card'))continue;
   const box=document.createElement('div');box.className='voice-message';
   box.innerHTML=`<button class="voice-message-play" aria-label="Play voice message">${icon('play',18)}</button><div><span class="voice-message-label">Voice message</span><input type="range" min="0" max="1" step="0.1" value="0" aria-label="Voice message position" disabled><span class="voice-message-time">0:00</span></div><button class="voice-message-speed" aria-label="Playback speed: 1 times">1×</button><p class="voice-message-error" role="status" hidden>Audio unavailable. <button>Retry</button></p>`;
   audio.before(box);box.append(audio);audio.controls=false;audio.hidden=true;

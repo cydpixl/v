@@ -97,6 +97,7 @@
     var song = card.querySelector(".vela-smtc-song");
     var empty = card.querySelector(".vela-smtc-empty");
     var visible = state.enabled && state.track && (state.track.playing || state.showPaused);
+    card.hidden = !visible;
     song.hidden = !visible;
     empty.hidden = !!visible;
     card.classList.toggle("is-playing", !!(visible && state.track.playing));
@@ -155,6 +156,7 @@
       if (!payload || !Array.isArray(payload.sessions)) throw Error("Invalid bridge response");
       if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
       state.track = normalized(selectSession(payload));
+      window.velaMusic?.observeListening?.(state.track,state.share);
       state.status = "connected"; state.error = ""; state.lastSeen = Date.now();
       failures = 0; permissionDenied = false; nextRefresh = Date.now()+(document.hidden?8000:1500);
       if(state.share)publishMusic();
@@ -166,7 +168,7 @@
       if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
       await bridgePermission();
       if(epoch!==requestEpoch || account!==state.account || !state.enabled)return;
-      state.track = null; state.status = "error";
+      state.track = null;window.velaMusic?.observeListening?.(null,state.share); state.status = "error";
       failures++;
       nextRefresh = Date.now()+(permissionDenied?30000:Math.min(15000,1000*Math.pow(2,Math.min(failures,4))));
       state.error = permissionDenied
@@ -276,11 +278,11 @@
     if(button)button.disabled=true;
     setText(info,"");
     try{
-      if(!window.velaMusic?.sendLive)throw Error("Refresh Vela to enable live music cards.");
+      if(!window.velaMusic?.sendSong)throw Error("Refresh Vela to send music.");
       if(!document.querySelector("#composer-form"))throw Error("Open a conversation first.");
-      await window.velaMusic.sendLive(await widgetSnapshot(state.track));
-      setText(button,"Live widget sent");
-      setTimeout(()=>setText(button,"Send live to chat"),1700);
+      var sent=await window.velaMusic.sendSong(await widgetSnapshot(state.track));
+      setText(button,sent?"Sent":"Send");
+      setTimeout(()=>setText(button,"Send"),1700);
     }catch(error){setText(info,error.message||"Unable to send live music.");}
     finally{if(button)button.disabled=false;}
   }
@@ -312,12 +314,12 @@
   }
   function cardHTML() {
     return '<div class="vela-smtc-head"><span class="vela-smtc-symbol" aria-hidden="true">♫</span><div class="vela-smtc-caption"><strong>Now playing <span class="vela-smtc-auto">AUTO</span></strong><small data-smtc-status role="status">Detecting Windows music…</small></div><button type="button" class="vela-smtc-more" data-smtc-settings aria-label="Music connection settings" title="Music settings">•••</button></div>' +
-      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send live to chat</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div></div>' +
+      '<div class="vela-smtc-song" hidden><div class="vela-smtc-main"><div class="vela-smtc-cover"><img data-smtc-art alt="Album artwork" hidden><span aria-hidden="true">♫</span></div><div class="vela-smtc-info"><strong data-smtc-title></strong><small data-smtc-artist></small></div><span class="vela-smtc-equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="vela-smtc-timeline"><div><span data-smtc-elapsed>0:00</span><span data-smtc-total>0:00</span></div><div class="vela-smtc-bar"><i data-smtc-progress></i></div><button type="button" class="vela-smtc-share-button" data-smtc-send>Send</button><small data-smtc-send-feedback class="vela-smtc-send-feedback"></small></div></div>' +
       '<div class="vela-smtc-empty"><span data-smtc-message>Looking for SMTC Bridge…</span><button type="button" data-smtc-action>Check now</button></div>';
   }
   function ensureCard() {
-    var sidebar = document.querySelector(".app-shell .sidebar");
-    var dock = sidebar?.querySelector("#voice-dock") || sidebar?.querySelector("#account-dock");
+    var sidebar = document.querySelector("#composer-form");
+    var dock = sidebar?.querySelector(".composer");
     if (!sidebar || !dock || !state.account) { card = null; return; }
     card = sidebar.querySelector(".vela-smtc-card");
     if (!card) {
@@ -325,7 +327,8 @@
       card.className = "vela-smtc-card";
       card.setAttribute("aria-label", "Windows media activity");
       card.innerHTML = cardHTML();
-      dock.before(card);
+      sidebar.prepend(card);
+      lastArt = ""; lastTitle = "";
       card.querySelector("[data-smtc-settings]").addEventListener("click", openSettings);
       card.querySelector("[data-smtc-send]").addEventListener("click",sendToChat);
       card.querySelector("[data-smtc-action]").addEventListener("click", function () {
@@ -354,7 +357,7 @@
       if (state.enabled) refresh();
     });
     host.querySelector("[data-smtc-share]").addEventListener("change", function (ev) {
-      state.share=ev.target.checked;saveSettings();
+      state.share=ev.target.checked;saveSettings();window.velaMusic?.setListeningSharing?.(state.share).catch(()=>{});
       if(!state.share){publishMusic(true);}else if(state.enabled){publishMusic(true);}
       renderSettings();
     });
@@ -447,5 +450,6 @@
   document.addEventListener("visibilitychange", function () { if (!document.hidden){if(state.enabled)refresh(true);readPeer();} });
   window.addEventListener("online",function(){if(state.enabled)refresh(true);});
   window.addEventListener("focus",function(){if(state.enabled)refresh(true);});
+  window.velaSMTC={setSharing:value=>{state.share=!!value;saveSettings();renderSettings();},track:()=>state.enabled?state.track:null,snapshot:()=>widgetSnapshot(state.track),openSettings};
   scan();
 })();

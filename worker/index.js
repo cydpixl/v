@@ -1,3 +1,4 @@
+import {listeningHistoryAPI} from './listening-history.js';
 import {ensureQueryBudget} from './query-budget.js';
 import {databaseQuotaResponse} from './database-quota.js';
 import {privateStatus,publicPresence} from './presence-privacy.js';
@@ -62,6 +63,7 @@ async function api(req,env,ctx){
  const uid=await identity(req,env),needsAdmin=p==='/api/me'||p==='/api/state'||p.startsWith('/api/admin/')||method==='POST'&&/\/messages$/.test(p)||method==='PATCH'&&p.startsWith('/api/messages/'),siteAdmin=needsAdmin?await isSiteAdmin(env,uid):false;if(method!=='GET')await limit(env,'write:'+uid,100);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx,siteAdmin};
  const messageAdmin=await messageAdminAPI(req,env,uid,helpers);if(messageAdmin)return messageAdmin;
+ const history=await listeningHistoryAPI(req,env,uid,helpers);if(history)return history;
  const music=await liveMusicAPI(req,env,uid,helpers);if(music)return music;
  const social=await socialAPI(req,env,uid,helpers);if(social)return social;
  const feature=await connectionsAPI(req,env,uid,helpers)||await commandAPI(req,env,uid,{...helpers,members,blocked})||await movieUploadAPI(req,env,uid,helpers)||await expressionAPI(req,env,uid,helpers)||await featureAPI(req,env,uid,helpers);if(feature)return feature;

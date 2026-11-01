@@ -36,11 +36,12 @@ export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWit
   const template=document.createElement('template');template.innerHTML=html;
   const preserved=new Map();
   for(const old of target.querySelectorAll(':scope > .message[data-message]')) {
-   if(!old.querySelector('.social-post iframe'))continue;
+   if(!old.querySelector('.social-post iframe,.song-card'))continue;
    const fresh=[...template.content.querySelectorAll('.message[data-message]')].find(n=>n.dataset.message===old.dataset.message);
    if(!fresh)continue;
    const before=old.querySelector('.message-text').cloneNode(true);before.querySelectorAll('.social-post').forEach(n=>n.remove());
-   if(before.innerHTML!==fresh.querySelector('.message-text').innerHTML)continue;
+   const song=old.querySelector('.song-card'),newSong=fresh.querySelector('.song-card');
+   if(song&&newSong?song.dataset.songToken!==newSong.dataset.songToken:before.innerHTML!==fresh.querySelector('.message-text').innerHTML)continue;
    old.className=fresh.className;
    for(const selector of ['.reactions','.message-toolbar','.message-heading']){const a=old.querySelector(selector),b=fresh.querySelector(selector);if(a&&b)a.innerHTML=b.innerHTML;}
    preserved.set(old.dataset.message,old);

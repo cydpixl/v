@@ -1,11 +1,10 @@
 {
-  "version": "1.6.0",
-  "release": "admin-rules-query-budget-20261031",
+  "version": "1.7.0",
+  "release": "music-chat-20261101",
   "changes": [
-    "Remove all built-in profanity and logout rewrites; messages stay as typed by default",
-    "Site-admin custom replacement editor in the new slash button and /rewrites command",
-    "Site administrator may edit other members messages with audit history",
-    "Indexed live-player lookups and fewer background refreshes to reduce database reads",
-    "Explain database quota outages and display the reset time"
+    "Simpler chat layout and compact Now Playing beside the composer",
+    "Browse and search Apple music with direct Send and custom song cards",
+    "Your weekly listening history and opt-in friend history",
+    "Improved saved-message navigation, search recovery and session-safe retries"
   ]
 }

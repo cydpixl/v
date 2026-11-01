@@ -1,5 +1,7 @@
+import {parseSongMessage} from './song-model.mjs';
 import {plainEmojis} from './emoji-size.js';
 export function messagePreview(text='',attachment){
+ const song=parseSongMessage(text);if(song)return song.title+' · '+song.artist;
  text=plainEmojis(text);
  if(attachment?.kind==='bodycam-library')return 'Bodycam · '+(attachment.items?.length||0)+' videos';
  if(attachment?.kind==='daily-dose-library')return 'Daily Dose of Internet · '+(attachment.items?.length||0)+' videos';

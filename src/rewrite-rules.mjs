@@ -1,3 +1,4 @@
+import {parseSongMessage} from './song-model.mjs';
 const escape=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function normalizeRewriteConfig(value){
  if(!value||!Array.isArray(value.rules)||value.rules.length>100)throw Error('Choose up to 100 replacement rules.');
@@ -29,7 +30,7 @@ function replaceBounded(input,regex,replacement){
  return (output+input.slice(offset)).slice(0,4000);
 }
 export function applyRewriteRules(text,config,{admin=false}={}){
- const original=String(text??'');if(!config?.enabled)return original;
+ const original=String(text??'');if(parseSongMessage(original)||!config?.enabled)return original;
  if(/^\[\[vela-live-music:1:[A-Za-z0-9_-]+\]\]$/.test(original))return original;
  let result=original;
  for(const rule of config.rules||[]){
