@@ -1,6 +1,6 @@
 # VELA 1.7.0 · Chat and Music
 
-Implemented locally on branch `improve/vela-features-20261031` on November 1, 2026. This change is not deployed. The separate Vela-Shop-integration checkout has uncommitted work and was left untouched.
+Deployed on November 1, 2026. Combined the Music/chat changes with the committed Ashlan Shop feature from origin/main. Uncommitted edits in the separate Shop checkout were left untouched. Frontend publication: f095ae8; Cloudflare Worker version: e1aad391-3a1a-4173-9d03-44f36af9953f.
 
 ## Product behavior
 
@@ -18,13 +18,17 @@ Implemented locally on branch `improve/vela-features-20261031` on November 1, 20
 - `npm run test:outbox` and `node scripts/test-message-admin.mjs` — passed existing queue and custom-message-control regressions.
 - `npm run check`, `npm run build` and the GitHub-base production build — passed. Vite reports its retained classic SMTC-script warning and a roughly 503 kB main chunk warning.
 - `npm run qa:music-ui` — passed desktop Chromium at 390/768/1440 widths and the light theme. Used the built frontend at the real production origin through a test-only static route, two real Firebase QA accounts, authenticated production messages/WebSocket delivery, and real Apple search/art/audio. Verified send, recipient decode/playback/pause/seeking, retained audio during incoming messages, composer-draft preservation, unobstructed mobile layouts and zero uncaught browser errors.
-- Weekly views were exercised against the actual new Worker running locally with isolated D1 records and local-only test authentication. The history endpoint has not been deployed or verified against production D1.
+- Weekly views were exercised against the actual new Worker running locally with isolated D1 records and local-only test authentication. The endpoint was then deployed and verified against production D1 using two real QA accounts. Both weekly views, sharing and direct song sending passed on the actual GitHub Pages site without test routing. QA-generated history records and messages were removed and prior sharing preferences restored.
 - QA-created production messages were deleted. Test fixtures and credentials are not part of the product. Physical phones, native Apple Music account-history import and WebKit playback were not tested.
 
 ## Running and publishing
 
 The working Vite preview is `http://127.0.0.1:5197/`. The isolated history Worker is `http://127.0.0.1:8796/`; browser QA maps only history calls to that local Worker. Product history calls use the configured authenticated API origin.
 
-The new Worker route is `/api/listening-history` (GET, POST, DELETE). Its additive tables/index are in `worker/migrations/0008_listening_history.sql`, and the route safely initializes them on first use. Publish the updated Worker together with the frontend. Reconcile the independent shop work before updating the shared production app.
+The new Worker route is `/api/listening-history` (GET, POST, DELETE). Its additive tables/index are in `worker/migrations/0008_listening_history.sql`, and the route safely initializes them on first use. The Worker, additive migration, and combined frontend are published. Both public release manifests report version 1.7.0 / music-chat-shop-20261101. GitHub build and Pages deployment workflows succeeded.
 
 Apple integration uses the [official Search API](https://performance-partners.apple.com/search-api), with bounded, cached searches and direct playback from returned audio URLs. Prepared D1 statements follow [Cloudflare's API](https://developers.cloudflare.com/d1/worker-api/prepared-statements/).
+
+Live site: https://cydpixl.github.io/v/
+
+Worker frontend/API: https://vela-cyd.cydpixl7.workers.dev/

@@ -4,26 +4,31 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 const qa=JSON.parse(fs.readFileSync(process.env.QA_CREDENTIALS||'.private/qa.json','utf8')),site=process.env.QA_SITE||'http://127.0.0.1:5196/',backend='https://vela-cyd.cydpixl7.workers.dev',local='http://127.0.0.1:8796',cid=qa.users.slice(0,2).map(u=>u.uid).sort().join(':'),output=path.resolve('output/playwright/music-ui');
 fs.mkdirSync(output,{recursive:true});
-const browser=await chromium.launch({channel:'chrome',headless:true}),pages=[],tokens=[],created=[],errors=[];
+const browser=await chromium.launch({channel:'chrome',headless:true}),pages=[],tokens=[],created=[],errors=[],historyCreated=[],priorSharing=[];
 const pass=name=>console.log('PASS:',name);
-async function liveAPI(path,method='GET',body){const response=await fetch(backend+'/api'+path,{method,headers:{Authorization:tokens[0],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await response.json();assert.ok(response.ok,data.error||response.status);return data;}
+async function liveAPI(path,method='GET',body,index=0){const response=await fetch(backend+'/api'+path,{method,headers:{Authorization:tokens[index],'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await response.json();assert.ok(response.ok,data.error||response.status);return data;}
 async function historyAPI(uid,path='',method='GET',body){const response=await fetch(local+'/api/listening-history'+path,{method,headers:{Authorization:'Bearer test:'+uid,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await response.json();assert.ok(response.ok,data.error||response.status);return data;}
 async function chat(page){const nav=page.getByRole('button',{name:'Show Navigation',exact:true});if(await nav.isVisible())await nav.click();await page.locator('.dm-row[data-open="'+cid+'"]').click();await page.locator('#composer').waitFor();}
 try{
- await historyAPI('listener-one','','POST',{shared:true,track:{id:crypto.randomUUID(),title:'luther',artist:'Kendrick Lamar',album:'GNX'}});
- await historyAPI('listener-two','','POST',{shared:true,track:{id:crypto.randomUUID(),title:'Snooze',artist:'SZA',album:'SOS'}});
+ if(process.env.QA_REAL_HISTORY!=='1')await historyAPI('listener-one','','POST',{shared:true,track:{id:crypto.randomUUID(),title:'luther',artist:'Kendrick Lamar',album:'GNX'}});
+ if(process.env.QA_REAL_HISTORY!=='1')await historyAPI('listener-two','','POST',{shared:true,track:{id:crypto.randomUUID(),title:'Snooze',artist:'SZA',album:'SOS'}});
  for(let i=0;i<2;i++){console.log('Opening QA session',i);
   const context=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'});
   if(process.env.QA_BUNDLE==='1')await context.route('https://cydpixl.github.io/v/**',route=>route.fulfill({path:path.resolve('dist-gh',new URL(route.request().url()).pathname.slice(3)||'index.html')}));
   await context.addInitScript(()=>{localStorage.setItem('vela.theme','graphite');localStorage.setItem('vela.theme.chosen','1');});
-  await context.route(backend+'/**',async route=>{try{
-   const history=route.request().url().includes('/api/listening-history');
+  if(process.env.QA_REAL_HISTORY!=='1')await context.route(backend+'/**',async route=>{try{
+   const history=process.env.QA_REAL_HISTORY!=='1'&&route.request().url().includes('/api/listening-history');
    const request=route.request(),response=await route.fetch({...(history?{url:local+new URL(request.url()).pathname+new URL(request.url()).search}:{}),headers:{...request.headers(),origin:'https://cydpixl.github.io',...(history?{authorization:'Bearer test:'+(i?'listener-two':'listener-one')}:{})}});
    await route.fulfill({response,headers:{...response.headers(),'access-control-allow-origin':new URL(site).origin}});
   }catch{await route.abort().catch(()=>{});}});
   await context.route('http://127.0.0.1:5000/**',route=>route.fulfill({json:{current_session_id:'apple',sessions:[{source_app_id:'apple',media_properties:{Title:'luther',Artist:'Kendrick Lamar',AlbumTitle:'GNX'},playback_info:{PlaybackStatus:4},timeline_properties:{StartTime:0,EndTime:177000,Position:24000}}]},headers:{'access-control-allow-origin':'*'}}));
-  const page=await context.newPage();pages.push(page);page.setDefaultTimeout(35000);page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>{if(request.url().startsWith(backend+'/api/')&&request.headers().authorization)tokens[i]=request.headers().authorization;});
+  const page=await context.newPage();pages.push(page);page.setDefaultTimeout(35000);page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>{if(request.url().startsWith(backend+'/api/')&&request.headers().authorization)tokens[i]=request.headers().authorization;if(process.env.QA_REAL_HISTORY==='1'&&request.url().includes('/api/listening-history')&&request.method()==='POST'){const data=request.postDataJSON();if(data?.track?.id)historyCreated.push({uid:qa.users[i].uid,id:data.track.id});}});
   await page.goto(site,{waitUntil:'domcontentloaded'});console.log('Login page loaded',i);await page.locator('[name=handle]').fill(qa.users[i].handle);await page.locator('[name=password]').fill(qa.password);await page.getByRole('button',{name:'Log In',exact:true}).click();await page.getByRole('button',{name:'Tools & uploads',exact:true}).waitFor();await chat(page);console.log('Chat loaded',i);
+ }
+ if(process.env.QA_REAL_HISTORY==='1')for(let i=0;i<2;i++){
+  priorSharing[i]=(await liveAPI('/listening-history','GET',undefined,i)).sharing;
+  await liveAPI('/listening-history','POST',{shared:true},i);
+  const id=crypto.randomUUID();await liveAPI('/listening-history','POST',{shared:true,track:{id,title:i?'Snooze':'luther',artist:i?'SZA':'Kendrick Lamar',album:i?'SOS':'GNX'}},i);historyCreated.push({uid:qa.users[i].uid,id});
  }
  const [a,b]=pages;console.log('Checking Music page');
  await a.locator('#composer').fill('Draft stays while sharing a song');
@@ -49,12 +54,17 @@ try{
  await a.locator('[data-message="'+sent.message.id+'"] .song-card').waitFor();await a.screenshot({animations:'disabled',path:path.join(output,'chat-desktop.png')});
  await a.locator('[data-action=music]').click();await a.getByRole('button',{name:'This week',exact:true}).click();await a.locator('.music-history-row').filter({hasText:'luther'}).first().waitFor();await a.screenshot({animations:'disabled',path:path.join(output,'music-week.png')});
  await a.locator('[data-music-view=friends]').click();await a.locator('[data-music-view=friends][aria-pressed=true]').waitFor();await a.locator('.music-history-row').filter({hasText:'Snooze'}).first().waitFor();
- pass('Music navigation preserves composer drafts; weekly history and opted-in friend history render from local Worker/D1');
+ pass('Music navigation preserves composer drafts; weekly history and opted-in friend history render from the selected Worker/D1');
  for(const width of [390,768]){await a.setViewportSize({width,height:844});await a.locator('[data-music-view=browse]').click();await a.locator('.music-browse-track').first().waitFor();assert.ok(await a.locator('.music-page').evaluate(el=>el.scrollWidth<=el.clientWidth+1));await a.screenshot({animations:'disabled',path:path.join(output,'music-'+width+'.png')});await chat(a);assert.ok(await a.locator('#composer').isVisible());assert.ok(await a.locator('.composer').evaluate(el=>el.getBoundingClientRect().right<=innerWidth));await a.screenshot({animations:'disabled',path:path.join(output,'chat-'+width+'.png')});await a.locator('[data-action=music-share]').click();}
  await a.setViewportSize({width:1440,height:1000});await a.getByRole('button',{name:'Choose theme',exact:true}).click();await a.locator('[data-choose-theme=paper]').click();await a.getByRole('button',{name:'Use Paper',exact:true}).click();await a.screenshot({animations:'disabled',path:path.join(output,'music-light.png')});
  assert.deepEqual(errors,[]);pass('390/768/1440 layouts, light theme, no horizontal overflow or uncaught browser errors');
 }catch(error){for(let i=0;i<pages.length;i++){await pages[i].screenshot({path:path.join(output,'failure-'+i+'.png')}).catch(()=>{});console.error('PAGE',i,(await pages[i].locator('body').innerText()).slice(-2200));}throw error;}finally{
  for(const id of created)try{await liveAPI('/messages/'+id,'DELETE');}catch(error){console.error('QA cleanup failed:',id,error.message);}
+ if(process.env.QA_REAL_HISTORY==='1'){
+  for(let i=0;i<priorSharing.length;i++)await liveAPI('/listening-history','POST',{shared:priorSharing[i]},i);
+  const safe=historyCreated.filter(row=>qa.users.some(u=>u.uid===row.uid)&&/^[a-f0-9-]{36}$/i.test(row.id)&&/^[A-Za-z0-9_-]+$/.test(row.uid));
+  fs.writeFileSync(path.join(output,'qa-history-cleanup.sql'),safe.map(row=>"DELETE FROM listening_history WHERE uid='"+row.uid+"' AND id='"+row.id+"';").join('\n'));
+ }
  for(const page of pages)await page.context().unrouteAll({behavior:'ignoreErrors'});
  await browser.close();
 }
