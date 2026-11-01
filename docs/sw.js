@@ -1,14 +1,18 @@
 // Vela owns only its scoped shell cache. Private API/media responses bypass it.
-const VERSION='pwa-cc16c2e541f1';
+const VERSION='pwa-94553c142a02';
 const PREFIX='vela-shell-';
 const CACHE=PREFIX+VERSION;
 const ROOT=new URL('./',self.registration.scope).href;
-const PRECACHE=["./","./manifest.webmanifest","./favicon.svg","./vela-mark.svg","./icons/icon-192.png","./icons/icon-512.png","./icons/apple-touch-icon.png","./icons/maskable-512.png","./vela-smtc.js","./vela-smtc.css","./fonts/gg-sans-400.woff2","./fonts/gg-sans-500.woff2","./fonts/gg-sans-600.woff2","./fonts/gg-sans-700.woff2","./assets/index-B29UowRh.css","./assets/firebase-Ky9UFjrk.js","./assets/index-CP0AzWgm.js","./assets/call-replay.worker-BXCeDE0G.js","./assets/__vite-browser-external-9wXp6ZBx.js","./assets/movie-conversion.worker-BG5ptHQ1.js"];
+const PRECACHE=["./","./manifest.webmanifest","./favicon.svg","./vela-mark.svg","./icons/icon-192.png","./icons/icon-512.png","./icons/apple-touch-icon.png","./icons/maskable-512.png","./vela-smtc.js","./vela-smtc.css","./fonts/gg-sans-400.woff2","./fonts/gg-sans-500.woff2","./fonts/gg-sans-600.woff2","./fonts/gg-sans-700.woff2","./assets/index-DN06LEkX.css","./assets/firebase-Ky9UFjrk.js","./assets/index-BVlRpCVx.js","./assets/call-replay.worker-BXCeDE0G.js","./assets/__vite-browser-external-9wXp6ZBx.js","./assets/movie-conversion.worker-BG5ptHQ1.js"];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(PREFIX)&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||url.origin!==self.location.origin||!url.href.startsWith(ROOT)||url.pathname.includes('/api/')||url.pathname.includes('/media/')||url.searchParams.has('ticket')||request.headers.has('Authorization'))return;
+ // Nested shop pages must never replace the Vela app shell in its cache.
+ if(url.pathname.startsWith(new URL('shop/',ROOT).pathname)){
+  event.respondWith((async()=>{const cache=await caches.open(CACHE);try{const response=await fetch(request);if(response.ok)event.waitUntil(cache.put(request,response.clone()));return response;}catch{return await cache.match(request,{ignoreVary:true})||new Response('Reconnect to open the shop.',{status:503,headers:{'Content-Type':'text/plain'}});}})());return;
+ }
  if(request.mode==='navigate'){
   event.respondWith((async()=>{
    const cache=await caches.open(CACHE);

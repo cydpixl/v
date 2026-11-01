@@ -1,6 +1,8 @@
+import {parseShopMessage} from './shop-message.mjs';
 import {parseSongMessage} from './song-model.mjs';
 import {plainEmojis} from './emoji-size.js';
 export function messagePreview(text='',attachment){
+ const shop=parseShopMessage(text);if(shop)return 'Shared '+shop.name+' from Shop';
  const song=parseSongMessage(text);if(song)return song.title+' · '+song.artist;
  text=plainEmojis(text);
  if(attachment?.kind==='bodycam-library')return 'Bodycam · '+(attachment.items?.length||0)+' videos';

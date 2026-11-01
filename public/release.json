@@ -1,10 +1,11 @@
 {
   "version": "1.7.0",
-  "release": "music-chat-20261101",
+  "release": "music-chat-shop-20261101",
   "changes": [
     "Simpler chat layout and compact Now Playing beside the composer",
     "Browse and search Apple music with direct Send and custom song cards",
     "Your weekly listening history and opt-in friend history",
-    "Improved saved-message navigation, search recovery and session-safe retries"
+    "Improved saved-message navigation, search recovery and session-safe retries",
+    "Keep Ashlan Shop browsing and shareable item cards"
   ]
 }

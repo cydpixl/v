@@ -34,7 +34,8 @@
     "test:kind-api": "node scripts/test-kind-api.mjs",
     "test:live-music-api": "node scripts/test-live-music-api.mjs",
     "qa:live-player": "node scripts/qa-live-player.mjs",
-    "test:message-admin": "node scripts/test-message-admin.mjs"
+    "test:message-admin": "node scripts/test-message-admin.mjs",
+    "test:shop": "node scripts/test-shop.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
