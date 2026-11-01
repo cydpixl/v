@@ -2,7 +2,7 @@ import {socialLink} from './social-links.mjs';
 import {escape as e} from './util.js';
 import './social.css';
 
-export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWith}) {
+export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWith,sharing=true}) {
  const pendingKey='vela.social.pending';
  let shared='';
  const incoming=new URL(location.href);
@@ -11,8 +11,8 @@ export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWit
  function clearPending(){shared='';try{sessionStorage.removeItem(pendingKey);}catch{}}
  function card(post) {
   const node=document.createElement('section');node.className='social-post';node.dataset.socialUrl=post.url;
-  node.innerHTML=`<header><strong>${e(post.label)}</strong><a href="${e(post.url)}" target="_blank" rel="noopener noreferrer">Open original ↗</a></header><div class="social-player"><button type="button" data-load-post><span class="social-play">▶</span><strong>Watch ${e(post.label)}</strong><small>Play here in VELA</small></button></div><p class="social-note">Public posts play here when the creator allows embeds.</p><footer><button type="button" data-forward-post>Send to a friend</button><button type="button" data-copy-post>Copy link</button></footer>`;
-  node.querySelector('[data-forward-post]').onclick=()=>compose(post.url);
+  node.innerHTML=`<header><strong>${e(post.label)}</strong><a href="${e(post.url)}" target="_blank" rel="noopener noreferrer">Open original ↗</a></header><div class="social-player"><button type="button" data-load-post><span class="social-play">▶</span><strong>Watch ${e(post.label)}</strong><small>Play here in VELA</small></button></div><p class="social-note">Public posts play here when the creator allows embeds.</p><footer>${sharing?'<button type="button" data-forward-post>Send to a friend</button>':''}<button type="button" data-copy-post>Copy link</button></footer>`;
+  node.querySelector('[data-forward-post]')?.addEventListener('click',()=>compose(post.url));
   node.querySelector('[data-copy-post]').onclick=async()=>{try{await navigator.clipboard.writeText(post.url);toast('Post link copied.');}catch{toast('Press and hold the original link to copy it.');}};
   node.querySelector('[data-load-post]').onclick=async event=>{
    const button=event.currentTarget;button.disabled=true;button.querySelector('strong').textContent='Loading post…';
@@ -52,7 +52,7 @@ export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWit
   for(const fresh of [...template.content.children]){const old=preserved.get(fresh.dataset.message);if(old){anchor=old.nextSibling;}else target.insertBefore(fresh,anchor);}
  }
  function compose(initial='') {
-  if(!S.user)return;
+  if(!sharing||!S.user)return;
   const owner=S.user.uid,dialog=modal('Share Post',`<div class="social-intro"><strong>Something they need to see.</strong><p>On your iPhone: TikTok → Share → Copy Link. Paste it here and send it to a friend.</p></div><label>POST LINK<div class="social-link-input"><input name="post" aria-label="Post link" type="text" inputmode="url" autocapitalize="none" autocomplete="off" placeholder="Paste a TikTok or Instagram link" value="${e(initial)}"><button type="button" data-paste>Paste</button></div></label><p class="social-validation" role="status"></p><label>ADD A MESSAGE<textarea name="note" aria-label="Optional message" maxlength="2000" placeholder="Thought of you…" rows="2"></textarea></label><label>SEND TO<input type="search" aria-label="Search friends and groups" placeholder="Search friends and groups"></label><div class="social-recipients"></div><p class="form-error" role="alert"></p><footer><small>Only the people you choose receive this post.</small><button type="button" class="primary" data-send-post disabled>Send Post</button></footer>`,{onclose:clearPending});
   dialog.classList.add('social-compose');
   const input=dialog.querySelector('[name=post]'),status=dialog.querySelector('.social-validation'),list=dialog.querySelector('.social-recipients'),submit=dialog.querySelector('[data-send-post]'),error=dialog.querySelector('.form-error');
@@ -79,6 +79,7 @@ export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWit
   recipients();validate();
  }
  async function shelf() {
+  if(!sharing)return;
   const owner=S.user?.uid,dialog=modal('Shared Posts',`<div class="social-shelf-top"><p>TikToks and Reels from your conversations.</p><button type="button" data-new-post class="primary">Share Post</button></div><div class="social-filters"><label>Platform<select name="provider"><option value="">All posts</option><option value="tiktok">TikTok</option><option value="instagram">Instagram</option></select></label><label>Conversation<select name="conversation"><option value="">All conversations</option>${S.conversations.map(c=>`<option value="${e(c.id)}">${e(title(c))}</option>`).join('')}</select></label></div><div class="social-shelf" aria-live="polite"></div><p class="form-error" role="alert"></p><footer><button type="button" data-more-posts>Load more</button></footer>`,{wide:true});
   dialog.classList.add('social-shelf-modal');let items=[],cursor=null,loading=false,revision=0;
   const target=dialog.querySelector('.social-shelf'),more=dialog.querySelector('[data-more-posts]'),error=dialog.querySelector('.form-error');
@@ -86,7 +87,7 @@ export function createSocial({S,api,modal,toast,title,user,openChat,send,chatWit
   async function load(reset=false){if(loading&&!reset)return;const current=++revision;loading=true;more.disabled=true;error.textContent='';if(reset){items=[];cursor=null;target.textContent='Loading posts…';}try{const query=new URLSearchParams();if(cursor&&!reset){query.set('before',cursor.before);query.set('id',cursor.id);}const cid=dialog.querySelector('[name=conversation]').value;if(cid)query.set('conversation',cid);const data=await api('/social/posts?'+query);if(current!==revision||!dialog.isConnected||S.user?.uid!==owner)return;items.push(...data.posts);cursor=data.next;draw();}catch(err){if(current===revision){error.textContent=err.message;more.hidden=false;more.textContent='Retry';}}finally{if(current===revision){loading=false;more.disabled=false;}}}
   dialog.querySelector('[data-new-post]').onclick=()=>{dialog.close();compose();};dialog.querySelector('[name=provider]').onchange=draw;dialog.querySelector('[name=conversation]').onchange=()=>load(true);more.onclick=()=>load();await load(true);
  }
- function ready(){try{shared=shared||sessionStorage.getItem(pendingKey)||'';}catch{}if(shared&&socialLink(shared)&&!document.querySelector('.social-compose'))compose(shared);else if(incoming.searchParams.get('open')==='share')compose();}
+ function ready(){if(!sharing){clearPending();return;}try{shared=shared||sessionStorage.getItem(pendingKey)||'';}catch{}if(shared&&socialLink(shared)&&!document.querySelector('.social-compose'))compose(shared);else if(incoming.searchParams.get('open')==='share')compose();}
  document.addEventListener('click',event=>{if(event.target.closest('[data-social-compose]'))compose();if(event.target.closest('[data-social-shelf]'))shelf().catch(error=>toast(error.message));});
  return {enhance,render,compose,shelf,ready};
 }

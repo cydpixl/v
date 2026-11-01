@@ -14,3 +14,9 @@ Validated 2026-11-01:
 The isolated checkout starts from origin/main 8f76d8c. Unrelated edits in PIXL-Chat were not included. API/message storage, authentication and Worker routes were not changed. The release adds only frontend code and static shop files.
 
 Physical phones, calls, and uploads are outside this change and were not retested.
+
+## Compact shell follow-up (2026-11-01)
+
+Removed the server-style rail, social publishing navigation/actions, and lower profile card. Account, input/output, mute/deafen and settings remain in the top utility bar. Old conversation content remains readable. Idle music activity is compact; automatic detection still follows the signed-in account.
+
+Desktop browser checks: no visible scrollbar tracks; conversation keyboard scrolling still changes scroll position; sidebar resizing uses two columns; account popover fits below its top anchor; mute toggle and User Settings still work; Shop and shared item detail remain reachable; no horizontal page overflow at 1280 by 720.

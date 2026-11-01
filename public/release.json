@@ -1,7 +1,11 @@
 {
   "version": "1.7.0",
-  "release": "music-chat-shop-20261101",
+  "release": "compact-chat-shell-20261101",
   "changes": [
+    "Single-sidebar layout without server-style rail",
+    "Remove Share Post and Shared Posts",
+    "Top-bar account and audio controls replace the bottom profile card",
+    "Hidden scrollbar tracks and more room for conversations",
     "Simpler chat layout and compact Now Playing beside the composer",
     "Browse and search Apple music with direct Send and custom song cards",
     "Your weekly listening history and opt-in friend history",

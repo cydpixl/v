@@ -101,6 +101,7 @@
     song.hidden = !visible;
     empty.hidden = !!visible;
     card.classList.toggle("is-playing", !!(visible && state.track.playing));
+    card.classList.toggle("has-track", !!visible);
     var sub = card.querySelector("[data-smtc-status]");
     setText(sub, activityLabel());
     if (visible) {
@@ -416,8 +417,8 @@
   function scan() {
     scanPending = false;
     if (destroyed) return;
-    var accountNode = document.querySelector("#account-dock .self-profile small");
-    var account = (accountNode?.textContent || "").trim().toLowerCase();
+    var accountNode = document.querySelector("#account-dock");
+    var account = (accountNode?.dataset.accountHandle || "").trim().toLowerCase();
     if (account !== state.account) {
       requestEpoch++; nextRefresh=0; failures=0; permissionDenied=false;
       controller?.abort();
