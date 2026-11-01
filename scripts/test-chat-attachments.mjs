@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {validateChatFile} from '../src/media-policy.mjs';
+import {connectionsAPI} from '../worker/connections.js';
+const ebml=Uint8Array.from([0x1a,0x45,0xdf,0xa3,...new TextEncoder().encode('matroska')]);
+const mkv=await validateChatFile(new File([ebml],'episode.mkv',{type:'video/x-matroska'}));
+assert.equal(mkv.type,'application/octet-stream');
+const header={name:'large.mkv',size:584927865,type:'video/x-matroska',slice:()=>new Blob([ebml])};
+const large=await validateChatFile(header);assert.equal(large.type,'application/octet-stream');
+await assert.rejects(()=>validateChatFile({...header,size:1024**3+1}),/1 GB/);
+assert.equal((await validateChatFile(new File([Uint8Array.from([0x1a,0x45,0xdf,0xa3,...new TextEncoder().encode('webm')])],'video.webm',{type:'video/webm'}))).type,'video/webm');
+await assert.rejects(()=>validateChatFile(new File(['fake'],'photo.png',{type:'image/png'})),/validated/);
+const h={body:req=>req.json(),access:async()=>{},row:async()=>({id:'reserved'}),json:x=>x,fail:message=>{throw Error(message)}};
+const env={FILES:{createMultipartUpload:async()=>({uploadId:'test',abort:async()=>{}})}};
+const create=size=>connectionsAPI(new Request('https://vela.test/api/chat-uploads',{method:'POST',body:JSON.stringify({size,conversation:'chat',name:'large.mkv',type:'application/octet-stream'})}),env,'owner',h);
+assert.equal((await create(584927865)).partSize,8*1024**2);
+await assert.rejects(()=>create(1024**3+1),/1 GB/);
+console.log('PASS: 585 MB MKV, downloadable type, WebM preservation, forged media rejection, frontend/backend 1 GB boundaries, multipart parts stay 8 MB');

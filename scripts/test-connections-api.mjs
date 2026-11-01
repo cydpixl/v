@@ -17,7 +17,7 @@ assert.equal((await request(b,'/profile-extras/'+a)).profile.status,'Testing par
 await request(a,'/preferences','PUT',{receipts:false});
 await request(a,'/conversation-options/'+group,'PUT',{muted:true,pinned:true});
 assert.equal((await request(a,'/preferences')).conversations[group].pinned,true);
-await request(a,'/chat-uploads','POST',{conversation:group,name:'too-large.zip',size:513*1024**2,type:'application/zip'},400);
+await request(a,'/chat-uploads','POST',{conversation:group,name:'too-large.zip',size:1024**3+1,type:'application/zip'},400);
 const content=new Uint8Array(8*1024**2+127).fill(97),job=await request(a,'/chat-uploads','POST',{conversation:group,name:'resumable.txt',size:content.length,type:'text/plain'});
 await request(c,'/chat-uploads/'+job.id,'GET',undefined,404);
 await request(a,'/chat-uploads/'+job.id+'/part?n=1','PUT',content.subarray(0,job.partSize));
@@ -36,4 +36,4 @@ await request(b,'/hidden-messages','POST',{id});assert.ok(!(await request(b,'/se
 await request(b,'/hidden-messages','DELETE');assert.ok((await request(b,'/search?q=Parity')).messages.some(m=>m.id===id));
 await request(a,'/conversations/'+group+'/read','POST');const state=await request(b,'/state');assert.equal(state.conversations.find(x=>x.id===group).members.find(x=>x.uid===a).last_read,0);
 await request(a,'/groups/'+group+'/members','POST',{uid:c,action:'remove'});await request(c,'/message-context/'+id,'GET',undefined,404);
-console.log(JSON.stringify({ok:true,checks:['group permissions and owner protection','profile ownership','private preferences','multipart resume and completion retry','512 MB cap','attachment ownership and multi-file send','idempotent messages','bookmarks','search and private hiding','read-receipt privacy','removed-member access'],group}));
+console.log(JSON.stringify({ok:true,checks:['group permissions and owner protection','profile ownership','private preferences','multipart resume and completion retry','1 GB cap','attachment ownership and multi-file send','idempotent messages','bookmarks','search and private hiding','read-receipt privacy','removed-member access'],group}));

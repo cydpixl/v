@@ -1,7 +1,10 @@
 {
-  "version": "1.7.0",
-  "release": "compact-chat-shell-20261101",
+  "version": "1.7.1",
+  "release": "upload-first-20261101",
   "changes": [
+    "Upload file first with extra tools under More options",
+    "Copy message replaces hover Forward; remove Copy Message Link",
+    "Resumable attachments up to 1 GB and downloadable MKV support",
     "Single-sidebar layout without server-style rail",
     "Remove Share Post and Shared Posts",
     "Top-bar account and audio controls replace the bottom profile card",
