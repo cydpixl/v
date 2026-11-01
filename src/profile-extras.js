@@ -19,7 +19,7 @@ export function createProfileExtras({api,modal,toast,self,showTitle}){
  panel.querySelector('[data-presence]')?.closest('.profile-extras-section')?.before(musicSection);
  const save=async data=>{await api('/profile-extras/'+encodeURIComponent(uid),{method:'PUT',body:data});Object.assign(p,data);};
  const redraw=async()=>{panel.close();await show(uid)};
- panel.querySelector('[data-save-status]')?.addEventListener('click',()=>safe(async()=>{await save({status:panel.querySelector('[name=status]').value});toast('Status saved.')}));
+ panel.querySelector('[data-save-status]')?.addEventListener('click',()=>safe(async()=>{await save({status:panel.querySelector('[name=status]').value});toast('Status saved.');window.dispatchEvent(new Event('vela-status-updated'))}));
  panel.querySelector('[data-save-games]')?.addEventListener('click',()=>safe(async()=>{await save({games:[...panel.querySelectorAll('[data-profile-game]:checked')].map(x=>x.dataset.profileGame)});toast('Profile games saved.')}));
  const gameIcon=name=>({X:'✕',Circle:'○',RotateCcw:'↻'}[name]||'×');panel.querySelectorAll('[data-play-game]').forEach(button=>button.onclick=()=>{dispose?.();dispose=startGame(panel.querySelector('.profile-game-host'),button.dataset.playGame,gameIcon)});
  panel.querySelectorAll('[data-film]').forEach(button=>button.onclick=()=>safe(async()=>{const film=p.films[Number(button.dataset.film)];panel.close();await showTitle(film.type+':'+film.id)}));

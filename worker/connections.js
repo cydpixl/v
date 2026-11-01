@@ -33,7 +33,7 @@ export async function connectionsAPI(req,env,uid,h){
    if('drawing'in b){if(b.drawing&&!/^data:image\/png;base64,[a-zA-Z0-9+/=]+$/.test(b.drawing)||String(b.drawing||'').length>250000)fail('Drawing is too large.');data.drawing=b.drawing||'';}
    if('games'in b){if(!Array.isArray(b.games)||b.games.some(x=>!['tic-tac-toe','connect-four','pong'].includes(x)))fail('Invalid games.');data.games=[...new Set(b.games)].slice(0,3);}
    if('films'in b){if(!Array.isArray(b.films)||b.films.length>5)fail('Choose up to five titles.');data.films=b.films.map(x=>{if(!/^\d+$/.test(String(x.id))||!['movie','tv'].includes(x.type))fail('Invalid title.');return {id:String(x.id),type:x.type,title:String(x.title||'').slice(0,200),poster:/^https:\/\//.test(x.poster||'')?String(x.poster).slice(0,500):''};});}
-   await run(env,'INSERT INTO profile_extras(uid,data) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET data=excluded.data',uid,JSON.stringify(data));return json({ok:true,...('music'in b?{music:true}:{})});}
+   await run(env,'INSERT INTO profile_extras(uid,data) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET data=excluded.data',uid,JSON.stringify(data));if('status'in b){const peers=await rows(env,'SELECT DISTINCT b.uid FROM members a JOIN members b ON b.conversation=a.conversation WHERE a.uid=?',uid);h.ctx.waitUntil(Promise.all(peers.map(peer=>h.notify(env,peer.uid,{type:'refresh'}))).catch(()=>{}));}return json({ok:true,...('music'in b?{music:true}:{})});}
  }
  const admin=p.match(/^\/api\/groups\/([^/]+)\/members$/);
  if(admin){const cid=decodeURIComponent(admin[1]),c=await access(env,uid,cid);if(c.kind!=='group')fail('Not a group.');const isOwner=c.owner===uid,isAdmin=isOwner||!!await row(env,'SELECT 1 FROM group_admins WHERE conversation=? AND uid=?',cid,uid);

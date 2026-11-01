@@ -1,7 +1,12 @@
 {
-  "version": "1.7.2",
-  "release": "playable-chat-videos-20261101",
+  "version": "1.7.3",
+  "release": "status-block-controls-20261101",
   "changes": [
+    "Fix clipped status menu and restore account/settings controls on phones",
+    "Show who blocked whom in chat, profiles, friend list and direct messages",
+    "Named blocked-account list with working Unblock controls",
+    "Live block updates across accounts and devices; disable unavailable message/call controls",
+    "Enforce blocking for call rejoin, typing, read receipts and scheduled messages",
     "Prepare MKV and MOV chat uploads as playable MP4 video",
     "Upload file first with extra tools under More options",
     "Copy message replaces hover Forward; remove Copy Message Link",
