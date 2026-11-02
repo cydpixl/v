@@ -1,1 +1,0 @@
-for(const route of ['/profiles/zPZPMqLM7uWGiudD6AiKBIUbfA72','/profiles/f2UFJ9IlNYP2PAo5Yp0VGr6EdDD3']){const r=await fetch('http://localhost:5188/api'+route);const d=await r.json();console.log(route,r.status,d.error||{name:d.profile?.name,relationship:!!d.profile?.relationship,collections:d.profile?.collection?.length});}

@@ -6,6 +6,8 @@ export const COMMANDS=Object.freeze([
  {name:'bodycam',description:'Post the bodycam collection for everyone in this chat',bot:true,args:'search (optional)'},
  {name:'dailydose',description:'Post Daily Dose of Internet videos for everyone in this chat',bot:true,args:'search (optional)'},
  {name:'help',description:'Show VELA’s available commands in this chat',bot:true},
+ {name:'library',description:'Open your uploaded videos',local:true},
+ {name:'movies',description:'Browse films and shows',local:true},
  {name:'saved',description:'Open your saved messages',local:true},
  {name:'shrug',description:'Send a message with a shrug',args:'message (optional)'},
 ]);

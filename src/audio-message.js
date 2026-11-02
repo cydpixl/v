@@ -12,11 +12,11 @@ export function enhanceAudioMessages(host){
   audio.before(box);box.append(audio);audio.controls=false;audio.hidden=true;
   const toggle=box.querySelector('.voice-message-play'),seek=box.querySelector('input'),time=box.querySelector('.voice-message-time'),speed=box.querySelector('.voice-message-speed'),error=box.querySelector('p');
   const update=()=>{const finite=Number.isFinite(audio.duration)&&audio.duration>0;seek.disabled=!finite;seek.max=finite?audio.duration:1;if(document.activeElement!==seek)seek.value=finite?audio.currentTime:0;time.textContent=format(audio.currentTime)+(finite?' / '+format(audio.duration):'');};
-  toggle.onclick=async()=>{if(!audio.paused){audio.pause();return;}for(const other of document.querySelectorAll('.voice-message audio'))if(other!==audio)other.pause();try{if(!audio.getAttribute('src')&&audio.dataset.userMediaSrc)audio.src=audio.dataset.userMediaSrc;await audio.play();}catch{error.hidden=false;}};
+  toggle.onclick=async()=>{if(!audio.paused){audio.pause();return;}for(const other of document.querySelectorAll('.voice-message audio'))if(other!==audio)other.pause();try{await audio.play();}catch{error.hidden=false;}};
   for(const event of ['loadedmetadata','durationchange','timeupdate'])audio.addEventListener(event,update);
   audio.addEventListener('play',()=>{toggle.innerHTML=icon('pause',18);toggle.setAttribute('aria-label','Pause voice message');error.hidden=true;});
   const paused=()=>{toggle.innerHTML=icon('play',18);toggle.setAttribute('aria-label','Play voice message');};audio.addEventListener('pause',paused);audio.addEventListener('ended',paused);
-  audio.addEventListener('error',()=>{error.hidden=false;});error.querySelector('button').onclick=()=>{if(!audio.getAttribute('src')&&audio.dataset.userMediaSrc)audio.src=audio.dataset.userMediaSrc;audio.load();error.hidden=true;};
+  audio.addEventListener('error',()=>{error.hidden=false;});error.querySelector('button').onclick=()=>{audio.load();error.hidden=true;};
   seek.oninput=()=>{if(Number.isFinite(audio.duration))audio.currentTime=Number(seek.value);update();};
   speed.onclick=()=>{const values=[1,1.25,1.5,2],next=values[(values.indexOf(audio.playbackRate)+1)%values.length];audio.playbackRate=next;speed.textContent=next+'×';speed.setAttribute('aria-label','Playback speed: '+next+' times');};update();
  }

@@ -1,1 +1,0 @@
-import {FORTNITE_VIDEOS} from '../src/fortnite-videos.mjs';for(const id of ['EID_AsideDepot','EID_CargoLying']){try{const r=await fetch(FORTNITE_VIDEOS[id],{method:'HEAD'});console.log(id,r.status,r.headers.get('content-type'));}catch(e){console.log(e.message)}}

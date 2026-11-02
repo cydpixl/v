@@ -22,5 +22,5 @@ export function parseShopMessage(text){
 export function shopItemHash(item){return '#'+(item.kind==='cosmetic'?'cosmetic=':'item=')+encodeURIComponent(item.id);}
 export function shopMessageMarkup(text){
  const item=parseShopMessage(text);if(!item)return '';
- return `<button class="shared-shop-card" type="button" data-shop-message="${escape(text)}" aria-label="View ${escape(item.name)} in Fortnite">${item.image?`<img src="${escape(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}<span><small>FORTNITE · ITEM SHOP</small><strong>${escape(item.name)}</strong><em>${escape(item.type)}${item.price===null?'':' · Ⓥ '+item.price.toLocaleString('en-US')}</em><b>View in Fortnite ↗</b></span></button>`;
+ return `<button class="shared-shop-card" type="button" data-shop-message="${escape(text)}" aria-label="View ${escape(item.name)} in Shop">${item.image?`<img src="${escape(item.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}<span><small>ASHLAN SHOP · FORTNITE</small><strong>${escape(item.name)}</strong><em>${escape(item.type)}${item.price===null?'':' · Ⓥ '+item.price.toLocaleString('en-US')}</em><b>View in Shop ↗</b></span></button>`;
 }
