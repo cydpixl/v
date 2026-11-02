@@ -1,1 +1,0 @@
-App icons downloaded from Apple catalog artwork via https://itunes.apple.com/lookup and the iOS App Store logo from https://commons.wikimedia.org/wiki/File:App_Store_(iOS).svg. Apple owns the marks. VELA Chat and Flick retain their own identities.

@@ -1,7 +1,12 @@
 {
-  "version": "1.7.3",
-  "release": "status-block-controls-20261101",
+  "version": "1.7.4",
+  "release": "drawing-camera-20261102",
   "changes": [
+    "Replace drawing workspace with light/dark purple controls and a large canvas",
+    "Add text placement while preserving fill, eraser, palettes, sketchbook, coloring pages and PNG export",
+    "Redesign camera with Photo/Video modes, centered shutter, flip and settings",
+    "Preview, retake and send photos or recorded videos to chat",
+    "Release capture devices on close and preserve active call camera tracks",
     "Fix clipped status menu and restore account/settings controls on phones",
     "Show who blocked whom in chat, profiles, friend list and direct messages",
     "Named blocked-account list with working Unblock controls",
