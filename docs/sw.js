@@ -1,9 +1,9 @@
 // Vela owns only its scoped shell cache. Private API/media responses bypass it.
-const VERSION='pwa-327e4f578c6a';
+const VERSION='pwa-4acb1af65578';
 const PREFIX='vela-shell-';
 const CACHE=PREFIX+VERSION;
 const ROOT=new URL('./',self.registration.scope).href;
-const PRECACHE=["./","./manifest.webmanifest","./favicon.svg","./vela-mark.svg","./icons/icon-192.png","./icons/icon-512.png","./icons/apple-touch-icon.png","./icons/maskable-512.png","./vela-smtc.js?v=compact-shell-20261101","./vela-smtc.css","./fonts/gg-sans-400.woff2","./fonts/gg-sans-500.woff2","./fonts/gg-sans-600.woff2","./fonts/gg-sans-700.woff2","./assets/index-0l-URiYo.css","./assets/cinema-app-BpKNA1hO.css","./assets/firebase-Ky9UFjrk.js","./assets/index-PA_sLNsG.js","./assets/cinema-app-Bncnrv5n.js","./assets/flick-game-Cog55LDo.js","./assets/__vite-browser-external-9wXp6ZBx.js","./assets/movie-conversion.worker-BG5ptHQ1.js","./assets/call-replay.worker-BXCeDE0G.js"];
+const PRECACHE=["./","./manifest.webmanifest","./favicon.svg","./vela-mark.svg","./icons/icon-192.png","./icons/icon-512.png","./icons/apple-touch-icon.png","./icons/maskable-512.png","./vela-smtc.js?v=compact-shell-20261101","./vela-smtc.css","./fonts/gg-sans-400.woff2","./fonts/gg-sans-500.woff2","./fonts/gg-sans-600.woff2","./fonts/gg-sans-700.woff2","./assets/index-B5FNCzMR.css","./assets/firebase-Ky9UFjrk.js","./assets/index-1UKFf1dc.js","./assets/__vite-browser-external-9wXp6ZBx.js","./assets/movie-conversion.worker-BG5ptHQ1.js","./assets/call-replay.worker-BXCeDE0G.js"];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(PREFIX)&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
