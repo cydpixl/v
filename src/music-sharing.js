@@ -4,16 +4,16 @@ import './music-sharing.css';
 
 const catalogCache=new Map(),wired=new WeakSet(),players=new Set();
 const time=seconds=>Number.isFinite(seconds)?Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0'):'—';
-export async function findSongs(query,{signal}={}){
+export async function findSongs(query,{signal,limit=40,offset=0}={}){
  const key=String(query).trim().slice(0,240);
  if(!key)return [];
  if(/^https?:/i.test(key))throw Error('Search by song title or artist.');
- const existing=catalogCache.get(key);if(existing&&Date.now()-existing.at<1800000)return existing.songs;
- const url='https://itunes.apple.com/search?'+new URLSearchParams({term:key,entity:'song',media:'music',limit:'12',country:'us'});
+ const existing=catalogCache.get(key+':'+offset+':'+limit);if(existing&&Date.now()-existing.at<1800000)return existing.songs;
+ const url='https://itunes.apple.com/search?'+new URLSearchParams({term:key,entity:'song',media:'music',limit:String(limit),offset:String(offset),country:'us'});
  const response=await fetch(url,{signal:signal?AbortSignal.any([signal,AbortSignal.timeout(12000)]):AbortSignal.timeout(12000),credentials:'omit',referrerPolicy:'no-referrer'});
  if(!response.ok)throw Error(response.status===429?'Music search is busy. Try again shortly.':'Music could not load. Try again.');
  const data=await response.json(),songs=[...new Map((data.results||[]).map(catalogSong).filter(Boolean).map(song=>[song.id,song])).values()];
- if(catalogCache.size>=50)catalogCache.delete(catalogCache.keys().next().value);catalogCache.set(key,{songs,at:Date.now()});return songs;
+ if(catalogCache.size>=50)catalogCache.delete(catalogCache.keys().next().value);catalogCache.set(key+':'+offset+':'+limit,{songs,at:Date.now()});return songs;
 }
 
 export function enhanceSongCards(root=document){
@@ -28,7 +28,7 @@ export function enhanceSongCards(root=document){
    card.querySelector('[data-song-elapsed]').textContent=time(audio.currentTime);card.querySelector('[data-song-duration]').textContent=time(duration);seek.style.setProperty('--song-progress',seek.value/10+'%');
   }
   function failure(){error.hidden=false;error.textContent='This song could not play. Try again or open it in Apple Music.';paint();}
-  button.onclick=async()=>{error.hidden=true;if(!audio.paused){audio.pause();return;}button.disabled=true;try{for(const other of document.querySelectorAll('.song-card audio'))if(other!==audio)other.pause();if(audio.error)audio.load();await audio.play();}catch{failure();}finally{button.disabled=false;paint();}};
+  button.onclick=async()=>{error.hidden=true;if(!audio.paused){audio.pause();return;}button.disabled=true;try{for(const other of document.querySelectorAll('.song-card audio'))if(other!==audio)other.pause();if(!audio.getAttribute('src'))audio.src=audio.dataset.songSrc;if(audio.error)audio.load();await audio.play();}catch{failure();}finally{button.disabled=false;paint();}};
   seek.oninput=()=>{if(Number.isFinite(audio.duration)){audio.currentTime=Number(seek.value)/1000*audio.duration;paint();}};
   for(const event of ['play','pause','ended','timeupdate','loadedmetadata','durationchange'])audio.addEventListener(event,paint);audio.addEventListener('error',failure);paint();
  }

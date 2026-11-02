@@ -1,5 +1,6 @@
 export function registerPWA({busy,toast}){
  if(!('serviceWorker'in navigator))return;
+ if(import.meta.env.DEV){navigator.serviceWorker.getRegistrations().then(list=>Promise.all(list.map(registration=>registration.unregister()))).catch(()=>{});return;}
  let lastCheck=0,initial=!!navigator.serviceWorker.controller;
  const showUpdate=()=>{
   if(document.querySelector('.pwa-update'))return;

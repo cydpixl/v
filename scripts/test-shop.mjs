@@ -8,7 +8,7 @@ assert.ok(text.length<4000);
 assert.equal(messagePreview(text),'Shared Day-o 🎵 from Shop');
 assert.equal(shopItemHash(item),'#item=offer-12345');
 assert.equal(shopItemHash({...item,kind:'cosmetic',id:'cosmetic-br-Test'}),'#cosmetic=cosmetic-br-Test');
-assert.ok(shopMessageMarkup(text).includes('View in Shop'));
+assert.ok(shopMessageMarkup(text).includes('View in Fortnite'));
 assert.ok(shopMessageMarkup(createShopMessage({...item,name:'<img src=x onerror=alert(1)>'})).includes('&lt;img'));
 for(const image of ['javascript:alert(1)','http://fortnite-api.com/a.png','https://fortnite-api.com.evil.test/a.png','https://user:pass@fortnite-api.com/a.png','data:image/svg+xml,x'])assert.equal(normalizeShopItem({...item,image}),null);
 for(const price of [-1,Infinity,1.5,'500',undefined])assert.equal(normalizeShopItem({...item,price}),null);
