@@ -1,6 +1,6 @@
 {
   "name": "vela",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -37,7 +37,9 @@
     "test:message-admin": "node scripts/test-message-admin.mjs",
     "test:shop": "node scripts/test-shop.mjs",
     "test:relationships:api": "node scripts/test-relationships-api.mjs",
-    "qa:controls": "node scripts/qa-controls.mjs"
+    "qa:controls": "node scripts/qa-controls.mjs",
+    "qa:drawing-camera": "node scripts/qa-drawing-camera.mjs",
+    "test:camera": "node scripts/test-camera-capture.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
