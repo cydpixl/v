@@ -7,7 +7,7 @@ export const isWatched=p=>typeof p?.watched==='boolean'?p.watched:Number(p?.dura
 
 export function selectLibrary(library,progress,{query='',filter='all',sort='recent',playback='all'}={}){
  const words=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
- let items=library.filter(item=>(filter==='watched'||!isWatched(progress[item.id]))&&canPlayInVela(item)&&words.every(word=>[item.title,item.showTitle,item.episodeTitle,item.year,item.channel,item.category].filter(Boolean).join(' ').toLocaleLowerCase().includes(word)));
+ let items=library.filter(item=>canPlayInVela(item)&&words.every(word=>[item.title,item.showTitle,item.episodeTitle,item.year,item.channel,item.category].filter(Boolean).join(' ').toLocaleLowerCase().includes(word)));
  if(playback==='youtube')items=[];
  if(['bodycam','daily-dose'].includes(filter))items=items.filter(item=>item.category===filter);
  items=items.filter(item=>filter==='music'?item.kind==='song':filter==='movies'?item.kind!=='tv'&&item.kind!=='song':filter==='tv'?item.kind==='tv':filter==='continue'?isContinuing(progress[item.id]):filter==='watched'?isWatched(progress[item.id]):true);
