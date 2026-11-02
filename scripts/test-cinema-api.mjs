@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+const base=process.env.QA_API||'http://127.0.0.1:8793/api';
+if(new URL(base).hostname!=='127.0.0.1')throw Error('This test writes only to the isolated local fixture.');
+async function api(uid,path,{method='GET',body,status=200}={}){const response=await fetch(base+path,{method,headers:{Authorization:'Bearer test:cinema-qa-'+uid,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const data=await response.json();assert.equal(response.status,status,JSON.stringify(data));return data;}
+const item={id:66732,type:'tv',title:'Stranger Things',season:1,episode:1,poster:'https://image.tmdb.org/t/p/w342/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg'};
+const room='/cinema-rooms/cinema-qa-room',session=crypto.randomUUID(),second=crypto.randomUUID();
+await api('outsider',room,{status:404});
+await api('host',room,{method:'POST',body:{item,session,position:-1,playing:false},status:400});
+const first=await api('host',room,{method:'POST',body:{item,session,position:30,playing:true}});
+await Promise.all([api('guest',room,{method:'POST',body:{item,session:second,position:0,playing:false},status:409}),api('host',room,{method:'POST',body:{item,session:second,position:0,playing:false},status:409})]);
+const claim=[first];assert.equal(first.state.controller,'cinema-qa-host');
+await api('host',room,{method:'POST',body:{item,session:crypto.randomUUID(),position:30,playing:true},status:409});
+await api('guest',room,{method:'DELETE',body:{session:second},status:403});
+const seek=await api('host',room,{method:'POST',body:{item,session,position:120,playing:false,intent:'seek'}});
+const joined=await api('guest',room);assert.equal(joined.state.position,120);assert.equal(joined.state.playing,false);assert.ok(joined.state.revision>claim[0].state.revision);assert.equal(joined.state.source,'cinesrc');
+await api('host','/cinema-library',{method:'PUT',body:{item,position:120,duration:2400}});
+const library=await api('host','/cinema-library');assert.ok(library.history.some(h=>h.item.id===66732&&h.position===120));assert.ok(!(await api('guest','/cinema-library')).history.some(h=>h.item.id===66732&&h.position===120));
+await api('host','/cinema-library',{method:'PUT',body:{item:{...item,id:'bad'},position:1,duration:2000},status:400});
+await api('host','/movie-list',{method:'POST',body:{item,saved:true}});assert.ok((await api('host','/cinema-library')).saved.some(x=>x.id===66732));assert.equal((await api('guest','/cinema-library')).saved.length,0);
+const discovery=await api('host','/movie-catalog?path=movie-discover&tab=movies');assert.ok(discovery.items.length>0);
+await api('host',room,{method:'DELETE',body:{session}});assert.equal((await api('guest',room)).state,null);
+await api('host','/movie-list',{method:'POST',body:{item,saved:false}});
+const attempts=await Promise.all(['host','guest'].map(async uid=>{const token=crypto.randomUUID();const response=await fetch(base+room,{method:'POST',headers:{Authorization:'Bearer test:cinema-qa-'+uid,'Content-Type':'application/json'},body:JSON.stringify({item,session:token,position:0,playing:false})});return {uid,token,status:response.status};}));
+assert.deepEqual(attempts.map(x=>x.status).sort(),[200,409]);const winner=attempts.find(x=>x.status===200);await api(winner.uid,room,{method:'DELETE',body:{session:winner.token}});
+console.log('PASS: authenticated catalog, member-only rooms, exclusive session host, guest restrictions, seek/pause state, per-account progress/list, validation, cleanup');
