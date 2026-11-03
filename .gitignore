@@ -10,3 +10,6 @@ dist-gh/
 AGENTS.md
 REFERENCE-CALL-PASS.md
 RELEASE.md
+
+.private/
+worker-configuration.d.ts

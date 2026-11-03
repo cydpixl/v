@@ -13,3 +13,18 @@ export const THEMES=Object.freeze([
  {id:'sand',name:'Sand',description:'Warm daylight',bg:'#faf6ef',panel:'#f0e8db',raised:'#fffdf8',accent:'#8d5f38',text:'#3b3026',light:true},
 ]);
 export const normalizeTheme=id=>THEMES.some(theme=>theme.id===id)?id:id==='light'?'paper':id==='dark'?'midnight':'graphite';
+
+export const WALLPAPERS={
+ graphite:'radial-gradient(ellipse at 8% 0%,#527c9e,transparent 58%),radial-gradient(ellipse at 85% 100%,#695b87,transparent 55%),linear-gradient(135deg,#203f52,#172739 55%,#2f263f)',
+ midnight:'radial-gradient(ellipse at 0 0,#407ab3,transparent 60%),radial-gradient(ellipse at 100% 100%,#364b8c,transparent 60%),#102039',
+ paper:'radial-gradient(ellipse at 0 0,#bfd9f0,transparent 60%),radial-gradient(ellipse at 100% 100%,#d8c8ec,transparent 60%),#d4dfe8',
+ pine:'radial-gradient(ellipse at 0 0,#4e897c,transparent 60%),radial-gradient(ellipse at 100% 100%,#819270,transparent 60%),#193d37',
+ obsidian:'radial-gradient(ellipse at 0 0,#333e50,transparent 60%),radial-gradient(ellipse at 100% 100%,#343043,transparent 60%),#090c13',
+ amethyst:'radial-gradient(ellipse at 0 0,#896bad,transparent 60%),radial-gradient(ellipse at 100% 100%,#485381,transparent 60%),#2d204b',
+ rose:'radial-gradient(ellipse at 0 0,#ad718a,transparent 60%),radial-gradient(ellipse at 100% 100%,#7d516a,transparent 60%),#452337',
+ ocean:'radial-gradient(ellipse at 0 0,#378da0,transparent 60%),radial-gradient(ellipse at 100% 100%,#366380,transparent 60%),#123848',
+ ember:'radial-gradient(ellipse at 0 0,#b17752,transparent 60%),radial-gradient(ellipse at 100% 100%,#764f5f,transparent 60%),#432d2b',
+ coffee:'radial-gradient(ellipse at 0 0,#947960,transparent 60%),radial-gradient(ellipse at 100% 100%,#675665,transparent 60%),#392b2a',
+ lavender:'radial-gradient(ellipse at 0 0,#d1bbef,transparent 60%),radial-gradient(ellipse at 100% 100%,#c0d1ed,transparent 60%),#e1d9ed',
+ sand:'radial-gradient(ellipse at 0 0,#efd7b8,transparent 60%),radial-gradient(ellipse at 100% 100%,#d5c6b7,transparent 60%),#e8dcd0'
+};

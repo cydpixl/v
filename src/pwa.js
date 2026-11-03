@@ -1,14 +1,8 @@
 export function registerPWA({busy,toast}){
  if(!('serviceWorker'in navigator))return;
+ if(import.meta.env.DEV){navigator.serviceWorker.getRegistrations().then(list=>Promise.all(list.map(registration=>registration.unregister()))).catch(()=>{});return;}
  let lastCheck=0,initial=!!navigator.serviceWorker.controller;
- const showUpdate=()=>{
-  if(document.querySelector('.pwa-update'))return;
-  const notice=document.createElement('div');notice.className='pwa-update';notice.setAttribute('role','status');
-  notice.innerHTML='<span>A Vela update is ready.</span><button class="primary">Update</button><button class="text-button" aria-label="Dismiss update">Later</button>';
-  notice.querySelector('.primary').onclick=()=>{if(busy()){toast('Finish your upload or call, then update Vela.');return;}location.reload();};
-  notice.querySelector('.text-button').onclick=()=>notice.remove();document.body.append(notice);
- };
- navigator.serviceWorker.addEventListener('controllerchange',()=>{if(initial)showUpdate();initial=true;});
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{document.querySelector('.pwa-update')?.remove();initial=true;});
  const start=async()=>{
   try{
    const registration=await navigator.serviceWorker.register(new URL('sw.js',document.baseURI),{updateViaCache:'none'});

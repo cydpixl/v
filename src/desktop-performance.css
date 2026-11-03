@@ -1,0 +1,8 @@
+/* Opaque app surfaces avoid repeatedly sampling thousands of chat pixels. */
+.hub-ready .duo-shell,.hub-ready .duo-shell .workspace,.hub-ready #workspace-header,.hub-ready .composer,.hub-ready .date-divider span,.desktop-window{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.hub-ready .duo-shell{background:var(--panel)!important}.hub-ready .duo-shell .workspace{background:var(--bg)!important}.desktop-window{background:var(--panel)!important}
+.hub-ready.chat-app-hidden #main-content{content-visibility:hidden;contain-intrinsic-size:auto 600px}
+#messages>[data-message-spacer]{display:block;flex:none;width:1px;pointer-events:none;overflow-anchor:none}
+#messages>.message{contain:layout style}
+.desktop-window.window-dragging{will-change:transform;user-select:none;transition:none!important}
+.desktop-window.window-dragging iframe{pointer-events:none}
