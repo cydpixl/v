@@ -1,5 +1,20 @@
 import {desktopPlayerState,playDesktopTracks,seekDesktopPlayer,toggleDesktopPlayer} from './desktop-player.js';
 let runtime,following=null,followingEpoch=0,busy=false,lastSignature='',lastPublished=0,lastOwner=null;
+let friendOwner=null,friendItems=[],friendRequest=null,friendSignature='';
+export const listeningFriends=()=>friendOwner===runtime?.self()?friendItems.filter(person=>person.music?.playing&&person.music.updated>Date.now()-60000):[];
+export async function refreshListeningFriends(){
+ const owner=runtime?.self();
+ if(owner!==friendOwner){friendOwner=owner;friendItems=[];friendRequest=null;friendSignature='';window.dispatchEvent(new Event('vela-listening-updated'))}
+ if(!owner)return [];
+ if(friendRequest)return friendRequest;
+ const request=runtime.api('/music-listening').then(({items})=>{
+  if(runtime.self()!==owner||friendOwner!==owner)return [];
+  friendItems=items;const signature=JSON.stringify(listeningFriends().map(person=>[person.uid,person.name,person.avatar,person.music.title,person.music.artist,person.music.source,person.music.trackId]));
+  if(signature!==friendSignature){friendSignature=signature;window.dispatchEvent(new Event('vela-listening-updated'))}
+  return listeningFriends();
+ }).finally(()=>{if(friendRequest===request)friendRequest=null});
+ friendRequest=request;return request;
+}
 export const desktopMusicPlaying=()=>desktopPlayerState().playing;
 export const musicFollowing=()=>following;
 export const musicSharingEnabled=()=>localStorage.getItem('desktop.music.share.'+runtime?.self())!=='off';
@@ -8,7 +23,8 @@ export function stopMusicFollowing(){followingEpoch++;following=null;window.disp
 export function configureMusicPresence(options){
  runtime=options;
  window.addEventListener('vela-player-state',()=>publish().catch(()=>{}));
- setInterval(()=>{publish().catch(()=>{});if(following)sync().catch(error=>{stopMusicFollowing();runtime.toast(error.message)})},5000);
+ setInterval(()=>{publish().catch(()=>{});if(!document.hidden)refreshListeningFriends().catch(()=>{});if(following)sync().catch(error=>{stopMusicFollowing();runtime.toast(error.message)})},5000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshListeningFriends().catch(()=>{})});
 }
 async function publish(){
  const uid=runtime?.self();if(!uid||busy)return;

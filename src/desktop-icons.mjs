@@ -12,10 +12,14 @@ export function arrangeDesktopIcons(dock,owner){
   button.addEventListener('click',event=>{if(suppress){event.preventDefault();event.stopImmediatePropagation();suppress=false}},{capture:true});
   button.onpointerdown=event=>{
    if(event.button!==0||button.classList.contains('is-installing'))return;
+   // Native focus must not scroll the desktop canvas under a clicked icon.
+   event.preventDefault();button.focus({preventScroll:true});
+   dock.querySelector('.icon-selected')?.classList.remove('icon-selected');button.classList.add('icon-selected');
    const initial={x:event.clientX,y:event.clientY,left:parseFloat(button.style.left),top:parseFloat(button.style.top)};let moved=false;
    button.setPointerCapture(event.pointerId);
-   const move=ev=>{if(Math.hypot(ev.clientX-initial.x,ev.clientY-initial.y)<5&&!moved)return;moved=true;button.classList.add('icon-moving');place(button,initial.left+ev.clientX-initial.x,initial.top+ev.clientY-initial.y)};
-   const stop=()=>{button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',stop);button.removeEventListener('pointercancel',stop);button.removeEventListener('lostpointercapture',stop);button.classList.remove('icon-moving');if(moved){suppress=true;saved[button.dataset.hubApp]={x:parseFloat(button.style.left),y:parseFloat(button.style.top)};localStorage.setItem(key,JSON.stringify(saved));setTimeout(()=>suppress=false,0)}};
+   const threshold=event.pointerType==='touch'?14:10;
+   const move=ev=>{if(Math.hypot(ev.clientX-initial.x,ev.clientY-initial.y)<threshold&&!moved)return;moved=true;button.classList.add('icon-moving');place(button,initial.left+ev.clientX-initial.x,initial.top+ev.clientY-initial.y)};
+   const stop=ev=>{button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',stop);button.removeEventListener('pointercancel',stop);button.removeEventListener('lostpointercapture',stop);button.classList.remove('icon-moving');if(button.hasPointerCapture(event.pointerId))button.releasePointerCapture(event.pointerId);if(ev.type==='pointercancel'||ev.type==='lostpointercapture'){place(button,initial.left,initial.top);return}if(moved){suppress=true;saved[button.dataset.hubApp]={x:parseFloat(button.style.left),y:parseFloat(button.style.top)};localStorage.setItem(key,JSON.stringify(saved));setTimeout(()=>suppress=false,0)}};
    button.addEventListener('pointermove',move);button.addEventListener('pointerup',stop);button.addEventListener('pointercancel',stop);button.addEventListener('lostpointercapture',stop);
   };
  });
