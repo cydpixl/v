@@ -5,7 +5,7 @@ import {assetURL} from './config.js';
 
 export const appFeatures=[['music','music','Music','Browse songs and share listening activity.'],['fortnite','shop','Fortnite','The lobby, daily item shop and news.'],['drawing','edit','Drawing','Send a drawing from the message dock.'],['voice','mic','Voice messages','Record and send a voice note.']];
 function features(uid){try{return JSON.parse(localStorage.getItem('vela.features.'+uid)||'{}')}catch{return {}}}
-export function featureEnabled(uid,id){return features(uid)[id]!==false&&isAppInstalled(uid,id);}
+export function featureEnabled(uid,id){return features(uid)[id]!==false&&(['drawing','voice'].includes(id)||isAppInstalled(uid,id));}
 export function mountFeatureSettings(target,uid){
  target.innerHTML='<h2>Chat tools</h2><p class="muted">Choose your Chat tools. Install Music and Fortnite from the App Store.</p><div class="feature-settings">'+appFeatures.map(([id,ico,name,desc])=>`<label class="feature-option">${icon(ico,23)}<span><strong>${name}</strong><small>${desc}</small></span><input type="checkbox" role="switch" data-feature="${id}" aria-label="Enable ${name}" ${featureEnabled(uid,id)?'checked':''}></label>`).join('')+'</div><p class="settings-feedback" role="status"></p>';
  target.querySelectorAll('[data-feature]').forEach(input=>input.onchange=()=>{localStorage.setItem('vela.features.'+uid,JSON.stringify({...features(uid),[input.dataset.feature]:input.checked}));target.querySelector('[role=status]').textContent='Your app updated.';window.dispatchEvent(new Event('vela-features-changed'));});
@@ -14,7 +14,8 @@ let openDock;
 function dock(anchor,label,items){
  if(openDock){const same=openDock.anchor===anchor;openDock.close();if(same)return;}
  const panel=document.createElement('section'),events=new AbortController();panel.className='desktop-dock';panel.setAttribute('role','dialog');panel.setAttribute('aria-label',label);panel.innerHTML=`<header>${e(label)}</header><div class="desktop-dock-grid">${items.map(([name,ico,run],i)=>`<button type="button" data-dock-item="${i}">${icon(ico,23)}<span>${e(name)}</span></button>`).join('')}</div>`;
- document.querySelector('#layers').append(panel);anchor.setAttribute('aria-expanded','true');
+ // A top-layer popover stays above windows regardless of their focus z-index.
+ panel.setAttribute('popover','manual');document.body.append(panel);panel.showPopover();anchor.setAttribute('aria-expanded','true');
  function close(focus=false){events.abort();panel.remove();anchor.setAttribute('aria-expanded','false');if(openDock?.panel===panel)openDock=null;if(focus&&anchor.isConnected)anchor.focus();}
  openDock={anchor,panel,close};const r=anchor.getBoundingClientRect(),w=panel.offsetWidth,h=panel.offsetHeight;panel.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';panel.style.top=Math.max(8,Math.min(r.top>h+16?r.top-h-10:r.bottom+10,innerHeight-h-8))+'px';
  panel.querySelectorAll('[data-dock-item]').forEach(b=>b.onclick=()=>{close();Promise.resolve().then(items[Number(b.dataset.dockItem)][2]).catch(error=>window.dispatchEvent(new CustomEvent('vela-ui-error',{detail:error.message})));});

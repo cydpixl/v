@@ -1,0 +1,21 @@
+export const appleArt=(value,width=800,height=450)=>value?.template?.replace('{w}',width).replace('{h}',height).replace('{c}','sr').replace('{f}','webp')||'';
+export function normalizeApplePage(raw){
+ const page=raw.data?.find(entry=>entry.data?.shelves)?.data;if(!page)throw Error('Apple TV title data was unavailable.');
+ const shelves=page.shelves,hero=shelves.find(s=>s.id?.startsWith('canonical-header'))?.items?.[0];if(!hero)throw Error('Title information was unavailable.');
+ const item=x=>({appleId:x.segue?.destination?.id||x.id,title:x.title||'',type:x.type==='Show'?'tv':'movie',artwork:appleArt(x.artwork,400,600),url:x.segue?.url||'',subtitle:x.subtitle||'',description:x.description||''});
+ const trailers=shelves.find(s=>s.id?.startsWith('uts.col.Trailers'))?.items||[];
+ const trailer=x=>{let url='';function find(v){if(!v||typeof v!=='object')return;for(const [k,value]of Object.entries(v)){if(typeof value==='string'&&value.includes('.m3u8')&&!url)url=value;else if(typeof value==='object'&&!k.toLowerCase().includes('metric'))find(value)}}find(x);return {...item(x),artwork:appleArt(x.artwork,640,360),duration:x.metadata||'',trailer:url}};
+ const collection=shelves.find(s=>s.$type==='epicShowcase');
+ const cast=shelves.find(s=>s.id?.startsWith('uts.col.CastAndCrew'))?.items||[];
+ return {appleId:shelves[0].id.replace('canonical-header-',''),title:hero.title,type:hero.type==='Show'?'tv':'movie',description:hero.description||'',metadata:hero.primaryMetadata||[],rating:hero.ratingBadges?.[0]?.fallbackText||'',badges:(hero.playbackBadges||[]).map(b=>({type:b.$type,label:b.ariaLabel})),details:hero.badgeRowMetadata||[],personnel:hero.personnel||[],artwork:appleArt(hero.artwork?.wide,2400,1350),logo:appleArt(hero.contentLogo,900,Math.round(900*(hero.contentLogo?.height||1)/(hero.contentLogo?.width||3))),trailer:hero.videoUrl?.wide||'',trailers:trailers.slice(0,20).map(trailer),related:(shelves.find(s=>s.id?.startsWith('uts.col.ContentRelated'))?.items||[]).slice(0,30).map(item),cast:cast.slice(0,30).map(x=>({...item(x),artwork:appleArt(x.artwork,300,300)})),collection:collection?{title:collection.header?.title||'',artwork:appleArt(collection.items[0]?.artwork,2000,750),logo:appleArt(collection.items[0]?.contentLogo,500,168),url:collection.items[0]?.segue?.url||''}:null,about:(shelves.find(s=>s.id==='uts.marker.About')?.items||[]).filter(x=>x.description).map(x=>({title:x.title,description:x.description,genres:x.genres||[]})),info:(shelves.find(s=>s.id==='uts.marker.Info')?.items||[]).map(group=>({title:group.title,items:group.items.map(x=>({title:x.title,info:x.info}))}))};
+}
+export async function appleTVPageAPI(req,env,uid,{json,fail}){
+ const url=new URL(req.url),collection=url.pathname==='/api/apple-tv-collection';if(url.pathname!=='/api/apple-tv-page'&&!collection)return null;if(req.method!=='GET')fail('Method not allowed.',405);
+ let target;try{target=new URL(url.searchParams.get('url'))}catch{fail('Invalid Apple TV title.');}
+ const allowed=collection?/^\/us\/room\/(?:uts\.room\.[a-z0-9-]+|[^/]+\/edt\.item\.[a-f0-9-]+)$/:/^\/us\/(movie|show)\/[^/]+\/umc\.cmc\.[a-z0-9]+$/;
+ if(target.protocol!=='https:'||target.hostname!=='tv.apple.com'||!allowed.test(target.pathname))fail('Invalid Apple TV title.');target.search='';
+ const response=await fetch(target,{headers:{'Accept-Language':'en-US'},cf:{cacheTtl:86400,cacheEverything:true},signal:AbortSignal.timeout(18000)});if(!response.ok)fail('Apple TV title information could not load.',502);
+ const html=await response.text();const match=html.match(/<script[^>]+id="serialized-server-data"[^>]*>([\s\S]*?)<\/script>/);if(!match)fail('Apple TV title information could not load.',502);
+ const data=JSON.parse(match[1]);if(collection){const page=data.data?.find(entry=>entry.data?.shelves)?.data;return json({title:'Kids & Family',rows:(page?.shelves||[]).filter(shelf=>shelf.header?.title&&shelf.items?.some(item=>item.type==='Show'||item.type==='Movie')).map(shelf=>({title:shelf.header.title,items:shelf.items.filter(item=>item.type==='Show'||item.type==='Movie').slice(0,30).map(item=>({appleId:item.segue?.destination?.id||item.id,title:item.title,type:item.type==='Show'?'tv':'movie',url:item.segue?.url,artwork:appleArt(item.artwork?.tall||item.artwork,400,600)}))}))})}
+ return json(normalizeApplePage(data));
+}

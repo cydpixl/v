@@ -1,0 +1,28 @@
+import {chromium} from 'playwright';import fs from 'node:fs';import assert from 'node:assert/strict';
+const qa=JSON.parse(fs.readFileSync('C:/Users/jayme/Downloads/Vela-controls-repair/.private/qa.json')),key=fs.readFileSync('src/auth.js','utf8').match(/apiKey:'([^']+)'/)[1];
+const apiOrigin='https://vela-desktop.cydpixl7.workers.dev';
+const accounts=await Promise.all(qa.users.slice(0,2).map(async person=>{const result=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:person.handle+'@users.connections.invalid',password:qa.password,returnSecureToken:true})}).then(r=>r.json());if(!result.idToken)throw Error('QA sign in failed');return {...person,uid:result.localId,token:result.idToken}}));
+const api=async(person,path,options={})=>{const result=await fetch(apiOrigin+'/api'+path,{...options,headers:{Authorization:'Bearer '+person.token,'Content-Type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const data=await result.json();if(!result.ok)throw Error(path+': '+result.status+' '+data.error);return data};
+const previous=await Promise.all(accounts.map(person=>api(person,'/profile-extras/'+person.uid).then(data=>data.profile.music||null)));
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--mute-audio']});const errors=[];let gameId;
+try{
+ const pages=[];
+ for(const person of accounts){const context=await browser.newContext({viewport:{width:1440,height:940},serviceWorkers:'block'});await context.addInitScript(uid=>{localStorage.setItem('desktop.device.setup.v3','{"ready":true}');localStorage.setItem('desktop.setup.complete.'+uid,'1');localStorage.setItem('vela.auto-fullscreen','off');localStorage.setItem('vela.installed.'+uid,JSON.stringify(['music','tic-tac-toe']))},person.uid);const page=await context.newPage();await page.addInitScript(()=>{window.__playerEvents=[];window.addEventListener('vela-player-state',event=>window.__playerEvents.push({title:event.detail.track?.title,playing:event.detail.playing,position:event.detail.position,error:event.detail.error,at:Date.now()}))});page.on('pageerror',error=>errors.push(error.message));await page.goto('http://127.0.0.1:5194');await page.locator('[name=handle]').fill(person.handle);await page.locator('[name=password]').fill(qa.password);await page.getByRole('button',{name:'Log In',exact:true}).click();await page.locator('#composer').waitFor();await page.waitForTimeout(2200);await page.evaluate(async()=>{const {setMixerVolume}=await import('/src/audio-mixer.mjs');setMixerVolume('music',0)});pages.push(page)}
+ const [host,guest]=pages;
+ await host.getByRole('button',{name:'Show desktop',exact:true}).click();await host.getByRole('button',{name:'Open Music',exact:true}).click();await host.getByRole('button',{name:'Play Become by The Goo Goo Dolls',exact:true}).click();
+ await host.waitForFunction(()=>window.__playerEvents.at(-1)?.playing&&window.__playerEvents.at(-1)?.position>1);
+ await guest.getByRole('button',{name:'Show desktop',exact:true}).click();await guest.getByRole('button',{name:'Open Music',exact:true}).click();await guest.getByRole('button',{name:'Friends',exact:true}).click();await guest.getByRole('button',{name:'Listen together',exact:true}).first().waitFor();await guest.getByRole('button',{name:'Listen together',exact:true}).first().click();
+ await guest.waitForFunction(()=>window.__playerEvents.at(-1)?.playing&&window.__playerEvents.at(-1)?.title==='Become');
+ const state=page=>page.evaluate(()=>{const s=window.__playerEvents.at(-1);return {title:s.title,position:s.position,playing:s.playing}});
+ const [a,b]=await Promise.all(pages.map(state));assert.equal(a.title,b.title);assert.ok(Math.abs(a.position-b.position)<3,JSON.stringify({a,b}));console.log('PASS real full-song playback, friend live activity and two-account listening sync under 3 seconds drift.');
+ await guest.getByRole('button',{name:'Stop syncing',exact:true}).click();await guest.locator('[data-stop-follow]').waitFor({state:'detached'});
+ gameId=(await api(accounts[0],'/game-rooms',{method:'POST',body:{guest:accounts[1].uid}})).id;
+ await guest.evaluate(async owner=>{const {openOnlineGame}=await import('/src/games/online.mjs');openOnlineGame({api:window.velaMusic.api,owner})},accounts[1].uid);
+ await guest.locator('[data-room="'+gameId+'"]').click();await guest.getByRole('heading',{name:'Waiting for '+accounts[0].name,exact:true}).count();await api(accounts[0],'/game-rooms/'+gameId,{method:'PUT',body:{cell:0,revision:0}});await guest.getByRole('button',{name:'Square 2',exact:true}).waitFor();await guest.getByRole('button',{name:'Square 2',exact:true}).click();
+ await guest.waitForFunction(()=>document.querySelector('.online-tic-board [data-cell="1"]')?.textContent==='O');const room=(await api(accounts[0],'/game-rooms')).items.find(room=>room.id===gameId);assert.deepEqual(room.board.slice(0,2),['X','O']);console.log('PASS online game cross-account moves and browser board synchronization.');
+ assert.deepEqual(errors,[]);
+}finally{
+ for(const page of browser.contexts().flatMap(c=>c.pages()))await page.evaluate(async()=>{const {closeDesktopPlayer}=await import('/src/desktop-player.js');const {stopMusicFollowing}=await import('/src/music-presence.js');stopMusicFollowing();closeDesktopPlayer()}).catch(()=>{});
+ await browser.close();if(gameId)await api(accounts[0],'/game-rooms/'+gameId,{method:'DELETE'}).catch(()=>{});
+ await Promise.all(accounts.map((person,i)=>api(person,'/profile-extras/'+person.uid,{method:'PUT',body:{music:previous[i]}})));
+}

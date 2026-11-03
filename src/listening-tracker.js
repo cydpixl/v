@@ -12,7 +12,7 @@ export function createListeningTracker({api,self}){
   if(account!==self())reset();if(!account)return;
   sharing=!!shared;
   const now=Date.now(),key=track?.title?[track.title,track.artist].join('\0'):'';
-  const source=track?.source==='vela-card'?'vela-card':'desktop';let current=sources.get(source);
+  const source=['vela-card','library-player'].includes(track?.source)?track.source:'desktop';let current=sources.get(source);
   if(!track?.playing||!key){if(current)current.playingSince=0;return;}
   if(!current||current.signature!==key){current={signature:key,record:{id:crypto.randomUUID(),title:String(track.title).slice(0,200),artist:String(track.artist||'').slice(0,200),album:String(track.album||'').slice(0,200)},playingSince:now,lastWrite:0,busy:false};sources.set(source,current);}
   if(!current.playingSince)current.playingSince=now;

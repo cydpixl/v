@@ -52,6 +52,7 @@
     "@mediabunny/dts": "^1.62.1",
     "@twemoji/api": "^17.0.3",
     "firebase": "^12.3.0",
+    "hls.js": "^1.7.4",
     "jose": "^6.2.12",
     "lucide": "^1.48.0",
     "mediabunny": "^1.62.1"

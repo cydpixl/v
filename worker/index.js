@@ -1,3 +1,6 @@
+import {sharedNotesAPI} from './shared-notes.js';
+import {appleTVPageAPI} from './apple-tv-page.js';
+import {gameRoomsAPI} from './game-rooms.js';
 import {defaultMusicAPI} from './default-music.js';
 import {cinemaLibraryAPI} from './cinema-library.js';
 import {cinemaPartyAPI} from './cinema-party.js';
@@ -7,6 +10,7 @@ import {musicCatalogAPI} from './music-catalog.js';
 import {fortniteAPI} from './fortnite.js';
 import {relationshipState,relationshipFor,relationshipPresence,requireCommunication} from './relationships.js';
 import {listeningHistoryAPI} from './listening-history.js';
+import {musicListeningAPI} from './music-listening.js';
 import {ensureQueryBudget} from './query-budget.js';
 import {databaseQuotaResponse} from './database-quota.js';
 import {privateStatus,publicPresence} from './presence-privacy.js';
@@ -73,6 +77,8 @@ async function api(req,env,ctx){
  const uid=await identity(req,env),needsAdmin=p==='/api/me'||p==='/api/state'||p.startsWith('/api/admin/')||method==='POST'&&/\/messages$/.test(p)||method==='PATCH'&&p.startsWith('/api/messages/'),siteAdmin=needsAdmin?await isSiteAdmin(env,uid):false;if(method!=='GET')await limit(env,'write:'+uid,100);
  if(await row(env,'SELECT 1 FROM deleted_accounts WHERE uid=?',uid))fail('This account was removed. Sign in with Ash or Pixl, or create a new account.',410);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx,siteAdmin};
+ const applePage=await appleTVPageAPI(req,env,uid,helpers);if(applePage)return applePage;
+ const sharedNotes=await sharedNotesAPI(req,env,uid,helpers);if(sharedNotes)return sharedNotes;
  const sharedMusic=await defaultMusicAPI(req,env,uid,helpers);if(sharedMusic)return sharedMusic;
  const cinema=await cinemaPartyAPI(req,env,uid,helpers)||await cinemaLibraryAPI(req,env,uid,helpers);if(cinema)return cinema;
  const messageAdmin=await messageAdminAPI(req,env,uid,helpers);if(messageAdmin)return messageAdmin;
@@ -80,6 +86,8 @@ async function api(req,env,ctx){
  const playlists=await musicPlaylistsAPI(req,env,uid,helpers);if(playlists)return playlists;
  const catalog=await musicCatalogAPI(req,env,uid,helpers);if(catalog)return catalog;
  const fortnite=await fortniteAPI(req,env,uid,helpers);if(fortnite)return fortnite;
+ const game=await gameRoomsAPI(req,env,uid,helpers);if(game)return game;
+ const listening=await musicListeningAPI(req,env,uid,helpers);if(listening)return listening;
  const history=await listeningHistoryAPI(req,env,uid,helpers);if(history)return history;
  const music=await liveMusicAPI(req,env,uid,helpers);if(music)return music;
  const social=await socialAPI(req,env,uid,helpers);if(social)return social;

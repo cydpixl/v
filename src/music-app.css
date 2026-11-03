@@ -4,3 +4,16 @@
 
 .apple-music .am-main{width:100%;max-width:none;margin:0;box-sizing:border-box}.am-now-playing input[type=range]{appearance:none;min-height:0;height:3px;border:0;border-radius:1px;box-shadow:none;padding:0;margin:0;background:#555;cursor:pointer}.am-now-playing input[type=range]::-webkit-slider-thumb{appearance:none;height:5px;width:5px;border-radius:50%;background:#ddd}.am-now-playing input[type=range]::-moz-range-thumb{height:5px;width:5px;border:0;border-radius:50%;background:#ddd}
 .am-history-controls{display:flex;align-items:center;gap:15px;justify-content:space-between}.am-history-controls>button{color:#fa586a;font-size:10px}.am-history article>button{margin-left:auto;color:#fa586a}
+
+/* Full-song availability uses one quiet accent alongside the existing Music UI. */
+.am-playable-star{color:#bb9af7;display:inline-block;font-size:11px;line-height:1;vertical-align:1px;margin-right:5px;flex-shrink:0}
+.am-section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:24px 0 18px}
+.am-section-heading h2{font-size:21px;letter-spacing:-.5px;margin:0;color:inherit}
+.am-section-heading p,.am-section-heading>span{font-size:11px;color:#aaa;margin:7px 0 0}
+.am-section-heading .am-ready-play{display:inline-flex;align-items:center;gap:6px;color:#fa586a;font-size:12px;padding:7px 12px;border-radius:6px;background:#ffffff0b;transition:background .15s}
+.am-section-heading .am-ready-play:hover{background:#ffffff15}
+.am-ready-section{padding-bottom:28px;border-bottom:1px solid #ffffff12}
+.am-art-placeholder{display:grid;width:100%;aspect-ratio:1;place-items:center;background:#303036;color:#8e8e93}
+.am-album-title strong .am-playable-star{font-size:10px}
+.am-import:disabled{opacity:.65;cursor:progress;white-space:normal}
+@media(max-width:700px){.am-section-heading{align-items:flex-start;gap:8px}.am-section-heading h2{font-size:18px}.am-section-heading p,.am-section-heading>span{font-size:10px}.am-section-heading .am-ready-play{padding:6px 8px}.am-ready-section{padding-bottom:18px}}

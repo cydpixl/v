@@ -6,3 +6,33 @@
 .apple-tv-app{grid-template-columns:clamp(245px,15.2vw,292px) minmax(0,1fr)}.atv-native-home{padding:1px 40px 36px;background:#1f1f1f;min-height:100%}.atv-native-shelf{margin:0 0 32px}.atv-native-shelf h2{font:600 17px 'Segoe UI';margin:0 0 16px;color:#ddd;padding-top:3px}.atv-native-shelf h2 span{font-size:24px;vertical-align:-1px;color:#aaa;margin-left:5px}.atv-native-rail{display:grid;grid-auto-flow:column;grid-auto-columns:clamp(150px,9.1vw,194px);gap:21px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}.atv-native-poster{position:relative;display:block;aspect-ratio:2/3;border-radius:19px!important;overflow:hidden;padding:0!important;background:#151515!important;text-align:left;transition:transform .12s}.atv-native-poster:hover{transform:scale(.985);outline:2px solid #ffffff80;outline-offset:-2px}.atv-native-poster>img:first-child{display:block;width:100%;height:100%;object-fit:cover}.atv-native-poster .atv-content-logo{position:absolute;width:86%;height:42px;object-fit:contain;left:7%;bottom:39px}.atv-chart-rank{position:absolute;top:7px;left:16px;font:700 40px 'Segoe UI';color:#fff;text-shadow:0 2px 8px #0006}.atv-native-poster small{position:absolute;bottom:14px;left:8px;right:8px;color:#ddd;font:12px 'Segoe UI';text-align:center;text-shadow:0 2px 5px #000}.atv-native-poster:has(small):after{content:'';position:absolute;inset:65% 0 0;background:linear-gradient(transparent,#0006);pointer-events:none;z-index:0}.atv-native-poster small,.atv-native-poster .atv-content-logo{z-index:1}.apple-tv-app .atv-sidebar{background:#202020!important}.apple-tv-app>.nc-body{background:#1f1f1f}.apple-tv-app .atv-sidebar .nc-profile-menu{position:absolute;bottom:48px}.apple-tv-app .atv-sidebar nav button{font-size:14px!important;font-weight:400}.apple-tv-app .atv-sidebar nav button[aria-current=page]{font-weight:600}@media(max-width:700px){.atv-native-home{padding:10px 18px}.atv-native-rail{grid-auto-columns:140px;gap:14px}.atv-native-poster{border-radius:13px!important}}
 
 .apple-tv-app>.nc-body{position:relative}.apple-tv-detail{position:absolute!important;inset:0 0 auto!important;width:100%!important;max-width:none!important;height:auto!important;min-height:100%!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;padding:0!important;background:#1f1f1f!important;box-shadow:none!important;z-index:20;overflow:visible!important;color:#eee}.apple-tv-detail .nc-detail-hero{height:580px}.apple-tv-detail .nc-detail-hero h2{font:600 46px 'Segoe UI';letter-spacing:-.025em}.apple-tv-detail .nc-detail-copy{padding:30px 40px 60px}.apple-tv-detail .nc-detail-close{left:20px;right:auto;top:13px;border-radius:50%;font-size:36px;background:#202020b0}.apple-tv-detail .nc-primary,.apple-tv-detail .nc-secondary{border-radius:22px!important;font:600 13px 'Segoe UI'!important}.apple-tv-detail .nc-detail-about{font:14px/1.6 'Segoe UI'}.apple-tv-detail .nc-episode{background:#262626;border-radius:8px;margin:10px 0;padding:20px!important}.apple-tv-detail .nc-episode-still{border-radius:6px}.apple-tv-detail .nc-meta{font-family:'Segoe UI'}.apple-tv-app .atv-native-home{padding-top:0}.apple-tv-app .atv-native-shelf:first-child{margin-top:-4px}
+
+/* Native Windows titlebar owns the app identity; sidebar begins with Search. */
+.apple-tv-app .atv-brand{display:none!important}
+.apple-tv-app .atv-sidebar{padding-top:16px!important}
+.apple-tv-app .atv-search svg{position:static!important;order:2;pointer-events:none}
+.apple-tv-app .atv-search input::placeholder{color:#aaa!important}
+.apple-tv-app .atv-profile>button>span{transform:none!important}
+.apple-tv-app .atv-profile>button>.avatar{width:20px;height:20px;min-width:20px;border-radius:50%;font-size:10px}
+.apple-tv-app .atv-native-home{padding-top:3px}
+.apple-tv-app .atv-native-shelf:first-child{margin-top:0}
+.atv-native-shelf{margin-bottom:26px}
+.atv-native-shelf>header{display:flex;align-items:center;justify-content:space-between;height:34px;margin-bottom:3px}
+.atv-native-shelf h2{padding:0;margin:0;font-size:17px}
+.atv-shelf-controls{display:flex;gap:4px;opacity:0;transition:opacity .12s}
+.atv-native-shelf:hover .atv-shelf-controls,.atv-native-shelf:focus-within .atv-shelf-controls{opacity:1}
+.atv-shelf-controls button{width:28px;height:28px;border-radius:50%;background:#333!important;font-size:24px!important;line-height:1}
+.atv-native-rail{overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+.atv-native-poster{scroll-snap-align:start}
+.apple-tv-window .desktop-window-heading>strong{display:flex;align-items:center;gap:10px}
+.apple-tv-window .desktop-window-heading>strong:before{content:'';width:19px;height:19px;background:var(--apple-tv-icon) center/contain no-repeat}
+.am-live-friends article{display:flex;align-items:center;gap:16px;padding:20px 0;border-bottom:1px solid #ffffff12}
+.am-live-friends article>div{flex:1;display:grid;gap:5px}.am-live-friends span{font-size:14px}.am-live-friends small{color:#aaa;font-size:12px}
+.am-live-friends button,[data-stop-follow]{background:#fa586a!important;color:white!important;border-radius:6px;padding:8px 14px!important;font-size:12px!important}
+
+.apple-tv-app .nc-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:30px 21px}
+.atv-library-card{min-width:0}.atv-library-card>button{display:block;padding:0;width:100%;aspect-ratio:2/3;border-radius:14px;overflow:hidden;background:#292929}
+.atv-library-card>button img{width:100%;height:100%;object-fit:cover}.atv-library-card>div{position:relative;padding:10px 30px 0 0;display:grid;gap:5px}
+.atv-library-card strong{font:500 14px 'Segoe UI';overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.atv-library-card small{font:12px 'Segoe UI';color:#aaa}
+.atv-library-card>div>button{position:absolute;right:0;top:10px;border-radius:50%;height:25px;width:25px;background:#333!important;font-size:19px!important}
+@media(max-width:600px){.apple-tv-app{grid-template-columns:60px minmax(0,1fr)}.apple-tv-app .nc-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}}

@@ -247,6 +247,7 @@
     return window.velaMusic.api(path,options);
   }
   async function publishMusic(force=false) {
+    if(window.velaMusic?.desktopPlaying?.())return false;
     if (publishing) {if(force)publishNext=true;return false;}
     if (!state.account) return;
     if (!window.velaMusic?.selfUid?.()) {sharedStatus="Site update is not active yet. Reload Vela after the next build.";renderSettings();return;}

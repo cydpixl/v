@@ -1,0 +1,27 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {gameRoomsAPI} from '../worker/game-rooms.js';import {musicListeningAPI} from '../worker/music-listening.js';
+const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync('worker/schema.sql','utf8'));db.exec("INSERT INTO users(uid,handle,name,created) VALUES('one','one','PIXL',0),('two','two','Ash',0),('stranger','stranger','Stranger',0);INSERT INTO friends(id,a,b,requested_by,status,created) VALUES('friend','one','two','one','accepted',0)");
+const env={DB:{prepare(sql){let args=[];const s={bind(...v){args=v;return s},async all(){return {results:db.prepare(sql).all(...args)}},async first(){return db.prepare(sql).get(...args)||null},async run(){if(/^\s*SELECT/i.test(sql))return s.all();return {meta:{changes:db.prepare(sql).run(...args).changes}}}};return s},async batch(statements){db.exec('BEGIN');try{const out=[];for(const s of statements)out.push(await s.run());db.exec('COMMIT');return out}catch(error){db.exec('ROLLBACK');throw error}}}};
+const h={json:data=>data,body:req=>req.json(),fail:(message,status=400)=>{throw Object.assign(Error(message),{status})},rows:async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results,row:async(env,sql,...args)=>env.DB.prepare(sql).bind(...args).first()};
+
+db.exec("CREATE TABLE IF NOT EXISTS profile_extras(uid TEXT PRIMARY KEY,data TEXT);UPDATE users SET status='online';");
+const request=(uid,path='',method='GET',data)=>gameRoomsAPI(new Request('https://vela.test/api/game-rooms'+path,{method,...(data?{body:JSON.stringify(data)}:{})}),env,uid,h);
+await assert.rejects(()=>request('one','','POST',{guest:'stranger'}),/accepted friend/);
+const {id}=await request('one','','POST',{guest:'two'});
+assert.equal((await request('stranger')).items.length,0);
+await assert.rejects(()=>request('stranger','/'+id,'PUT',{cell:0,revision:0}),/not found/);
+await assert.rejects(()=>request('two','/'+id,'PUT',{cell:0,revision:0}),/turn/);
+await request('one','/'+id,'PUT',{cell:0,revision:0});
+await assert.rejects(()=>request('two','/'+id,'PUT',{cell:1,revision:0}),/changed/);
+await assert.rejects(()=>request('two','/'+id,'PUT',{cell:0,revision:1}),/empty/);
+await request('two','/'+id,'PUT',{cell:3,revision:1});await request('one','/'+id,'PUT',{cell:1,revision:2});await request('two','/'+id,'PUT',{cell:4,revision:3});await request('one','/'+id,'PUT',{cell:2,revision:4});
+assert.equal((await request('two')).items[0].winner,'one');
+await assert.rejects(()=>request('two','/'+id,'PUT',{cell:5,revision:5}),/changed/);
+console.log('PASS online game access, turns, stale revisions, occupied cells, win and finished-game lock.');
+const music={title:'Become',artist:'The Goo Goo Dolls',playing:true,updated:Date.now(),position:1000,duration:248000,source:'Playlist One'};
+db.prepare('INSERT INTO profile_extras VALUES(?,?)').run('one',JSON.stringify({music}));
+const listen=uid=>musicListeningAPI(new Request('https://vela.test/api/music-listening'),env,uid,h);
+assert.equal((await listen('stranger')).items.length,0);assert.equal((await listen('two')).items[0].music.trackId,'1d837c74ed5335acc5dd');
+db.exec("UPDATE users SET status='invisible' WHERE uid='one'");assert.equal((await listen('two')).items.length,0);
+db.exec("UPDATE users SET status='online' WHERE uid='one';INSERT INTO blocks VALUES('two','one')");assert.equal((await listen('two')).items.length,0);
+db.exec('DELETE FROM blocks');music.updated=Date.now()-61000;db.prepare('UPDATE profile_extras SET data=?').run(JSON.stringify({music}));assert.equal((await listen('two')).items.length,0);
+console.log('PASS music activity maps full shared tracks and hides strangers, blocks, invisible and stale presence.');
