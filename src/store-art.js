@@ -1,9 +1,11 @@
-import {desktopAppIcon} from './desktop-catalog.js';
-import {gameDefinition} from './games/catalog.mjs';
+import {escape as e} from './util.js';
+import {appDefinition,desktopAppIcon} from './desktop-catalog.js';
+import {gameDefinition,gameIcon} from './games/catalog.mjs';
 import {assetURL} from './config.js';
-export function storeArt(id){if(id==='cinema')return `<div class="ms-app-cover ms-cover-cinema">${desktopAppIcon(id)}</div>`;
+export function storeArt(id){if(appDefinition(id)?.logo||id==='app-studio')return `<div class="ms-app-cover ms-cover-studio">${desktopAppIcon(id)}<strong>${e(appDefinition(id).name)}</strong></div>`;if(id==='cinema')return `<div class="ms-app-cover ms-cover-cinema">${desktopAppIcon(id)}</div>`;
  const game=gameDefinition(id);if(!game){const src=id==='apple-tv'?'app-icons/apple-tv.png':id==='cinema'?'app-icons/netflix-symbol.png':id==='fortnite'?'fortnite/treasure-hunters.jpg':id==='music'?'app-icons/music.png':null;return src?`<div class="ms-app-cover ms-cover-${id}"><img src="${assetURL(src)}" alt=""></div>`:'<div class="ms-app-cover ms-cover-flick"><span>Flick</span><i></i><b>100</b></div>';}
  let art='';
+ if(game.multiplayer)art=`<g transform="translate(230 90) scale(3.7)" style="color:${game.accent}">${gameIcon(id)}</g>`;
  if(id==='bricks')art=Array.from({length:24},(_,i)=>`<rect x="${112+i%6*74}" y="${42+Math.floor(i/6)*36}" width="66" height="25" rx="7" fill="${['#ff9982','#ffbd79','#e9d28b','#a7d9bc'][Math.floor(i/6)]}"/>`).join('')+'<path d="M420 255l-52-58-35 45" fill="none" stroke="#ffe6ba" stroke-width="3" stroke-dasharray="5 10" opacity=".4"/><circle cx="420" cy="255" r="14" fill="#fff1d6"/><rect x="350" y="301" width="125" height="12" rx="6" fill="#ffbb79"/>';
  if(id==='tic-tac-toe')art='<g stroke="#ffffff12" stroke-width="3"><path d="M265 58v245m110-245v245M155 140h330M155 222h330"/></g><g stroke="#c6bbff" stroke-width="13" stroke-linecap="round"><path d="M188 80l40 40m0-40l-40 40m70 48l40 40m0-40l-40 40m70 44l40 40m0-40l-40 40"/></g><g fill="none" stroke="#f0ecff" stroke-width="12"><circle cx="425" cy="100" r="25"/><circle cx="210" cy="262" r="25"/></g>';
  if(id==='reaction')art='<g fill="none" stroke="#c0f68b"><circle cx="330" cy="180" r="145" opacity=".07"/><circle cx="330" cy="180" r="105" opacity=".14"/><circle cx="330" cy="180" r="70" opacity=".18"/></g><path d="M358 52L257 194h68l-17 108 104-157h-72z" fill="#b8f77c"/><circle cx="140" cy="106" r="5" fill="#b8f77c" opacity=".7"/><circle cx="490" cy="252" r="7" fill="#b8f77c" opacity=".4"/>';

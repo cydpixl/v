@@ -1,8 +1,10 @@
 import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
-export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade',...GAMES.map(game=>game.id)];
+import {escape as e} from './util.js';
+export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio',...GAMES.map(game=>game.id)];
 export const DESKTOP_APPS=[
+ {id:'app-studio',name:'App Studio',icon:'settings',category:'Developer tools',description:'Edit app names, descriptions, and logos across this desktop. Site administrators can publish changes.'},
  ...GAMES.map(game=>({...game,icon:'play',category:'Games',note:'VelaGames Studios'})),
  {id:'cinema',name:'Netflix',icon:'film',category:'Entertainment',description:'Movies, TV shows, and watching together.',note:'Your movies and TV shows, together in one app.'},
  {id:'apple-tv',name:'Apple TV',icon:'film',category:'Entertainment',description:'Your shows, movies, watchlist, and shared watch parties.',note:'Your desktop profile, your own library.'},
@@ -17,7 +19,8 @@ export const DESKTOP_APPS=[
  {id:'arcade',name:'Flick',icon:'play',category:'Games',description:'Pull back, let it roll, and chase a new high score. Nine balls. Four targets.',note:'Works offline. Mouse, touch, and keyboard.'}
 ];
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
-export function desktopAppIcon(id){
+export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
+export function defaultDesktopAppIcon(id){
  if(id==='cinema')return `<span class="official-netflix-icon"><svg viewBox="247 451 496 900" aria-hidden="true"><image href="${assetURL('app-icons/netflix-symbol.png')}" width="991" height="1801"/></svg></span>`;
  if(id==='apple-tv')return `<img src="${assetURL('app-icons/apple-tv.png')}" alt="">`;
  const game=gameDefinition(id);if(game)return `<span class="vela-game-icon" style="--game-icon-accent:${game.accent};--game-icon-ink:${game.ink}">${gameIcon(id)}</span>`;

@@ -21,3 +21,5 @@
 .hub-dock.desktop-apps{padding:0!important;max-height:none!important;overflow:visible!important}
 .desktop-apps .hub-dock-app.icon-selected:not(.icon-moving){z-index:1}
 .desktop-dock[popover]{margin:0;color:var(--text);inset:auto;border:1px solid var(--border)}
+
+.desktop-apps .hub-dock-app .hub-app-icon>.custom-app-logo,.desktop-apps .hub-dock-app.cinema .hub-app-icon>.custom-app-logo{position:static!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;transform:none!important;object-fit:contain!important;border-radius:inherit!important}

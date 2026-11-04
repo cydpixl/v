@@ -48,6 +48,10 @@
         "name": "LEGACY_ROOM",
         "class_name": "CallRoom",
         "script_name": "vela-cyd"
+      },
+      {
+        "name": "ARCADE",
+        "class_name": "ArcadeRoom"
       }
     ]
   },
@@ -58,6 +62,14 @@
     {
       "binding": "FILES",
       "bucket_name": "pixl-chat-files"
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "arcade-v1",
+      "new_sqlite_classes": [
+        "ArcadeRoom"
+      ]
     }
   ]
 }

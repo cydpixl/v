@@ -2,6 +2,8 @@ import {sharedNotesAPI} from './shared-notes.js';
 import {appleTVPageAPI} from './apple-tv-page.js';
 import {gameRoomsAPI} from './game-rooms.js';
 import {defaultMusicAPI} from './default-music.js';
+import {arcadeAPI} from './arcade-api.js';
+import {appBrandingAPI,appBrandAsset} from './app-branding.js';
 import {cinemaLibraryAPI} from './cinema-library.js';
 import {cinemaPartyAPI} from './cinema-party.js';
 import {musicPlaylistsAPI} from './music-playlists.js';
@@ -42,7 +44,7 @@ async function body(req){if(Number(req.headers.get('content-length'))>1000000)fa
 async function issueTicket(env,uid,scope){if(!env.API_TICKET_SECRET)fail('Connection credentials unavailable.',503);return new SignJWT({scope}).setProtectedHeader({alg:'HS256'}).setSubject(uid).setAudience('vela-api').setIssuer('vela').setIssuedAt().setExpirationTime(scope.startsWith('file:')?'1h':scope.startsWith('movie:')||scope.startsWith('expression:')||scope.startsWith('music:')?'4h':'2m').sign(new TextEncoder().encode(env.API_TICKET_SECRET));}
 async function identity(req,env){
  const url=new URL(req.url),ticket=url.searchParams.get('ticket');
- if(ticket&&env.API_TICKET_SECRET){try{const {payload}=await jwtVerify(ticket,new TextEncoder().encode(env.API_TICKET_SECRET),{algorithms:['HS256'],issuer:'vela',audience:'vela-api'});const expected=url.pathname==='/api/live'?'live':url.pathname.match(/^\/api\/calls\/([^/]+)\/live$/)?'call:'+url.pathname.split('/')[3]:url.pathname.startsWith('/api/movie-media/')?'movie:'+url.pathname.slice(17):url.pathname.startsWith('/api/expression-media/')?'expression:'+url.pathname.slice(22):url.pathname.startsWith('/api/shared-music/')?'music:'+url.pathname.split('/').at(-1):url.pathname.startsWith('/api/files/')?'file:'+url.pathname.slice(11):null;if(!expected||payload.scope!==expected||!payload.sub||req.method!=='GET')fail('Invalid connection credential.',401);return payload.sub;}catch{fail('Connection credential expired.',401)}}
+ if(ticket&&env.API_TICKET_SECRET){try{const {payload}=await jwtVerify(ticket,new TextEncoder().encode(env.API_TICKET_SECRET),{algorithms:['HS256'],issuer:'vela',audience:'vela-api'});const expected=url.pathname==='/api/live'?'live':url.pathname.match(/^\/api\/calls\/([^/]+)\/live$/)?'call:'+url.pathname.split('/')[3]:url.pathname.startsWith('/api/movie-media/')?'movie:'+url.pathname.slice(17):url.pathname.startsWith('/api/expression-media/')?'expression:'+url.pathname.slice(22):url.pathname.startsWith('/api/shared-music/')?'music:'+url.pathname.split('/').at(-1):url.pathname.match(/^\/api\/arcade-rooms\/([a-f0-9-]{36})\/socket$/)?'arcade:'+url.pathname.split('/')[3]:url.pathname.startsWith('/api/files/')?'file:'+url.pathname.slice(11):null;if(!expected||payload.scope!==expected||!payload.sub||req.method!=='GET')fail('Invalid connection credential.',401);return payload.sub;}catch{fail('Connection credential expired.',401)}}
  const cookie=req.headers.get('cookie')?.match(/(?:^|;\s*)__Host-pixl=([^;]+)/)?.[1];
  const token=req.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1]||cookie;
  if(!token)fail('Sign in to continue.',401);
@@ -73,12 +75,15 @@ async function visibleCall(env,call){
 async function api(req,env,ctx){
  const url=new URL(req.url),p=url.pathname,method=req.method;
  if(p==='/api/health')return json({service:'Vela',version:'1.7.3',release:'status-block-controls-20261101'});
+ const brandAsset=await appBrandAsset(req,env);if(brandAsset)return brandAsset;
  const origin=req.headers.get('Origin');if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io'&&!(url.hostname==='127.0.0.1'&&new URL(origin).hostname==='127.0.0.1'))fail('Invalid origin.',403);
  const uid=await identity(req,env),needsAdmin=p==='/api/me'||p==='/api/state'||p.startsWith('/api/admin/')||method==='POST'&&/\/messages$/.test(p)||method==='PATCH'&&p.startsWith('/api/messages/'),siteAdmin=needsAdmin?await isSiteAdmin(env,uid):false;if(method!=='GET')await limit(env,'write:'+uid,100);
  if(await row(env,'SELECT 1 FROM deleted_accounts WHERE uid=?',uid))fail('This account was removed. Sign in with Ash or Pixl, or create a new account.',410);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx,siteAdmin};
  const applePage=await appleTVPageAPI(req,env,uid,helpers);if(applePage)return applePage;
  const sharedNotes=await sharedNotesAPI(req,env,uid,helpers);if(sharedNotes)return sharedNotes;
+ const branding=await appBrandingAPI(req,env,uid,helpers);if(branding)return branding;
+ const arcade=await arcadeAPI(req,env,uid,helpers);if(arcade)return arcade;
  const sharedMusic=await defaultMusicAPI(req,env,uid,helpers);if(sharedMusic)return sharedMusic;
  const cinema=await cinemaPartyAPI(req,env,uid,helpers)||await cinemaLibraryAPI(req,env,uid,helpers);if(cinema)return cinema;
  const messageAdmin=await messageAdminAPI(req,env,uid,helpers);if(messageAdmin)return messageAdmin;
