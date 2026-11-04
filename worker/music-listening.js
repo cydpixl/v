@@ -11,7 +11,7 @@ export async function musicListeningAPI(req,env,uid,{rows,json,fail}){
  const items=[];
  for(const friend of friends){
   let music;try{music=JSON.parse(friend.data).music}catch{continue}
-  if(privateStatus(friend.status)||!music?.playing||!Number.isFinite(music.updated)||Date.now()-music.updated>60000)continue;
+  if(privateStatus(friend.status)||!music||!Number.isFinite(music.updated)||Date.now()-music.updated>60000)continue;
   const track=tracks.find(track=>track.title===music.title&&track.artist===music.artist);
   items.push({uid:friend.uid,name:friend.name,avatar:friend.avatar,music:{...music,trackId:track?.id||null}});
  }
