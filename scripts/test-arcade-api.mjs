@@ -6,3 +6,17 @@ const request=(uid,path='',method='GET',body)=>arcadeAPI(new Request('https://ve
 await assert.rejects(()=>request('one','','POST',{game:'slither',guest:'three'}),/accepted friend/);await assert.rejects(()=>request('one','','POST',{game:'fake',guest:'two'}),/game/);const {id}=await request('one','','POST',{game:'slither',guest:'two'});assert.equal((await request('one')).items[0].id,id);assert.equal((await request('two')).items[0].id,id);assert.equal((await request('three')).items.length,0);assert.match((await request('two','/'+id)).ticket,/arcade:/);await assert.rejects(()=>request('three','/'+id),/not found/);
 db.prepare("INSERT INTO blocks(uid,target) VALUES('one','two')").run();assert.equal((await request('two')).items.length,0);await assert.rejects(()=>request('two','/'+id),/not found/);db.exec('DELETE FROM blocks');await request('one','/'+id,'DELETE');assert.equal((await request('two')).items.length,0);
 console.log('PASS live-room creation, both-player listing, signed connection tickets, stranger/block rejection and room deletion.');
+const invitation=await request('one','','POST',{game:'chess',guest:'two',invitation:true});
+assert.equal((await request('two')).items[0].invite_status,'pending');
+assert.equal((await request('one','','POST',{game:'chess',guest:'two',invitation:true})).id,invitation.id);
+await assert.rejects(()=>request('two','/'+invitation.id),/Accept/);
+await assert.rejects(()=>request('one','/'+invitation.id,'POST',{action:'accept'}),/Only/);
+await request('two','/'+invitation.id,'POST',{action:'accept'});
+assert.match((await request('two','/'+invitation.id)).ticket,/arcade:/);
+assert.equal((await request('two')).items[0].invite_status,'accepted');
+await request('one','/'+invitation.id,'DELETE');
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM desktop_game_invitations').get().n,0);
+const expired=await request('one','','POST',{game:'reversi',guest:'two',invitation:true});db.prepare('UPDATE desktop_game_invitations SET expires=0 WHERE id=?').run(expired.id);
+assert.equal((await request('two')).items.length,0);await assert.rejects(()=>request('two','/'+expired.id,'POST',{action:'accept'}),/expired/);
+const crossed=await request('one','','POST',{game:'connect-four',guest:'two',invitation:true});assert.equal((await request('two','','POST',{game:'connect-four',guest:'one',invitation:true})).id,crossed.id);assert.match((await request('two','/'+crossed.id)).ticket,/arcade:/);await request('two','/'+crossed.id,'DELETE');
+console.log('PASS invitation deduplication, accept permissions, decline cleanup, expiry and crossed invitations.');

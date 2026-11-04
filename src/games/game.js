@@ -6,8 +6,8 @@ import {gameAudio} from './audio.js';
 import './games.css';
 
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function mountVelaGame(root,{id,owner='device',api}={}){
-  const game=gameDefinition(id);if(!game)throw Error('Unknown game.');if(game.multiplayer)return mountArcade(root,{id,owner,api});
+export function mountVelaGame(root,{id,owner='device',api,invite}={}){
+  const game=gameDefinition(id);if(!game)throw Error('Unknown game.');if(game.multiplayer)return mountArcade(root,{id,owner,api,invite});
   const events=new AbortController();let alive=true,raf,last=performance.now(),splash=0,view='',period='all',saved=true,muted=false;
   try{muted=localStorage.getItem('vela.games.muted.'+owner)==='1';}catch{}
   const shell=document.createElement('section');shell.className='vg vg-game-'+id;shell.style.setProperty('--game-accent',game.accent);shell.style.setProperty('--game-ink',game.ink);shell.tabIndex=-1;shell.setAttribute('aria-label',game.name);root.append(shell);root.closest('.desktop-window')?.classList.add('vg-window');
