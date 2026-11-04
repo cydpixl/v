@@ -1,4 +1,3 @@
-import './fullscreen-required.mjs';
 import {appDefinition} from './desktop-catalog.js';
 import {installSettingsWindow,settingsHome} from './settings-window.mjs';
 import {configureMusicPresence,desktopMusicPlaying} from './music-presence.js';
