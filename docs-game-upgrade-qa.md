@@ -20,3 +20,7 @@ Two real accounts against the deployed backend and deployed frontend: direct inv
 SQLite API tests cover friend and block permissions, signed tickets, deduplication, guest-only acceptance, invitation expiry, cleanup and simultaneous crossed invitations. Model tests cover invalid/stale moves, bot tactics, full bot games, chess castling/en passant/underpromotion/checkmate, Slither food/boost/collision and safe spawns. The unchanged bundled web-game skill client captured actual gameplay and text state.
 
 Additional source candidates are documented separately in docs-multiplayer-sources.md; researched Node/Socket.IO games are not claimed as integrated.
+
+## Main URL confirmation
+
+Published source 83b740f and CI assets ae3675f; main URL https://cydpixl.github.io/v/ served index-DmA7GUwb.js. Re-ran the complete six-game two-account suite on the main URL successfully, and separately verified actual main-site Chess/Reversi hard bot workers. Worker version e3ac366a-c306-453e-9267-706efb0e36f8. No required work remains.
