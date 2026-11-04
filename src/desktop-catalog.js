@@ -3,8 +3,9 @@ import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant',...GAMES.map(game=>game.id)];
+export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id)];
 export const DESKTOP_APPS=[
+ {id:'youtube',name:'YouTube',icon:'play',category:'Entertainment',description:'Your videos, your community. Upload, watch, search, and share videos with Vela.'},
  {id:'graphing',name:'Desmos',icon:'calculator',category:'Education',description:'The real Desmos graphing calculator. Save graphs, explore sliders, and export images.'},
  {id:'assistant',name:'Nova',icon:'chat',category:'Productivity',description:'Your private AI workspace. Write, learn, and code with Groq-powered models and saved conversations.'},
  {id:'app-studio',name:'App Studio',icon:'settings',category:'Developer tools',description:'Edit app names, descriptions, and logos across this desktop. Site administrators can publish changes.'},
@@ -24,6 +25,7 @@ export const DESKTOP_APPS=[
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
 export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
 export function defaultDesktopAppIcon(id){
+ if(id==='youtube')return `<img class="generated-app-icon" src="${assetURL('app-icons/youtube.png')}" alt="">`;
  if(GENERATED_APP_ICONS[id])return `<img class="generated-app-icon" src="${assetURL(GENERATED_APP_ICONS[id])}" alt="">`;
  if(id==='graphing')return `<img class="generated-app-icon" src="${assetURL('app-icons/desmos.png')}" alt="">`;
  if(id==='cinema')return `<span class="official-netflix-icon"><svg viewBox="247 451 496 900" aria-hidden="true"><image href="${assetURL('app-icons/netflix-symbol.png')}" width="991" height="1801"/></svg></span>`;

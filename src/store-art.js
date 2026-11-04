@@ -2,7 +2,7 @@ import {escape as e} from './util.js';
 import {appDefinition,desktopAppIcon} from './desktop-catalog.js';
 import {gameDefinition,gameIcon} from './games/catalog.mjs';
 import {assetURL} from './config.js';
-export function storeArt(id){if(appDefinition(id)?.logo||['app-studio','assistant','graphing'].includes(id))return `<div class="ms-app-cover ms-cover-studio">${desktopAppIcon(id)}<strong>${e(appDefinition(id).name)}</strong></div>`;if(id==='cinema')return `<div class="ms-app-cover ms-cover-cinema">${desktopAppIcon(id)}</div>`;
+export function storeArt(id){if(appDefinition(id)?.logo||['app-studio','assistant','graphing','youtube'].includes(id))return `<div class="ms-app-cover ms-cover-studio">${desktopAppIcon(id)}<strong>${e(appDefinition(id).name)}</strong></div>`;if(id==='cinema')return `<div class="ms-app-cover ms-cover-cinema">${desktopAppIcon(id)}</div>`;
  const game=gameDefinition(id);if(!game){const src=id==='apple-tv'?'app-icons/apple-tv.png':id==='cinema'?'app-icons/netflix-symbol.png':id==='fortnite'?'fortnite/treasure-hunters.jpg':id==='music'?'app-icons/music.png':null;return src?`<div class="ms-app-cover ms-cover-${id}"><img src="${assetURL(src)}" alt=""></div>`:'<div class="ms-app-cover ms-cover-flick"><span>Flick</span><i></i><b>100</b></div>';}
  let art='';
  if(game.multiplayer)art=`<g transform="translate(230 90) scale(3.7)" style="color:${game.accent}">${gameIcon(id)}</g>`;
