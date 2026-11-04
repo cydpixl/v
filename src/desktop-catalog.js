@@ -1,9 +1,12 @@
+import {GENERATED_APP_ICONS} from './generated-app-icons.mjs';
 import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio',...GAMES.map(game=>game.id)];
+export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant',...GAMES.map(game=>game.id)];
 export const DESKTOP_APPS=[
+ {id:'graphing',name:'Desmos',icon:'calculator',category:'Education',description:'The real Desmos graphing calculator. Save graphs, explore sliders, and export images.'},
+ {id:'assistant',name:'Nova',icon:'chat',category:'Productivity',description:'Your private AI workspace. Write, learn, and code with Groq-powered models and saved conversations.'},
  {id:'app-studio',name:'App Studio',icon:'settings',category:'Developer tools',description:'Edit app names, descriptions, and logos across this desktop. Site administrators can publish changes.'},
  ...GAMES.map(game=>({...game,icon:'play',category:'Games',note:'VelaGames Studios'})),
  {id:'cinema',name:'Netflix',icon:'film',category:'Entertainment',description:'Movies, TV shows, and watching together.',note:'Your movies and TV shows, together in one app.'},
@@ -21,6 +24,8 @@ export const DESKTOP_APPS=[
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
 export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
 export function defaultDesktopAppIcon(id){
+ if(GENERATED_APP_ICONS[id])return `<img class="generated-app-icon" src="${assetURL(GENERATED_APP_ICONS[id])}" alt="">`;
+ if(id==='graphing')return `<img class="generated-app-icon" src="${assetURL('app-icons/desmos.png')}" alt="">`;
  if(id==='cinema')return `<span class="official-netflix-icon"><svg viewBox="247 451 496 900" aria-hidden="true"><image href="${assetURL('app-icons/netflix-symbol.png')}" width="991" height="1801"/></svg></span>`;
  if(id==='apple-tv')return `<img src="${assetURL('app-icons/apple-tv.png')}" alt="">`;
  const game=gameDefinition(id);if(game)return `<span class="vela-game-icon" style="--game-icon-accent:${game.accent};--game-icon-ink:${game.ink}">${gameIcon(id)}</span>`;

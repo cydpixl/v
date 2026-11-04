@@ -45,11 +45,10 @@ export async function musicPlaylistsAPI(req,env,uid,h){
   if(req.method==='DELETE'&&key){if(key===playlist.owner)fail('The playlist owner cannot leave.');if(uid!==playlist.owner&&key!==uid)fail('Only the owner can remove collaborators.',403);await env.DB.batch([env.DB.prepare('DELETE FROM music_playlist_members WHERE playlist=? AND uid=?').bind(id,key),change()]);await broadcast(id);return json({ok:true})}
  }else if(section==='tracks'){
   if(req.method==='POST'){
-   const data=await body(req);let track=normalizeSong(data.track);
-   if(!track&&data.track?.source==='local'&&/^[a-f0-9]{20}$/.test(data.track.id||'')&&typeof data.track.title==='string'&&data.track.title.trim())track={id:data.track.id,source:'local',title:data.track.title.trim().slice(0,200),artist:String(data.track.artist||'').slice(0,200),album:String(data.track.album||'').slice(0,200),duration:Math.max(0,Math.min(86400,Number(data.track.duration)||0))};
-   if(!track)fail('Choose a valid song.');const trackKey=(track.source==='local'?'local:':'catalog:')+track.id;
-   if((await row(env,'SELECT COUNT(*) AS n FROM music_playlist_tracks WHERE playlist=?',id)).n>=500)fail('This playlist has 500 songs.');
-   await env.DB.batch([env.DB.prepare('INSERT INTO music_playlist_tracks(playlist,id,data,added_by,added,position) SELECT ?,?,?,?,?,COALESCE(MAX(position),-1)+1 FROM music_playlist_tracks WHERE playlist=? ON CONFLICT(playlist,id) DO NOTHING').bind(id,trackKey,JSON.stringify(track),uid,Date.now(),id),change()]);await broadcast(id);return json(await details(playlist));
+   const data=await body(req),input=Array.isArray(data.tracks)?data.tracks:[data.track];if(!input.length||input.length>40)fail('Add between 1 and 40 songs at a time.');
+   const tracks=input.map(value=>{let track=normalizeSong(value);if(!track&&value?.source==='local'&&/^[a-f0-9]{20}$/.test(value.id||'')&&typeof value.title==='string'&&value.title.trim())track={id:value.id,source:'local',title:value.title.trim().slice(0,200),artist:String(value.artist||'').slice(0,200),album:String(value.album||'').slice(0,200),duration:Math.max(0,Math.min(86400,Number(value.duration)||0))};if(!track)fail('Choose a valid song.');return track});
+   if((await row(env,'SELECT COUNT(*) AS n FROM music_playlist_tracks WHERE playlist=?',id)).n+tracks.length>500)fail('This playlist holds up to 500 songs.');
+   await env.DB.batch([...tracks.map(track=>env.DB.prepare('INSERT INTO music_playlist_tracks(playlist,id,data,added_by,added,position) SELECT ?,?,?,?,?,COALESCE(MAX(position),-1)+1 FROM music_playlist_tracks WHERE playlist=? ON CONFLICT(playlist,id) DO NOTHING').bind(id,(track.source==='local'?'local:':'catalog:')+track.id,JSON.stringify(track),uid,Date.now(),id)),change()]);await broadcast(id);return json(await details(playlist));
   }
   if(req.method==='DELETE'&&key){await env.DB.batch([env.DB.prepare('DELETE FROM music_playlist_tracks WHERE playlist=? AND id=?').bind(id,key),change()]);await broadcast(id);return json(await details(playlist))}
  }

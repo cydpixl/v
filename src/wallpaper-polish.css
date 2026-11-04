@@ -1,0 +1,18 @@
+.desktop-settings .settings-layout #settings-page.wallpaper-browser{max-width:1100px;width:100%;margin:0 auto;padding:0!important}
+#settings-page.wallpaper-browser .wallpaper-workspace{display:grid;grid-template-columns:minmax(260px,.92fr) minmax(0,1.08fr);gap:32px;width:100%;margin-top:30px}
+#settings-page.wallpaper-browser .wallpaper-preview-pane{position:sticky;top:12px;align-self:start;min-width:0;padding:0;background:none}
+#settings-page.wallpaper-browser .wallpaper-library{min-width:0;padding:0;background:none}
+#settings-page.wallpaper-browser .wallpaper-library>nav{position:static;display:flex;flex-flow:row wrap;gap:6px;width:100%;height:auto;min-height:0;margin:0 0 18px;padding:0!important;border:0;background:none!important;overflow:visible}
+#settings-page.wallpaper-browser .wallpaper-library>nav>button{width:auto;flex:none;min-height:0;padding:8px 11px!important;margin:0!important;font:11px 'Segoe UI',sans-serif;border:1px solid #ffffff15;border-radius:20px;background:#ffffff04;color:#bbb;text-align:center}
+#settings-page.wallpaper-browser .wallpaper-library>nav>button[aria-pressed=true]{background:#c5b9ff!important;color:#292237;border-color:transparent}
+#settings-page.wallpaper-browser .wallpaper-character-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}
+#settings-page.wallpaper-browser .wallpaper-character-grid>button{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0;width:100%;padding:5px!important;margin:0!important;background:none;border:1px solid transparent;text-align:left}
+#settings-page.wallpaper-browser .wallpaper-character-grid>button[aria-pressed=true]{border-color:#bbacfa;background:#bbacfa10}
+#settings-page.wallpaper-browser .wallpaper-character-grid img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;max-height:none;border-radius:5px}
+#settings-page.wallpaper-browser .wallpaper-fit{display:flex!important;flex-direction:row;align-items:center;justify-content:space-between;font-size:11px!important;font-weight:400!important;margin:20px 0!important}
+#settings-page.wallpaper-browser .wallpaper-fit>select{width:auto;max-width:65%;height:34px;padding:6px 10px;font-size:11px;border-radius:5px}
+#settings-page.wallpaper-browser .wallpaper-large-preview{width:100%;aspect-ratio:16/10}
+#settings-page.wallpaper-browser .wallpaper-selection{margin:18px 0}
+#settings-page.wallpaper-browser [data-apply-wallpaper]{width:100%;height:40px;border-radius:6px}
+#settings-page.wallpaper-browser .wallpaper-custom{padding:22px 0 10px}
+@media(max-width:1050px){#settings-page.wallpaper-browser .wallpaper-workspace{grid-template-columns:1fr}#settings-page.wallpaper-browser .wallpaper-preview-pane{position:static;max-width:500px}#settings-page.wallpaper-browser .wallpaper-character-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

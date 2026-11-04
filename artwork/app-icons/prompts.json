@@ -1,0 +1,132 @@
+{
+  "mode": "Built-in image_gen imagegen",
+  "note": "Original generated PNGs are retained here. Production assets are resized WebP copies. Official third-party app identities are preserved separately.",
+  "icons": [
+    {
+      "id": "nova",
+      "prompt": "A sculptural mint and pearlescent white four-point folded star on a dark teal rounded-square tile, no text; polished desktop app icon.",
+      "original": "nova.png",
+      "production": "public/app-icons/generated/nova.webp"
+    },
+    {
+      "id": "chat",
+      "prompt": "Create one production desktop app icon. Messages: a single sculptural white chat bubble, cobalt blue tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "chat.png",
+      "production": "public/app-icons/generated/chat.webp"
+    },
+    {
+      "id": "files",
+      "prompt": "Create one production desktop app icon. Files: a dimensional blue folder, icy blue tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "files.png",
+      "production": "public/app-icons/generated/files.webp"
+    },
+    {
+      "id": "notepad",
+      "prompt": "Create one production desktop app icon. Notes: a cream notepad with a folded corner and three fine ruled lines, warm golden yellow tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "notepad.png",
+      "production": "public/app-icons/generated/notepad.webp"
+    },
+    {
+      "id": "calculator",
+      "prompt": "Create one production desktop app icon. Calculator: a charcoal calculator with four neat pale round keys and one amber operator key, graphite grey tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "calculator.png",
+      "production": "public/app-icons/generated/calculator.webp"
+    },
+    {
+      "id": "music",
+      "prompt": "Create one production desktop app icon. Music: one sculptural white musical note, coral pink and crimson tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "music.png",
+      "production": "public/app-icons/generated/music.webp"
+    },
+    {
+      "id": "settings",
+      "prompt": "Create one production desktop app icon. Settings: one dimensional silver precision gear, muted slate blue tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "settings.png",
+      "production": "public/app-icons/generated/settings.webp"
+    },
+    {
+      "id": "app-studio",
+      "prompt": "Create one production desktop app icon. App Studio: four softly beveled lilac and white tiles arranged as an elegant diamond, deep indigo tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "app-studio.png",
+      "production": "public/app-icons/generated/app-studio.webp"
+    },
+    {
+      "id": "store",
+      "prompt": "Create one production desktop app icon. App Store: a clean white shopping bag with four small colorful squares on its face, azure blue tile. Square 1:1, no text or letters, no mockup or extra objects. One large centered recognizable symbol, crisp silhouette readable at 32px, soft studio light, restrained material depth, modern professional Windows/iOS app aesthetic. Rounded-square tile fills almost all the frame, 12% corner rounding, clean dark edges. Consistent coherent icon family, no border or drop shadow outside tile.",
+      "original": "store.png",
+      "production": "public/app-icons/generated/store.webp"
+    },
+    {
+      "id": "slither",
+      "prompt": "Create one production desktop game icon. Slither: a friendly mint-green snake curled into a flowing S, two tiny expressive dark eyes, deep teal tile. Square 1:1, no text, no typography, no mockup or surrounding objects. Large centered recognizable symbol, readable at 32px. Refined dimensional materials, soft studio light, restrained depth, modern professional Windows/iOS desktop aesthetic matching a coherent app icon family. Rounded-square tile fills almost the entire frame with 12 percent corner rounding. No extra frame, no outside drop shadow.",
+      "original": "slither.png",
+      "production": "public/app-icons/generated/slither.webp"
+    },
+    {
+      "id": "tic-tac-toe",
+      "prompt": "Create one production desktop game icon. Tic Tac Toe: one beveled lilac X and one pearlescent O arranged diagonally, deep violet tile. Square 1:1, no text, no typography, no mockup or surrounding objects. Large centered recognizable symbol, readable at 32px. Refined dimensional materials, soft studio light, restrained depth, modern professional Windows/iOS desktop aesthetic matching a coherent app icon family. Rounded-square tile fills almost the entire frame with 12 percent corner rounding. No extra frame, no outside drop shadow.",
+      "original": "tic-tac-toe.png",
+      "production": "public/app-icons/generated/tic-tac-toe.webp"
+    },
+    {
+      "id": "rock-paper-scissors",
+      "prompt": "Create one production desktop game icon. Rock Paper Scissors: one sculptural warm ivory hand making a scissors gesture with two raised fingers, terracotta peach tile. Square 1:1, no text, no typography, no mockup or surrounding objects. Large centered recognizable symbol, readable at 32px. Refined dimensional materials, soft studio light, restrained depth, modern professional Windows/iOS desktop aesthetic matching a coherent app icon family. Rounded-square tile fills almost the entire frame with 12 percent corner rounding. No extra frame, no outside drop shadow.",
+      "original": "rock-paper-scissors.png",
+      "production": "public/app-icons/generated/rock-paper-scissors.webp"
+    },
+    {
+      "id": "connect-four",
+      "prompt": "Create one production desktop game icon. Connect Four: a blue board with four glowing yellow discs in a diagonal and a few softly recessed empty round holes, midnight blue tile. Square 1:1, no text, no typography, no mockup or surrounding objects. Large centered recognizable symbol, readable at 32px. Refined dimensional materials, soft studio light, restrained depth, modern professional Windows/iOS desktop aesthetic matching a coherent app icon family. Rounded-square tile fills almost the entire frame with 12 percent corner rounding. No extra frame, no outside drop shadow.",
+      "original": "connect-four.png",
+      "production": "public/app-icons/generated/connect-four.webp"
+    },
+    {
+      "id": "bricks",
+      "prompt": "Create one production desktop application icon: a warm amber wall of three sculptural rounded bricks and one bright ivory ball on dark brown. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "bricks.png",
+      "production": "public/app-icons/generated/bricks.webp"
+    },
+    {
+      "id": "reaction",
+      "prompt": "Create one production desktop application icon: one crisp luminous lime lightning bolt on deep forest green. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "reaction.png",
+      "production": "public/app-icons/generated/reaction.webp"
+    },
+    {
+      "id": "aim",
+      "prompt": "Create one production desktop application icon: sculptural concentric pink and ivory target rings on deep burgundy. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "aim.png",
+      "production": "public/app-icons/generated/aim.webp"
+    },
+    {
+      "id": "stop-ten",
+      "prompt": "Create one production desktop application icon: a beautiful cyan stopwatch with silver hands on midnight blue. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "stop-ten.png",
+      "production": "public/app-icons/generated/stop-ten.webp"
+    },
+    {
+      "id": "type",
+      "prompt": "Create one production desktop application icon: two sculptural cream keyboard keys on warm sand. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "type.png",
+      "production": "public/app-icons/generated/type.webp"
+    },
+    {
+      "id": "memory",
+      "prompt": "Create one production desktop application icon: a mint three by three grid with alternating illuminated tiles on dark green. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "memory.png",
+      "production": "public/app-icons/generated/memory.webp"
+    },
+    {
+      "id": "click",
+      "prompt": "Create one production desktop application icon: a sculptural peach pointer arrow with two subtle click rays on deep terracotta. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "click.png",
+      "production": "public/app-icons/generated/click.webp"
+    },
+    {
+      "id": "arcade",
+      "prompt": "Create one production desktop application icon: a warm wooden target disc and a glossy teal ball on deep brown. Square 1:1 image, no text, no letters, no mockup or surrounding objects. Centered on a rounded-square tile filling almost the entire square with generous interior breathing room. Crisp silhouette readable at 32 pixels, soft studio lighting, subtle sculptural material depth, restrained polished desktop finish. Consistent 12 percent tile corner radius.",
+      "original": "arcade.png",
+      "production": "public/app-icons/generated/arcade.webp"
+    }
+  ]
+}

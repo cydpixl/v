@@ -1,0 +1,23 @@
+export const GENERATED_APP_ICONS={
+  "assistant": "app-icons/generated/nova.webp",
+  "chat": "app-icons/generated/chat.webp",
+  "files": "app-icons/generated/files.webp",
+  "notepad": "app-icons/generated/notepad.webp",
+  "calculator": "app-icons/generated/calculator.webp",
+  "music": "app-icons/generated/music.webp",
+  "settings": "app-icons/generated/settings.webp",
+  "app-studio": "app-icons/generated/app-studio.webp",
+  "store": "app-icons/generated/store.webp",
+  "slither": "app-icons/generated/slither.webp",
+  "tic-tac-toe": "app-icons/generated/tic-tac-toe.webp",
+  "rock-paper-scissors": "app-icons/generated/rock-paper-scissors.webp",
+  "connect-four": "app-icons/generated/connect-four.webp",
+  "bricks": "app-icons/generated/bricks.webp",
+  "reaction": "app-icons/generated/reaction.webp",
+  "aim": "app-icons/generated/aim.webp",
+  "stop-ten": "app-icons/generated/stop-ten.webp",
+  "type": "app-icons/generated/type.webp",
+  "memory": "app-icons/generated/memory.webp",
+  "click": "app-icons/generated/click.webp",
+  "arcade": "app-icons/generated/arcade.webp"
+};

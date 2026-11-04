@@ -1,0 +1,13 @@
+import fs from 'node:fs';import {execFileSync} from 'node:child_process';import crypto from 'node:crypto';import {chromium} from 'playwright';
+fs.mkdirSync('.private/wallpaper-candidates',{recursive:true});const candidates=[];
+for(const category of ['pusheen','hello-kitty','snoopy'])for(const image of JSON.parse(fs.readFileSync('.private/wallpaper-'+category+'.json','utf8')))candidates.push({...image,category,source:'https://wallpaper.dog/'+category+'#'+image.id});
+for(const [path,id]of [['43/58','5sRKSo'],['40/28','O9iSp3'],['4/34','evfp7m'],['93/91','hOEgvr']])candidates.push({id,category:'charlie-brown',url:'https://cdn.wallpapersafari.com/'+path+'/'+id+'.jpg',source:'https://wallpapersafari.com/w/'+id});
+const images=[],hashes=new Set();
+for(const candidate of candidates){const file='.private/wallpaper-candidates/'+candidate.id+'.jpg';const response=await fetch(candidate.url);if(!response.ok){console.log('Skipped unavailable',candidate.id);continue}const bytes=Buffer.from(await response.arrayBuffer());fs.writeFileSync(file,bytes);const hash=crypto.createHash('sha256').update(bytes).digest('hex');if(hashes.has(hash))continue;
+ const probe=JSON.parse(execFileSync('ffprobe',['-v','quiet','-select_streams','v:0','-show_entries','stream=width,height','-of','json',file],{encoding:'utf8'})).streams[0];if(!probe||probe.width<1920||probe.height<1080){console.log('Skipped lower resolution',candidate.id,probe);continue}hashes.add(hash);
+ const thumbnail='.private/wallpaper-candidates/'+candidate.id+'-thumb.jpg';execFileSync('ffmpeg',['-v','error','-y','-i',file,'-vf','scale=320:-2','-frames:v','1',thumbnail]);images.push({...candidate,...probe,file,thumbnail,hash,bytes:bytes.length});
+}
+fs.writeFileSync('.private/wallpaper-candidates.json',JSON.stringify(images,null,2));
+const html='<body style="margin:0;background:#191a1f;color:#fff;font:14px Segoe UI"><main style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px">'+images.map((image,index)=>`<article><img style="width:100%;height:180px;object-fit:contain;background:#25262c" src="data:image/jpeg;base64,${fs.readFileSync(image.thumbnail).toString('base64')}"><p>${index} · ${image.category} · ${image.id}<br>${image.width} × ${image.height}</p></article>`).join('')+'</main>';
+const browser=await chromium.launch({channel:'chrome',headless:true});try{const page=await browser.newPage({viewport:{width:1360,height:1000}});await page.setContent(html);await page.screenshot({path:'.private/wallpaper-contact-sheet.png',fullPage:true})}finally{await browser.close()}
+console.log('Verified unique full-resolution candidates:',images.length);

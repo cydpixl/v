@@ -23,3 +23,9 @@
 .desktop-dock[popover]{margin:0;color:var(--text);inset:auto;border:1px solid var(--border)}
 
 .desktop-apps .hub-dock-app .hub-app-icon>.custom-app-logo,.desktop-apps .hub-dock-app.cinema .hub-app-icon>.custom-app-logo{position:static!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;transform:none!important;object-fit:contain!important;border-radius:inherit!important}
+
+#vela-desktop{background-size:var(--desktop-wallpaper-fit,cover)!important;background-repeat:no-repeat!important;background-position:center!important;background-color:#171a20!important}
+
+.hub-app-icon>.generated-app-icon,.desktop-bar img.generated-app-icon,.ms-app-cover>img.generated-app-icon{width:100%;height:100%;object-fit:contain;border-radius:18%;background:none}.hub-app-icon:has(>.generated-app-icon){background:none!important;border-radius:18%;overflow:hidden}.am-sidebar .am-navigation{min-height:0;overflow:auto;flex:1}
+
+.hub-dock-app>small{text-shadow:0 1px 3px #000,0 1px 6px #0009}

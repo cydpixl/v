@@ -1,1 +1,103 @@
-Wallpaper photography provided by Unsplash. Source image identifiers: {"peaks":"photo-1464822759023-fed622ff2c3b","forest":"photo-1473448912268-2022ce9509d8","night":"photo-1519681393784-d120267933ba","desert":"photo-1500534314209-a25ddb2bd429"}
+Character wallpaper sources
+
+Images are sourced desktop wallpapers. Character artwork belongs to its respective creators and owners. Each catalog entry records its original source page, source image URL, measured resolution and SHA-256. No image was upscaled.
+
+pusheen — Fruit Picnic (1920×1080)
+https://wallpaper.dog/pusheen#20489371
+https://wallpaper.dog/large/20489371.jpg
+
+pusheen — Stargazing Campfire (1920×1080)
+https://wallpaper.dog/pusheen#20489382
+https://wallpaper.dog/large/20489382.jpg
+
+pusheen — Cozy Living Room (1920×1080)
+https://wallpaper.dog/pusheen#20489410
+https://wallpaper.dog/large/20489410.jpg
+
+pusheen — Beach Day (1920×1080)
+https://wallpaper.dog/pusheen#20489437
+https://wallpaper.dog/large/20489437.jpg
+
+pusheen — Classic Pusheen (1920×1108)
+https://wallpaper.dog/pusheen#20489453
+https://wallpaper.dog/large/20489453.jpg
+
+pusheen — Sweet Treat (1920×1080)
+https://wallpaper.dog/pusheen#20489454
+https://wallpaper.dog/large/20489454.jpg
+
+pusheen — Cool Cat (1920×1080)
+https://wallpaper.dog/pusheen#20489465
+https://wallpaper.dog/large/20489465.jpg
+
+hello-kitty — Blue Sky (1920×1200)
+https://wallpaper.dog/hello-kitty#20496249
+https://wallpaper.dog/large/20496249.jpg
+
+hello-kitty — Sunny Hello (1920×1200)
+https://wallpaper.dog/hello-kitty#20496257
+https://wallpaper.dog/large/20496257.jpg
+
+hello-kitty — Pink Glow (2880×1800)
+https://wallpaper.dog/hello-kitty#10849814
+https://wallpaper.dog/large/10849814.png
+
+hello-kitty — Butterfly Garden (1920×1080)
+https://wallpaper.dog/hello-kitty#20496444
+https://wallpaper.dog/large/20496444.jpg
+
+hello-kitty — Pumpkin Season (1920×1080)
+https://wallpaper.dog/hello-kitty#20496483
+https://wallpaper.dog/large/20496483.jpg
+
+snoopy — Golden Nap (2560×1440)
+https://wallpaper.dog/snoopy#20509977
+https://wallpaper.dog/large/20509977.jpg
+
+snoopy — Roller Disco (1920×1200)
+https://wallpaper.dog/snoopy#20510036
+https://wallpaper.dog/large/20510036.jpg
+
+snoopy — Doghouse Daydream (1920×1080)
+https://wallpaper.dog/snoopy#20510056
+https://wallpaper.dog/large/20510056.jpg
+
+snoopy — Moonlight Magic (1920×1200)
+https://wallpaper.dog/snoopy#20510074
+https://wallpaper.dog/large/20510074.jpg
+
+snoopy — Sweet Dreams (1920×1200)
+https://wallpaper.dog/snoopy#20510078
+https://wallpaper.dog/large/20510078.jpg
+
+snoopy — Flying Ace (2880×1770)
+https://wallpaper.dog/snoopy#20510135
+https://wallpaper.dog/large/20510135.jpg
+
+snoopy — Skateboard Duo (1920×1200)
+https://wallpaper.dog/snoopy#20510136
+https://wallpaper.dog/large/20510136.jpg
+
+snoopy — Autumn Leaves (1920×1080)
+https://wallpaper.dog/snoopy#20510232
+https://wallpaper.dog/large/20510232.jpg
+
+snoopy — Winter Visit (2560×1440)
+https://wallpaper.dog/snoopy#20510237
+https://wallpaper.dog/large/20510237.jpg
+
+charlie-brown — Bedtime Stories (1920×1080)
+https://wallpapersafari.com/w/5sRKSo
+https://cdn.wallpapersafari.com/43/58/5sRKSo.jpg
+
+charlie-brown — Dream Big (1920×1080)
+https://wallpapersafari.com/w/O9iSp3
+https://cdn.wallpapersafari.com/40/28/O9iSp3.jpg
+
+charlie-brown — Best Friends (1920×1080)
+https://wallpapersafari.com/w/evfp7m
+https://cdn.wallpapersafari.com/4/34/evfp7m.jpg
+
+charlie-brown — Snow Day (1920×1080)
+https://wallpapersafari.com/w/hOEgvr
+https://cdn.wallpapersafari.com/93/91/hOEgvr.jpg

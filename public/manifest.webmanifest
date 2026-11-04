@@ -4,7 +4,7 @@
   "description": "Private messages, calls and movie nights with friends.",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0b0d10",
   "theme_color": "#0b0d10",

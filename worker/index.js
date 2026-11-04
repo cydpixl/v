@@ -4,6 +4,7 @@ import {gameRoomsAPI} from './game-rooms.js';
 import {defaultMusicAPI} from './default-music.js';
 import {arcadeAPI} from './arcade-api.js';
 import {appBrandingAPI,appBrandAsset} from './app-branding.js';
+import {desktopIntegrationsAPI} from './desktop-integrations.js';
 import {cinemaLibraryAPI} from './cinema-library.js';
 import {cinemaPartyAPI} from './cinema-party.js';
 import {musicPlaylistsAPI} from './music-playlists.js';
@@ -80,6 +81,7 @@ async function api(req,env,ctx){
  const uid=await identity(req,env),needsAdmin=p==='/api/me'||p==='/api/state'||p.startsWith('/api/admin/')||method==='POST'&&/\/messages$/.test(p)||method==='PATCH'&&p.startsWith('/api/messages/'),siteAdmin=needsAdmin?await isSiteAdmin(env,uid):false;if(method!=='GET')await limit(env,'write:'+uid,100);
  if(await row(env,'SELECT 1 FROM deleted_accounts WHERE uid=?',uid))fail('This account was removed. Sign in with Ash or Pixl, or create a new account.',410);
  const helpers={json,fail,body,row,rows,run,access,publish,issueTicket,notify,limit,ctx,siteAdmin};
+ const integrations=await desktopIntegrationsAPI(req,env,uid,helpers);if(integrations)return integrations;
  const applePage=await appleTVPageAPI(req,env,uid,helpers);if(applePage)return applePage;
  const sharedNotes=await sharedNotesAPI(req,env,uid,helpers);if(sharedNotes)return sharedNotes;
  const branding=await appBrandingAPI(req,env,uid,helpers);if(branding)return branding;

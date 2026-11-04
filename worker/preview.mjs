@@ -4,7 +4,7 @@ const upstream='https://vela-cyd.cydpixl7.workers.dev';
 export default {
  async fetch(request,env,ctx){
   const url=new URL(request.url);
-  if(/^\/api\/(arcade-rooms|app-branding|app-brand-assets|cinema-library|cinema-rooms|music-playlists|music-library|shared-music|music-listening|game-rooms|apple-tv-page|apple-tv-collection|shared-notes)(?:\/|$)/.test(url.pathname))return cinemaAPI.fetch(request,env,ctx);
+  if(/^\/api\/(desktop-integrations|desktop-graphs|assistant|arcade-rooms|app-branding|app-brand-assets|cinema-library|cinema-rooms|music-playlists|music-library|shared-music|music-listening|game-rooms|apple-tv-page|apple-tv-collection|shared-notes)(?:\/|$)/.test(url.pathname))return cinemaAPI.fetch(request,env,ctx);
   if(url.pathname.startsWith('/api/')){
    const headers=new Headers(request.headers),origin=headers.get('Origin');
    if(origin&&origin!==url.origin&&origin!=='https://cydpixl.github.io')return Response.json({error:'Invalid origin.'},{status:403});

@@ -43,7 +43,9 @@
     "qa:desktop-taskbar": "node scripts/qa-desktop-taskbar.mjs",
     "test:games": "node scripts/test-vela-games.mjs",
     "qa:games": "node scripts/qa-vela-games.mjs",
-    "qa:store": "node scripts/qa-vela-store.mjs"
+    "qa:store": "node scripts/qa-vela-store.mjs",
+    "desktop": "node scripts/desktop-dev.mjs",
+    "check:desktop": "node --check src/fullscreen-required.mjs && node --check src/nova-app.mjs && node --check src/desmos-app.mjs && node --check src/wallpaper-settings.js && node --check src/desktop-setup.mjs && node --check worker/desktop-integrations.js && node scripts/test-desktop-integrations.mjs && node scripts/test-music-playlists.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
