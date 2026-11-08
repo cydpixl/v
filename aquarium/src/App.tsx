@@ -431,7 +431,7 @@ function App() {
       }
       if(!completed)throw Error('Gallery inventory exceeded page limit');
     }catch(e){
-      setError('Duplicate check unavailable. Uploads paused to avoid duplicates. Retry when the gallery responds.');
+      setError('Duplicate check unavailable. Uploads paused to avoid duplicates. Retry failed uploads when the gallery responds.');
       setQueue(old=>old.map(q=>(q.status==='waiting'||q.status==='failed')
         ? {...q,status:'failed',message:'Duplicate check unavailable — retry'} : q));
       setCheckingExisting(false);
@@ -440,9 +440,18 @@ function App() {
       return;
     }
     setCheckingExisting(false);
-    // Finish the smallest media first, after removing already-stored filename+size matches.
-    for(const item of queue.filter(x=>x.status==='waiting'||x.status==='failed')
-      .sort((a,b)=>a.file.size-b.file.size||a.file.name.localeCompare(b.file.name))){
+    // Remove every already-stored file before starting the first network transfer.
+    const candidateQueue=queue.filter(x=>x.status==='waiting'||x.status==='failed')
+      .sort((a,b)=>a.file.size-b.file.size||a.file.name.localeCompare(b.file.name));
+    const existingInQueue=candidateQueue.filter(q=>!isHeic(q.file) && existing.has(matchKey(q.file.name,q.file.size)));
+    if(existingInQueue.length){
+      const skippedIds=new Set(existingInQueue.map(q=>q.id));
+      existingInQueue.forEach(q=>{if(q.preview)URL.revokeObjectURL(q.preview);});
+      setQueue(old=>old.filter(q=>!skippedIds.has(q.id)));
+      setSkippedExisting(n=>n+existingInQueue.length);
+    }
+    // A renamed HEIC file is checked again after local conversion to JPEG.
+    for(const item of candidateQueue.filter(q=>!existingInQueue.includes(q))){
       const change=(patch:Partial<QueueItem>)=>setQueue(q=>q.map(x=>x.id===item.id?{...x,...patch}:x));
       const animalId = 'unidentified';
       try {
