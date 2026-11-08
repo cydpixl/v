@@ -130,6 +130,12 @@ function App() {
   const [manageLimit, setManageLimit] = useState(28);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [sizeFilter, setSizeFilter] = useState<'all'|'under10'|'10to100'|'100to1000'|'over1000'>('all');
+  const [dateFilter, setDateFilter] = useState<'all'|'day'|'week'|'month'|'year'>('all');
+  const [mediaSort, setMediaSort] = useState<'newest'|'oldest'|'largest'|'smallest'>('newest');
+  const [skippedExisting, setSkippedExisting] = useState(0);
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const uploadRunningRef = useRef(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
   const [selectedPlayback, setSelectedPlayback] = useState<{id:string;url:string;ready:boolean}|null>(null);
@@ -299,7 +305,7 @@ function App() {
 
   useEffect(()=>{
     setMediaGridLimit(32);
-  },[route.page,mediaMode,search]);
+  },[route.page,mediaMode,search,sizeFilter,dateFilter,mediaSort]);
   useEffect(()=>{
     if(route.page!=='media')return;
     const node=mediaSentinelRef.current;
@@ -328,16 +334,27 @@ function App() {
   const filteredExhibits = exhibits.filter(a =>
     (a.name + ' ' + a.subtitle).toLowerCase().includes(search.toLowerCase())
   );
-  const matchMedia = (list: Media[]) =>
-    list
+  const matchMedia = (list: Media[]) => {
+    const now=Date.now();
+    const mb=1024*1024;
+    const minDate=dateFilter==='day'?now-86400000:
+      dateFilter==='week'?now-7*86400000:
+      dateFilter==='month'?now-30*86400000:
+      dateFilter==='year'?new Date(new Date().getFullYear(),0,1).getTime():0;
+    const filtered=list
       .filter(x => mediaMode === 'all' || (mediaMode === 'unsorted' ? x.animal === 'unidentified' : x.kind === mediaMode))
-      .filter(
-        x =>
-          !search ||
-          (x.name + ' ' + label(x.animal) + ' ' + x.exhibit + ' ' + x.caption)
-            .toLowerCase()
-            .includes(search.toLowerCase())
-      );
+      .filter(x => !search || (x.name+' '+label(x.animal)+' '+x.exhibit+' '+x.caption).toLowerCase().includes(search.toLowerCase()))
+      .filter(x => sizeFilter==='all' ||
+        (sizeFilter==='under10' && x.size<10*mb) ||
+        (sizeFilter==='10to100' && x.size>=10*mb && x.size<100*mb) ||
+        (sizeFilter==='100to1000' && x.size>=100*mb && x.size<1000*mb) ||
+        (sizeFilter==='over1000' && x.size>=1000*mb))
+      .filter(x => !minDate || x.createdAt>=minDate);
+    filtered.sort((a,b)=>mediaSort==='largest'?b.size-a.size:
+      mediaSort==='smallest'?a.size-b.size:
+      mediaSort==='oldest'?a.createdAt-b.createdAt:b.createdAt-a.createdAt);
+    return filtered;
+  };
   const animal =
     route.page === 'animal' ? animals.find(x => x.id === route.id) : undefined;
   const exhibit =
@@ -376,14 +393,54 @@ function App() {
     nav('upload');
   }
   async function uploadQueue() {
-    if(uploadBusy||!queue.some(x=>x.status==='waiting'||x.status==='failed'))return;
+    if(uploadRunningRef.current||!queue.some(x=>x.status==='waiting'||x.status==='failed'))return;
+    uploadRunningRef.current=true;
     if(!providers.r2&&!providers.b2 && queue.some(x=>(x.status==='waiting'||x.status==='failed')&&x.file.size>3000000)){
       setError('Cloud storage is temporarily unavailable. Retry when the storage connection is restored.');
+      uploadRunningRef.current=false;
       return;
     }
     setError('');
     setUploadBusy(true);
-    // Finish the smallest media first, so the gallery populates quickly.
+    setCheckingExisting(true);
+    const existing=new Set<string>();
+    const matchKey=(name:string,size:number)=>name.toLowerCase()+'|'+size;
+    const storedName=(name:string)=>name.split('/').pop()!.replace(/^\\d{13}-[a-z0-9]{8,}-/i,'');
+    try{
+      // This must cover every page, not just the first page currently visible.
+      let token='';
+      const visited=new Set<string>();
+      let completed=false;
+      for(let page=0;page<250;page++){
+        const url=new URL('https://newport-aquarium-r2-api.vercel.app/api/gallery');
+        if(token)url.searchParams.set('nextToken',token);
+        const response=await fetch(url.href,{cache:'no-store'});
+        if(!response.ok)throw Error('Gallery inventory unavailable');
+        const data=await response.json();
+        if(!Array.isArray(data.items))throw Error('Invalid gallery inventory');
+        for(const m of data.items){
+          if(!m || typeof m.size!=='number' || !Number.isFinite(m.size))continue;
+          if(typeof m.name==='string')existing.add(matchKey(storedName(m.name),m.size));
+          if(typeof m.id==='string')existing.add(matchKey(storedName(m.id),m.size));
+        }
+        const next=String(data.nextToken||'');
+        if(!next){completed=true;break;}
+        if(visited.has(next))throw Error('Gallery pagination cycle');
+        visited.add(next);
+        token=next;
+      }
+      if(!completed)throw Error('Gallery inventory exceeded page limit');
+    }catch(e){
+      setError('Duplicate check unavailable. Uploads paused to avoid duplicates. Retry when the gallery responds.');
+      setQueue(old=>old.map(q=>(q.status==='waiting'||q.status==='failed')
+        ? {...q,status:'failed',message:'Duplicate check unavailable — retry'} : q));
+      setCheckingExisting(false);
+      setUploadBusy(false);
+      uploadRunningRef.current=false;
+      return;
+    }
+    setCheckingExisting(false);
+    // Finish the smallest media first, after removing already-stored filename+size matches.
     for(const item of queue.filter(x=>x.status==='waiting'||x.status==='failed')
       .sort((a,b)=>a.file.size-b.file.size||a.file.name.localeCompare(b.file.name))){
       const change=(patch:Partial<QueueItem>)=>setQueue(q=>q.map(x=>x.id===item.id?{...x,...patch}:x));
@@ -397,13 +454,23 @@ function App() {
         const mime=mediaMime(file);
         if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v'].includes(mime))
           throw Error('Unsupported media format: '+item.file.name);
+        const identity=matchKey(file.name,file.size);
+        if(existing.has(identity)){
+          if(item.preview)URL.revokeObjectURL(item.preview);
+          setQueue(old=>old.filter(q=>q.id!==item.id));
+          setSkippedExisting(n=>n+1);
+          continue;
+        }
         change({status:'uploading',message:'Uploading',progress:0});
         if(providers.r2||providers.b2){
           const uploadedKey=await sendLargeFile(file,uploadProvider,animalId,(pct,message)=>change({status:'uploading',message,progress:pct}),ownerKey);
           try{
             const duplicate=await api.post('/api/dupes/cleanup-new',{key:uploadedKey});
             if(duplicate.data?.duplicate){
-              change({status:'done',animal:animalId,progress:100,message:'Exact duplicate removed — original kept'});
+              if(item.preview)URL.revokeObjectURL(item.preview);
+              setQueue(old=>old.filter(q=>q.id!==item.id));
+              setSkippedExisting(n=>n+1);
+              existing.add(identity);
               continue;
             }
           }catch(e){console.warn('Duplicate verification unavailable; uploaded media retained',e);}
@@ -411,6 +478,7 @@ function App() {
           const data=await toBase64(file);
           await api.post('/api/upload',{name:file.name,mime,data,animal:animalId,size:file.size,ownerKey});
         }
+        existing.add(identity);
         change({status:'done',animal:animalId,progress:100,message:'Published'});
       }catch(e){
         const message=(e as {response?:{data?:{error?:string}}})?.response?.data?.error || (e instanceof Error?e.message:'Upload failed');
@@ -418,6 +486,7 @@ function App() {
       }
     }
     setUploadBusy(false);
+    uploadRunningRef.current=false;
     await loadMedia();
   }
   useEffect(()=>{
