@@ -1,5 +1,5 @@
 // Vela owns only its scoped shell cache. Private API/media responses bypass it.
-const VERSION='pwa-repair-20261027';
+const VERSION='pwa-chrome-media-20261108';
 const PREFIX='vela-shell-';
 const CACHE=PREFIX+VERSION;
 const ROOT=new URL('./',self.registration.scope).href;
@@ -9,6 +9,9 @@ self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||url.origin!==self.location.origin||!url.href.startsWith(ROOT)||url.pathname.includes('/api/')||url.pathname.includes('/media/')||url.searchParams.has('ticket')||request.headers.has('Authorization'))return;
+ // The aquarium archive is an independent site. Never cache or replace its
+ // standalone video pages with the Vela PWA shell.
+ if(url.pathname.startsWith(new URL('aq/',ROOT).pathname))return;
  // Nested shop pages must never replace the Vela app shell in its cache.
  if(url.pathname.startsWith(new URL('shop/',ROOT).pathname)){
   event.respondWith((async()=>{const cache=await caches.open(CACHE);try{const response=await fetch(request);if(response.ok)event.waitUntil(cache.put(request,response.clone()));return response;}catch{return await cache.match(request,{ignoreVary:true})||new Response('Reconnect to open the shop.',{status:503,headers:{'Content-Type':'text/plain'}});}})());return;
