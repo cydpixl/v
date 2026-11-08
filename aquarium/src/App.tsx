@@ -126,7 +126,7 @@ async function makeLocalVideoPoster(file:File):Promise<string|undefined>{
   });
 }
 
-function VideoPoster({media}:{media:Media}){
+function VideoPoster({media,localPreview}:{media:Media;localPreview?:string}){
   const ref=useRef<HTMLDivElement|null>(null);
   const [visible,setVisible]=useState(false);
   const [retry,setRetry]=useState(0);
@@ -178,7 +178,10 @@ function VideoPoster({media}:{media:Media}){
   },[visible,posterMissing]);
   return <div className="video-thumb" ref={ref}>
     <div className="video-still" aria-hidden="true"><Film size={27}/><span>VIDEO</span></div>
-    {posterMissing && previewUrl && visible && (
+    {posterMissing && localPreview && (
+      <img className="video-poster video-local-poster" src={localPreview} alt={media.caption || media.name}/>
+    )}
+    {posterMissing && !localPreview && previewUrl && visible && (
       <video key={media.id} className="video-poster video-frame-fallback"
         src={previewUrl} muted playsInline preload="metadata" aria-hidden="true"
         onLoadedMetadata={e=>{
@@ -202,7 +205,7 @@ function VideoPoster({media}:{media:Media}){
       onLoad={()=>{setPosterMissing(false);setPreviewFrame(false);}}
       onError={()=>setPosterMissing(true)}
     />
-    {posterMissing && !previewFrame && <span className="video-poster-pending">Preparing thumbnail</span>}
+    {posterMissing && !localPreview && !previewFrame && <span className="video-poster-pending">Preparing thumbnail</span>}
     {visible && <span className={'video-conversion-label '+(mp4Status==='ready'?'ready':'pending')}>
       {mp4Status==='ready'?'MP4 ready':mp4Status==='pending'?'MP4 pending':mp4Status==='checking'?'Checking MP4':'MP4 status unavailable'}
     </span>}
@@ -285,7 +288,10 @@ function App() {
   const [deleteError, setDeleteError] = useState('');
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [localVideoPosters,setLocalVideoPosters]=useState<Record<string,string>>({});
   const triedVideoPosterIds=useRef<Set<string>>(new Set());
+  const queuePreviewUrls=useRef<Map<string,string>>(new Map());
+  const uploadedVideoKeys=useRef<Map<string,string>>(new Map());
   const [skippedSidecars, setSkippedSidecars] = useState(0);
   const [skippedOtherFiles, setSkippedOtherFiles] = useState(0);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -539,27 +545,29 @@ function App() {
   // Preview video files in the upload queue as soon as they are selected.
   // One at a time avoids freezing Chrome when a whole iPhone folder is selected.
   useEffect(()=>{
-    const pending=queue.filter(q=>q.status==='waiting' && /\\.(mov|mp4|m4v|webm)$/i.test(q.file.name) &&
+    const pending=queue.filter(q=>q.status==='waiting' && /[.](mov|mp4|m4v|webm)$/i.test(q.file.name) &&
       !q.preview && !triedVideoPosterIds.current.has(q.id));
     if(!pending.length)return;
     pending.forEach(q=>triedVideoPosterIds.current.add(q.id));
-    let active=true;
     void (async()=>{
       for(const item of pending){
-        if(!active)break;
         const image=await makeLocalVideoPoster(item.file);
         if(!image)continue;
-        if(!active){URL.revokeObjectURL(image);break;}
+        queuePreviewUrls.current.set(item.id,image);
+        const uploaded=uploadedVideoKeys.current.get(item.id);
+        if(uploaded)setLocalVideoPosters(old=>({...old,[uploaded]:image}));
         setQueue(old=>{
           if(!old.some(q=>q.id===item.id)){
-            URL.revokeObjectURL(image);
+            if(!uploaded){
+              queuePreviewUrls.current.delete(item.id);
+              URL.revokeObjectURL(image);
+            }
             return old;
           }
           return old.map(q=>q.id===item.id?{...q,preview:image}:q);
         });
       }
     })();
-    return ()=>{active=false;};
   },[queue.length]);
 
   async function uploadQueue() {
@@ -653,6 +661,11 @@ function App() {
               continue;
             }
           }catch(e){console.warn('Duplicate verification unavailable; uploaded media retained',e);}
+          if(/[.](mov|mp4|m4v|webm)$/i.test(file.name)){
+            uploadedVideoKeys.current.set(item.id,uploadedKey);
+            const preview=queuePreviewUrls.current.get(item.id)||item.preview;
+            if(preview)setLocalVideoPosters(old=>({...old,[uploadedKey]:preview}));
+          }
         }else{
           const data=await toBase64(file);
           await api.post('/api/upload',{name:file.name,mime,data,animal:animalId,size:file.size,ownerKey});
@@ -781,7 +794,7 @@ function App() {
             {m.kind === 'image' ? (
               <img src={m.thumbnailUrl || m.url} alt={m.caption || m.name} loading="lazy" decoding="async" fetchPriority="low" />
             ) : (
-              <VideoPoster media={m}/>
+              <VideoPoster media={m} localPreview={localVideoPosters[m.id]}/>
             )}
             <div className="media-meta">
               <span>{m.caption || label(m.animal)}</span>
