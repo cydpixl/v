@@ -50,3 +50,8 @@
 #call-stage .presentation-options,#call-stage .camera-visibility,#call-stage #vela-movie-player.in-call-stage [data-movie-fullscreen]{display:none!important}
 /* The movie ID outranks the generic .focused rule. Place it explicitly. */
 #call-stage #call-tiles.movie-focused>#vela-movie-player.in-call-stage{grid-column:1!important;grid-row:1/-1!important;position:relative!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;max-height:none!important;align-self:stretch!important;aspect-ratio:auto!important}
+
+/* Tile fullscreen must display the requested participant, not the local preview. */
+#call-stage .call-tile:fullscreen{position:relative!important;inset:auto!important;grid-column:auto!important;grid-row:auto!important;display:block!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;border:0!important;border-radius:0!important;background:#000!important;overflow:hidden!important}
+#call-stage .call-tile:fullscreen>video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:contain!important}
+#call-stage .call-tile:fullscreen .tile-actions{z-index:20}
