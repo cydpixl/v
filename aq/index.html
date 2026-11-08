@@ -10,7 +10,10 @@
     :root{color-scheme:dark}
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-    iframe{display:block;width:100%;height:100dvh;height:100vh;border:0;background:#000}
+    html,body{overflow:hidden}
+    /* Extend the embedded viewport below the visible page so platform-provided
+       bottom-docked sharing controls remain out of view without covering content. */
+    iframe{display:block;position:fixed;inset:0 auto auto 0;width:100%;height:calc(100vh + 108px);height:calc(100dvh + 108px);border:0;background:#000}
     .upload{position:fixed;right:26px;bottom:26px;z-index:2;display:flex;align-items:center;gap:10px;padding:13px 22px;border:1px solid #dce6e7;background:#f2f5f5;color:#090d0e;font-size:13px;font-weight:700;letter-spacing:.02em;text-decoration:none;box-shadow:0 6px 22px #0008;transition:transform .2s,background .2s}
     .upload:hover{background:#fff;transform:translateY(-2px)}
     .upload:focus-visible{outline:3px solid #e3f0ec;outline-offset:4px}
