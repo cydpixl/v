@@ -61,9 +61,24 @@ jobs:
             const data=await req.json();
             if(!req.ok||!data.etag)throw Error('R2 chunk failed: '+req.status+' '+JSON.stringify(data));
             console.log('Real R2 multipart chunk:',req.status,'ETag received:',Boolean(data.etag));
+            const done=await post('finish',{provider:'r2',key:upload.key,uploadId:upload.uploadId,
+              name:'upload-system-verification.png',mime:'image/png',size:bytes.length,
+              animal:'unidentified',parts:[{PartNumber:1,ETag:data.etag}]});
+            if(!done.ok||!done.id)throw Error('Cloud file was not published');
+            console.log('R2 multipart completion and gallery indexing:',Boolean(done.id));
+            const gallery=await (await fetch(base+'?action=media')).json();
+            if(!gallery.items?.some(x=>x.id===done.id))throw Error('Published test file missing from gallery');
+            const deleted=await post('cleanup-test',{id:done.id});
+            if(!deleted.ok)throw Error('Test media cleanup did not complete');
+            console.log('Gallery test media removed:',deleted.ok);
+            upload.cleanedUp=true;
           }finally{
-            const cleanup=await post('abort',{provider:'r2',key:upload.key,uploadId:upload.uploadId});
-            console.log('Test upload aborted; gallery remains unchanged:',cleanup.ok);
+            if(!upload.cleanedUp){
+              try{
+                const cleanup=await post('abort',{provider:'r2',key:upload.key,uploadId:upload.uploadId});
+                console.log('Incomplete multipart upload aborted:',cleanup.ok);
+              }catch(error){console.warn('Abort cleanup unavailable:',String(error));}
+            }
           }
           JS
       - name: Publish without affecting Vela
