@@ -261,10 +261,11 @@ function App() {
     }catch{return '';}
   });
   const [media, setMedia] = useState<Media[]>([]);
+  const mediaRequestRef=useRef(0);
   const [nextToken, setNextToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [mediaGridLimit, setMediaGridLimit] = useState(32);
+  const [mediaGridLimit, setMediaGridLimit] = useState(180);
   const [manageLimit, setManageLimit] = useState(28);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -418,25 +419,67 @@ function App() {
     return ()=>{active=false;};
   },[]);
   const loadMedia = useCallback(async (append = false, token = '') => {
-    try {
-      if (append) setLoadingMore(true);
-      else setLoading(true);
-      const response = await api.get(
-        '/api/media' + (token ? '?nextToken=' + encodeURIComponent(token) : '')
-      );
-      const values = (response.data?.items || []) as Media[];
-      setMedia(old =>
-        append
-          ? [...old, ...values.filter(x => !old.some(y => y.id === x.id))]
-          : values
-      );
-      setNextToken(String(response.data?.nextToken || ''));
-      setError('');
-    } catch {
-      setError('The gallery could not be loaded.');
-    } finally {
-      setLoading(false);
+    // Fetch every gallery page automatically. The storage API may paginate
+    // at fewer than 100 items even though many more media files exist.
+    const request=++mediaRequestRef.current;
+    let cursor=token;
+    let page=0;
+    let first=!append;
+    const visited=new Set<string>();
+    setError('');
+    if(append)setLoadingMore(true);
+    else {
+      setLoading(true);
       setLoadingMore(false);
+      setNextToken('');
+    }
+    try {
+      while(page<500) {
+        const response=await api.get('/api/media'+(cursor?'?nextToken='+encodeURIComponent(cursor):''));
+        if(request!==mediaRequestRef.current)return;
+        const values=response.data?.items;
+        if(!Array.isArray(values))throw Error('Invalid gallery response');
+        const nextValues=values as Media[];
+        if(first){
+          const seen=new Set<string>();
+          setMedia(nextValues.filter(m=>{
+            if(!m||!m.id||seen.has(m.id))return false;
+            seen.add(m.id);
+            return true;
+          }));
+          first=false;
+          setLoading(false);
+        }else{
+          setMedia(old=>{
+            const seen=new Set(old.map(m=>m.id));
+            const additions=nextValues.filter(m=>{
+              if(!m||!m.id||seen.has(m.id))return false;
+              seen.add(m.id);
+              return true;
+            });
+            return additions.length?[...old,...additions]:old;
+          });
+        }
+        cursor=String(response.data?.nextToken||'');
+        setNextToken(cursor);
+        page++;
+        if(!cursor)break;
+        if(visited.has(cursor))throw Error('Gallery returned a repeated page');
+        visited.add(cursor);
+        setLoadingMore(true);
+      }
+      if(cursor)throw Error('Gallery contains more pages than this scan could load');
+    }catch(e){
+      if(request===mediaRequestRef.current){
+        setError(page>0
+          ? 'The remaining media could not be loaded. Files already shown are retained.'
+          : 'The gallery could not be loaded. Retry to reconnect.');
+      }
+    }finally{
+      if(request===mediaRequestRef.current){
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, []);
   useEffect(() => {
@@ -455,18 +498,18 @@ function App() {
   }, []);
 
   useEffect(()=>{
-    setMediaGridLimit(32);
+    setMediaGridLimit(180);
   },[route.page,mediaMode,search,sizeFilter,dateFilter,mediaSort]);
   useEffect(()=>{
     if(route.page!=='media')return;
     const node=mediaSentinelRef.current;
     if(!node)return;
     const observer=new IntersectionObserver(entries=>{
-      if(entries[0]?.isIntersecting)setMediaGridLimit(n=>Math.min(n+24,500));
+      if(entries[0]?.isIntersecting)setMediaGridLimit(n=>Math.min(n+96,10000));
     },{rootMargin:'600px 0px'});
     observer.observe(node);
     return ()=>observer.disconnect();
-  },[route.page,mediaGridLimit,mediaMode,search,media.length]);
+  },[route.page,mediaGridLimit,mediaMode,search,sizeFilter,dateFilter,mediaSort,media.length]);
 
   const visibleMedia = media;
 
@@ -1214,6 +1257,7 @@ function App() {
             </label>
             <span className="filter-count" role="status">
               {matchMedia(visibleMedia).length} matching file{matchMedia(visibleMedia).length===1?'':'s'}
+              {loadingMore?' · Scanning all uploads…':''}
             </span>
           </div>
           {loading ? (
@@ -1222,7 +1266,9 @@ function App() {
             <>
               {mediaTiles(matchMedia(visibleMedia).slice(0,mediaGridLimit))}
               {matchMedia(visibleMedia).length>mediaGridLimit&&(
-                <div ref={mediaSentinelRef} className="media-scroll-sentinel" aria-label="Loading more media"/>
+                <div ref={mediaSentinelRef} className="media-scroll-sentinel" aria-label="Loading more media">
+                  Showing {Math.min(mediaGridLimit,matchMedia(visibleMedia).length)} of {matchMedia(visibleMedia).length} files · Scroll for more
+                </div>
               )}
             </>
           )}
