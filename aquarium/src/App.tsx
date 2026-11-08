@@ -139,6 +139,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
   const [selectedPlayback, setSelectedPlayback] = useState<{id:string;url:string;ready:boolean}|null>(null);
+  const [videoPlaybackError, setVideoPlaybackError] = useState('');
   const [videoContext, setVideoContext] = useState<{media:Media;x:number;y:number}|null>(null);
   const [shareFeedback, setShareFeedback] = useState('');
   const admin = true; // uploads and classification are public; deletion remains private
@@ -166,25 +167,33 @@ function App() {
   const mediaSentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(()=>{
     const item=selected;
+    setVideoPlaybackError('');
+    setSelectedPlayback(null);
     if(!item||item.kind!=='video')return;
     let active=true;
-    let fetching=false;
+    let timer=0;
     async function check(){
-      if(fetching)return;
-      fetching=true;
       try{
         const response=await fetch(
           'https://newport-aquarium-r2-api.vercel.app/api/share?id='+encodeURIComponent(item.id),
           {cache:'no-store'}
         );
-        if(!response.ok)return;
+        if(!response.ok)throw Error('Could not retrieve the Chrome-compatible video.');
         const data=await response.json();
-        if(active&&data.url)setSelectedPlayback({id:item.id,url:data.url,ready:Boolean(data.browserReady)});
-      }catch{}finally{fetching=false;}
+        if(!active)return;
+        // Never send the original .MOV to Chrome: its audio track may work
+        // while its HEVC picture is completely unsupported.
+        if(data.browserReady && typeof data.url==='string' && data.url.startsWith('https://')){
+          setSelectedPlayback({id:item.id,url:data.url,ready:true});
+          return;
+        }
+      }catch(e){
+        if(active)console.warn('Compatible video lookup failed',e);
+      }
+      if(active)timer=window.setTimeout(()=>void check(),15000);
     }
     void check();
-    const interval=window.setInterval(()=>void check(),30000);
-    return ()=>{active=false;window.clearInterval(interval);};
+    return ()=>{active=false;window.clearTimeout(timer);};
   },[selected?.id,selected?.kind]);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
@@ -1365,14 +1374,34 @@ function App() {
                   openVideoContext(selected,e.clientX,e.clientY);
                 }} />
             ) : (
-              <video
-                src={selectedPlayback?.id===selected.id && selectedPlayback.ready ? selectedPlayback.url : selected.url}
-                poster={videoPosterUrl(selected)}
-                controls playsInline autoPlay
-                onContextMenu={e=>{
-                  e.preventDefault();
-                  openVideoContext(selected,e.clientX,e.clientY);
-                }} />
+              selectedPlayback?.id===selected.id && selectedPlayback.ready && !videoPlaybackError ? (
+                <video
+                  key={selected.id}
+                  src={selectedPlayback.url}
+                  poster={videoPosterUrl(selected)}
+                  controls playsInline autoPlay
+                  onLoadedMetadata={e=>{
+                    const video=e.currentTarget;
+                    if(!video.videoWidth||!video.videoHeight){
+                      video.pause();
+                      setVideoPlaybackError('The browser received audio but could not read the video picture.');
+                    }
+                  }}
+                  onError={()=>setVideoPlaybackError('Chrome could not decode this video. Open its dedicated player to retry the compatible copy.')}
+                  onContextMenu={e=>{
+                    e.preventDefault();
+                    openVideoContext(selected,e.clientX,e.clientY);
+                  }} />
+              ) : (
+                <div className="video-compat-state" role="status">
+                  <Film size={30}/>
+                  <p>{videoPlaybackError || 'Loading the Chrome-compatible video…'}</p>
+                  {!videoPlaybackError && <small>Waiting for the H.264/AAC MP4. The original MOV will not be played.</small>}
+                  <button type="button" onClick={()=>openInBox(selected)}>
+                    <ExternalLink size={16}/> Open video page
+                  </button>
+                </div>
+              )
             )}
           </div>
           <div className="lightbox-footer">
