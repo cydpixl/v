@@ -1217,7 +1217,11 @@ function App() {
             {selected.kind === 'image' ? (
               <img src={selected.url} alt={selected.caption || selected.name} />
             ) : (
-              <video src={selected.url} controls playsInline autoPlay />
+              <video src={selected.url} controls playsInline autoPlay
+                onContextMenu={e=>{
+                  e.preventDefault();
+                  openVideoContext(selected,e.clientX,e.clientY);
+                }} />
             )}
           </div>
           <div className="lightbox-footer">
