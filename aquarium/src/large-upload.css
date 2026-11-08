@@ -1,0 +1,11 @@
+
+.large-upload-status{padding:20px;margin:17px 0 19px;border:1px solid #394044;background:#101314;color:#e3e6e7}
+.large-upload-status strong{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:750}
+.large-upload-status strong.ready svg{color:#99ddbd}
+.large-upload-status p{font-size:12px;line-height:1.7;color:#a8b2b6;max-width:700px;margin:11px 0}
+.large-upload-status small{font-size:11px;color:#848f95;line-height:1.6;display:block}
+.large-upload-status a{display:inline-flex;gap:6px;align-items:center;color:#e2e8e8;font-size:12px;margin-bottom:13px;text-decoration:underline}
+.large-upload-status select{display:block;background:#070809;border:1px solid #464a4e;color:white;padding:10px 14px;margin:7px 0 12px}
+.large-upload-status label{font-size:12px}
+.file-progress{width:100%;height:4px;background:#303638;margin-top:7px}
+.file-progress>span{height:100%;display:block;background:#9bd6c3;transition:width .25s}
