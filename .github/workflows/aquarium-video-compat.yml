@@ -12,7 +12,7 @@ permissions:
   contents: write
   id-token: write
 concurrency:
-  group: newport-chrome-compatible-videos
+  group: newport-chrome-compatible-videos-fixed-v2
   cancel-in-progress: false
 jobs:
   convert:
