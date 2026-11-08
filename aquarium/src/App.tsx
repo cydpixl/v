@@ -73,6 +73,7 @@ async function prepareApplePhoto(file:File):Promise<File>{
   return new File([converted],name.endsWith('.jpg')?name:file.name+'.jpg',{type:'image/jpeg',lastModified:file.lastModified});
 }
 const label = (a: string) => animals.find(x => x.id === a)?.name || 'Unsorted';
+const videoPosterUrl = (m:Media) => `${import.meta.env.BASE_URL}posters/${encodeURIComponent(m.id.split('/').pop() || '')}.jpg`;
 const toBase64 = (f: File | Blob) =>
   new Promise<string>((resolve, reject) => {
     const r = new FileReader();
@@ -400,6 +401,9 @@ function App() {
             ) : (
               <div className="video-thumb">
                 <div className="video-still" aria-hidden="true"><Film size={27}/><span>VIDEO</span></div>
+                <img className="video-poster" src={videoPosterUrl(m)} alt={m.caption || m.name}
+                  loading="lazy" decoding="async"
+                  onError={e=>{e.currentTarget.style.display='none';}} />
                 <span className="play-overlay">
                   <Play size={24} fill="currentColor" />
                 </span>
