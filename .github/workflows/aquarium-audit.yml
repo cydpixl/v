@@ -10,6 +10,11 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      - name: Install image dimension inspection tool
+        run: |
+          if ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+          fi
       - name: Inventory gallery without modifying anything
         run: |
           node --input-type=module <<'JS'
@@ -34,6 +39,6 @@ jobs:
             const ff=spawnSync('ffprobe',['-v','error','-select_streams','v:0',
               '-show_entries','stream=width,height','-of','csv=p=0',item.url],{encoding:'utf8',timeout:35000});
             console.log('PNG candidate',JSON.stringify({id:item.id,name:item.name,size:item.size,
-              dimensions:ff.stdout.trim(),status:ff.status}));
+              dimensions:(ff.stdout||'').trim(),status:ff.status,error:ff.error?.code||''}));
           }
           JS
