@@ -75,6 +75,140 @@ async function prepareApplePhoto(file:File):Promise<File>{
 }
 const label = (a: string) => animals.find(x => x.id === a)?.name || 'Unsorted';
 const videoPosterUrl = (m:Media) => `${import.meta.env.BASE_URL}posters/${encodeURIComponent(m.id.split('/').pop() || '')}.jpg`;
+
+// Generate a real still from a local upload when this browser can decode it.
+// HEVC MOVs that Chrome cannot read are handled by the FFmpeg poster worker.
+async function makeLocalVideoPoster(file:File):Promise<string|undefined>{
+  const source=URL.createObjectURL(file);
+  return new Promise(resolve=>{
+    const video=document.createElement('video');
+    video.muted=true;
+    video.playsInline=true;
+    video.preload='auto';
+    let finished=false;
+    let timeout=0;
+    function done(result?:string){
+      if(finished){if(result)URL.revokeObjectURL(result);return;}
+      finished=true;
+      window.clearTimeout(timeout);
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(source);
+      resolve(result);
+    }
+    function capture(){
+      if(finished)return;
+      if(!video.videoWidth||!video.videoHeight){done();return;}
+      try{
+        const canvas=document.createElement('canvas');
+        const scale=Math.min(1,480/Math.max(video.videoWidth,video.videoHeight));
+        canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+        canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
+        const ctx=canvas.getContext('2d');
+        if(!ctx){done();return;}
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>done(blob?URL.createObjectURL(blob):undefined),'image/jpeg',0.78);
+      }catch{done();}
+    }
+    video.addEventListener('loadedmetadata',()=>{
+      if(finished)return;
+      const duration=video.duration;
+      const seek=Number.isFinite(duration)?Math.min(1,Math.max(0,duration-0.12)):0.25;
+      if(seek<=0.02){capture();return;}
+      try{video.currentTime=seek;}catch{capture();}
+    },{once:true});
+    video.addEventListener('seeked',capture,{once:true});
+    video.addEventListener('error',()=>done(),{once:true});
+    timeout=window.setTimeout(()=>done(),8000);
+    video.src=source;
+    video.load();
+  });
+}
+
+function VideoPoster({media}:{media:Media}){
+  const ref=useRef<HTMLDivElement|null>(null);
+  const [visible,setVisible]=useState(false);
+  const [retry,setRetry]=useState(0);
+  const [posterMissing,setPosterMissing]=useState(false);
+  const [previewUrl,setPreviewUrl]=useState('');
+  const [previewFrame,setPreviewFrame]=useState(false);
+  const [mp4Status,setMp4Status]=useState<'checking'|'ready'|'pending'|'unavailable'>('checking');
+  useEffect(()=>{
+    const node=ref.current;
+    if(!node)return;
+    if(!('IntersectionObserver' in window)){setVisible(true);return;}
+    const observer=new IntersectionObserver(entries=>{
+      if(entries.some(x=>x.isIntersecting)){setVisible(true);observer.disconnect();}
+    },{rootMargin:'300px'});
+    observer.observe(node);
+    return ()=>observer.disconnect();
+  },[]);
+  useEffect(()=>{
+    if(!visible)return;
+    let active=true;
+    let timer=0;
+    async function check(){
+      try{
+        const response=await fetch(
+          'https://newport-aquarium-r2-api.vercel.app/api/share?id='+encodeURIComponent(media.id),
+          {cache:'no-store'}
+        );
+        if(!response.ok)throw Error('Video status unavailable');
+        const data=await response.json();
+        if(!active)return;
+        if(data.browserReady && typeof data.url==='string' && data.url.startsWith('https://')){
+          setMp4Status('ready');
+          setPreviewUrl(data.url);
+          return;
+        }
+        setMp4Status('pending');
+      }catch{
+        if(active)setMp4Status('unavailable');
+      }
+      if(active)timer=window.setTimeout(()=>void check(),45000);
+    }
+    void check();
+    return ()=>{active=false;window.clearTimeout(timer);};
+  },[media.id,visible]);
+  useEffect(()=>{
+    if(!visible||!posterMissing)return;
+    const timer=window.setInterval(()=>setRetry(n=>n+1),20000);
+    return ()=>window.clearInterval(timer);
+  },[visible,posterMissing]);
+  return <div className="video-thumb" ref={ref}>
+    <div className="video-still" aria-hidden="true"><Film size={27}/><span>VIDEO</span></div>
+    {posterMissing && previewUrl && visible && (
+      <video key={media.id} className="video-poster video-frame-fallback"
+        src={previewUrl} muted playsInline preload="metadata" aria-hidden="true"
+        onLoadedMetadata={e=>{
+          const element=e.currentTarget;
+          if(element.videoWidth&&element.videoHeight){
+            const duration=element.duration;
+            const seek=Number.isFinite(duration)?Math.min(0.45,Math.max(0,duration-0.1)):0.3;
+            if(seek>0){try{element.currentTime=seek;}catch{setPreviewFrame(true);}}
+            else setPreviewFrame(true);
+          }
+        }}
+        onSeeked={()=>setPreviewFrame(true)}
+        onLoadedData={e=>{
+          if(e.currentTarget.videoWidth&&e.currentTarget.videoHeight)setPreviewFrame(true);
+        }}
+      />
+    )}
+    <img className="video-poster" src={videoPosterUrl(media)+(retry?'?refresh='+retry:'')}
+      alt={media.caption || media.name} loading="lazy" decoding="async"
+      style={{display:posterMissing?'none':undefined}}
+      onLoad={()=>{setPosterMissing(false);setPreviewFrame(false);}}
+      onError={()=>setPosterMissing(true)}
+    />
+    {posterMissing && !previewFrame && <span className="video-poster-pending">Preparing thumbnail</span>}
+    {visible && <span className={'video-conversion-label '+(mp4Status==='ready'?'ready':'pending')}>
+      {mp4Status==='ready'?'MP4 ready':mp4Status==='pending'?'MP4 pending':mp4Status==='checking'?'Checking MP4':'MP4 status unavailable'}
+    </span>}
+    <span className="play-overlay"><Play size={24} fill="currentColor"/></span>
+  </div>;
+}
 const toBase64 = (f: File | Blob) =>
   new Promise<string>((resolve, reject) => {
     const r = new FileReader();
@@ -151,6 +285,7 @@ function App() {
   const [deleteError, setDeleteError] = useState('');
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const triedVideoPosterIds=useRef<Set<string>>(new Set());
   const [skippedSidecars, setSkippedSidecars] = useState(0);
   const [skippedOtherFiles, setSkippedOtherFiles] = useState(0);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -401,6 +536,32 @@ function App() {
     });
     nav('upload');
   }
+  // Preview video files in the upload queue as soon as they are selected.
+  // One at a time avoids freezing Chrome when a whole iPhone folder is selected.
+  useEffect(()=>{
+    const pending=queue.filter(q=>q.status==='waiting' && /\\.(mov|mp4|m4v|webm)$/i.test(q.file.name) &&
+      !q.preview && !triedVideoPosterIds.current.has(q.id));
+    if(!pending.length)return;
+    pending.forEach(q=>triedVideoPosterIds.current.add(q.id));
+    let active=true;
+    void (async()=>{
+      for(const item of pending){
+        if(!active)break;
+        const image=await makeLocalVideoPoster(item.file);
+        if(!image)continue;
+        if(!active){URL.revokeObjectURL(image);break;}
+        setQueue(old=>{
+          if(!old.some(q=>q.id===item.id)){
+            URL.revokeObjectURL(image);
+            return old;
+          }
+          return old.map(q=>q.id===item.id?{...q,preview:image}:q);
+        });
+      }
+    })();
+    return ()=>{active=false;};
+  },[queue.length]);
+
   async function uploadQueue() {
     if(uploadRunningRef.current||!queue.some(x=>x.status==='waiting'||x.status==='failed'))return;
     uploadRunningRef.current=true;
@@ -620,15 +781,7 @@ function App() {
             {m.kind === 'image' ? (
               <img src={m.thumbnailUrl || m.url} alt={m.caption || m.name} loading="lazy" decoding="async" fetchPriority="low" />
             ) : (
-              <div className="video-thumb">
-                <div className="video-still" aria-hidden="true"><Film size={27}/><span>VIDEO</span></div>
-                <img className="video-poster" src={videoPosterUrl(m)} alt={m.caption || m.name}
-                  loading="lazy" decoding="async"
-                  onError={e=>{e.currentTarget.style.display='none';}} />
-                <span className="play-overlay">
-                  <Play size={24} fill="currentColor" />
-                </span>
-              </div>
+              <VideoPoster media={m}/>
             )}
             <div className="media-meta">
               <span>{m.caption || label(m.animal)}</span>
