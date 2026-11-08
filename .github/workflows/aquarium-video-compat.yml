@@ -9,7 +9,7 @@ on:
   schedule:
     - cron: '*/10 * * * *'
 permissions:
-  contents: read
+  contents: write
   id-token: write
 concurrency:
   group: newport-chrome-compatible-videos
@@ -30,5 +30,27 @@ jobs:
       - name: Create H.264 video and AAC audio copies in R2
         env:
           MAX_VIDEOS: '30'
-          MAX_ENCODE_SECONDS: '900'
+          MAX_ENCODE_SECONDS: '480'
+          MAX_ATTEMPTS: '10'
         run: python3 scripts/aquarium-compatible-videos.py
+      - name: Save real Chrome compatibility audit
+        if: always()
+        run: |
+          if [ ! -s reports/aquarium-chrome-status.json ]; then
+            echo '{"status":"workflow exited before the video audit was written"}' > reports/aquarium-chrome-status.json
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/aquarium-chrome-status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(aquarium): record Chrome video conversion results [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              git fetch origin main
+              if git rebase -X theirs origin/main && git push origin HEAD:main; then
+                exit 0
+              fi
+              git rebase --abort || true
+              sleep 3
+            done
+            exit 1
+          fi
