@@ -29,7 +29,7 @@ jobs:
           console.log('Screenshot candidates:',JSON.stringify(screenshots.map(x=>({id:x.id,name:x.name,size:x.size}))));
           console.log('Video filenames:',JSON.stringify(videos.map(x=>({id:x.id,name:x.name,size:x.size,mime:x.mime}))));
           console.log('Image filenames:',JSON.stringify(items.filter(x=>x.kind==='image').map(x=>({id:x.id,name:x.name,size:x.size,mime:x.mime}))));
-          for(const item of items.filter(x=>x.kind==='image'&&/\\.png$/i.test(x.name))){
+          for(const item of items.filter(x=>x.kind==='image'&&/\.png$/i.test(x.name))){
             const {spawnSync}=await import('node:child_process');
             const ff=spawnSync('ffprobe',['-v','error','-select_streams','v:0',
               '-show_entries','stream=width,height','-of','csv=p=0',item.url],{encoding:'utf8',timeout:35000});
