@@ -24,7 +24,8 @@
     .error{display:none;text-align:center;padding:38px 25px;max-width:440px}
     .error h1{font-size:19px;letter-spacing:-.04em;font-weight:650;margin:0 0 9px}
     .error p{color:#a2a9ad;font-size:13px;line-height:1.7;margin:0}
-    .error a{display:inline-block;border:1px solid #54575a;color:#f3f4f4;text-decoration:none;padding:11px 16px;font-size:12px;margin-top:20px}
+    .error a,.error button{display:inline-block;border:1px solid #54575a;background:#161819;color:#f3f4f4;text-decoration:none;padding:11px 16px;font-size:12px;margin-top:20px;cursor:pointer}
+    .error button:hover{background:#292c2e}
     .details{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:19px;min-width:0}
     .details-copy{min-width:0;overflow:hidden}
     .details .eyebrow{font-size:10px;letter-spacing:.12em;color:#8a9194;margin:0 0 8px;text-transform:uppercase}
@@ -59,6 +60,7 @@
       <div class="error" id="error" role="alert">
         <h1 id="errorTitle">Video unavailable</h1>
         <p id="errorBody">This video could not be loaded.</p>
+        <button type="button" id="retryVideo">Try again</button>
         <a id="original" hidden href="#" rel="noopener noreferrer" target="_blank">Open original video</a>
       </div>
     </div>
@@ -132,11 +134,19 @@
       image.onload=()=>{player.poster=poster;};
       image.src=poster;
       details.hidden=false;
-      player.addEventListener("loadedmetadata",()=>{loading.style.display="none";},{once:true});
+      player.addEventListener("loadedmetadata",()=>{
+        if(!player.videoWidth || !player.videoHeight){
+          player.pause();
+          failed("Video picture unavailable",
+            "The browser received an audio track but no decodable picture. Only an H.264 MP4 should play here.");
+          return;
+        }
+        loading.style.display="none";
+      },{once:true});
       player.addEventListener("canplay",()=>{loading.style.display="none";},{once:true});
       player.addEventListener("error",()=>{
         failed("Cannot play this video in this browser",
-          "Some iPhone MOV videos use HEVC, which not every browser can play. Try opening the original video.",true);
+          "Chrome could not decode the compatible video. Try again to request a fresh playback link.");
       },{once:true});
       player.src=source;
       player.style.display="block";
@@ -149,6 +159,14 @@
     clearTimeout(refreshTimer);
     preparing.style.display="none";
     loading.style.display="flex";
+    load();
+  });
+  document.getElementById("retryVideo").addEventListener("click",()=>{
+    error.style.display="none";
+    loading.style.display="flex";
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
     load();
   });
   document.getElementById("copy").addEventListener("click",async()=>{
