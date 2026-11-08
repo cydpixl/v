@@ -796,9 +796,53 @@ button {
 }
 .video-thumb {
   position: relative;
+  overflow: hidden;
 }
 .video-thumb video {
   object-fit: cover;
+}
+.video-thumb > .video-poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.video-thumb > .video-frame-fallback {
+  object-fit: cover;
+  background: #091920;
+}
+.video-conversion-label {
+  position: absolute;
+  z-index: 4;
+  top: 9px;
+  left: 9px;
+  color: #d5e0e4;
+  background: rgba(4,14,19,.89);
+  border: 1px solid rgba(149,182,195,.34);
+  padding: 5px 7px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: .01em;
+  pointer-events: none;
+}
+.video-conversion-label.ready {
+  color: #c1efe1;
+  border-color: rgba(102,198,161,.42);
+}
+.video-poster-pending {
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  bottom: 53px;
+  padding: 5px 8px;
+  background: rgba(3,17,23,.88);
+  color: #d6e5e5;
+  font-size: 11px;
+  line-height: 1.3;
+  pointer-events: none;
 }
 .play-overlay {
   position: absolute;
