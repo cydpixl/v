@@ -1,0 +1,35 @@
+name: Catalog verified aquarium footage
+on:
+  push:
+    paths:
+      - '.github/workflows/catalog-verified-aquarium-media.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify only visually verified jellyfish footage
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://newport-aquarium-r2-api.vercel.app';
+          const key='visitor/1794113754365-b57cc5613d26-IMG_3251.MOV';
+          const response=await fetch(base+'/api/gallery');
+          if(!response.ok)throw Error('Gallery unavailable');
+          const data=await response.json();
+          const media=data.items?.find(item=>item.id===key);
+          if(!media||media.name!=='IMG_3251.MOV'||media.size!==42997723)
+            throw Error('Verified original clip was not found; no labels changed');
+          const result=await fetch(base+'/api/manage?action=update&id='+encodeURIComponent(key),{
+            method:'POST',
+            headers:{'Content-Type':'application/json',Origin:'https://cydpixl.github.io'},
+            body:JSON.stringify({animal:'jellies',caption:'Jellyfish footage — exact species pending'})
+          });
+          const payload=await result.json();
+          if(!result.ok||!payload.ok)throw Error('Could not save classification');
+          const check=await(await fetch(base+'/api/gallery')).json();
+          const updated=check.items?.find(item=>item.id===key);
+          if(updated?.animal!=='jellies')throw Error('Classification not reflected in gallery');
+          console.log('Verified',media.name,'classified as Jellyfish (species pending)');
+          JS
