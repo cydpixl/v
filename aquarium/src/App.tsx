@@ -85,7 +85,20 @@ const dateText = (n: number) =>
   });
 function App() {
   const [route, setRoute] = useState(resolveHash);
-  const ownerKey = '';
+  const [ownerKey] = useState(()=>{
+    try{
+      const hash=window.location.hash;
+      if(hash.startsWith('#owner=')){
+        const key=decodeURIComponent(hash.slice(7));
+        if(/^[a-zA-Z0-9_-]{32,128}$/.test(key)){
+          localStorage.setItem('newport-archive-owner-link',key);
+          window.history.replaceState(null,'',window.location.pathname+window.location.search);
+          return key;
+        }
+      }
+      return localStorage.getItem('newport-archive-owner-link') || localStorage.getItem('newport-archive-owner-v1') || '';
+    }catch{return '';}
+  });
   const [media, setMedia] = useState<Media[]>([]);
   const [nextToken, setNextToken] = useState('');
   const [loading, setLoading] = useState(true);
@@ -94,8 +107,8 @@ function App() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
-  const admin = true;
-  const checkingAuth = false;
+  const [admin, setAdmin] = useState(false);
+
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [providers, setProviders] = useState<{r2:boolean;b2:boolean}>({r2:false,b2:false});
@@ -121,6 +134,13 @@ function App() {
     window.addEventListener('hashchange', fn);
     return () => window.removeEventListener('hashchange', fn);
   }, []);
+  useEffect(()=>{
+    if(!ownerKey)return;
+    let active=true;
+    api.post('/api/admin/check',{ownerKey}).then(()=>{if(active)setAdmin(true);})
+      .catch(()=>{if(active)setAdmin(false);});
+    return ()=>{active=false;};
+  },[ownerKey]);
   useEffect(()=>{
     let active=true;
     api.get('/api/large/status').then(r=>{
@@ -262,7 +282,7 @@ function App() {
     await loadMedia();
   }
   useEffect(()=>{
-    if(admin && !uploadBusy && queue.some(q=>q.status==='waiting')){
+    if(!uploadBusy && queue.some(q=>q.status==='waiting')){
       void uploadQueue();
     }
   },[admin,uploadBusy,queue,providers.r2,providers.b2]);
@@ -392,7 +412,7 @@ function App() {
             onChange={e=>{stageFiles(e.target.files);e.target.value='';}}
             aria-label="Choose media to add"
           />
-          <button className="upload-button" onClick={() => admin ? quickPickRef.current?.click() : nav('upload')}>
+          <button className="upload-button" onClick={() => quickPickRef.current?.click()}>
             <UploadCloud size={17} /> <span>Add</span>
           </button>
           <button
@@ -752,16 +772,7 @@ function App() {
               Choose your files. Smallest files upload first. Assign animals afterward.
             </p>
           </div>
-          {checkingAuth ? (
-            <div className="login-panel"><p>Checking owner access...</p></div>
-          ) : !admin ? (
-            <div className="login-panel">
-              <ShieldCheck size={32}/>
-              <h2>Open gallery</h2>
-              <p>Visitors can browse without signing in. Adding or organizing files is available from the archive owner's private link—no Google account needed.</p>
-            </div>
-          ) : (
-            <>
+          <>
               {error&&<div className="alert">{error}</div>}
               <div className="upload-layout">
                 <div className="upload-main">
