@@ -18,7 +18,7 @@ self.onmessage = async ({data}) => {
     const video = await input.getPrimaryVideoTrack(), audio = await input.getPrimaryAudioTrack();
     if(!video)throw Error('This video has no readable video track.');
     writer = await handle.createWritable();
-    output = new Output({format:new Mp4OutputFormat({fastStart:'fragmented'}), target:new StreamTarget(new WritableStream({
+    output = new Output({format:new Mp4OutputFormat({fastStart:data.fastStart==='reserve'?'reserve':'fragmented'}), target:new StreamTarget(new WritableStream({
       write: chunk => writer.write({type:'write',position:chunk.position,data:chunk.data}),
       close: () => writer.close(), abort: reason => writer.abort(reason),
     }), {chunked:true,chunkSize:2**20})});

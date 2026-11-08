@@ -1,5 +1,5 @@
 export const needsMovieConversion = file => /\.(mkv|mov)$/i.test(file.name);
-export function convertMovie(file, key, {signal,onProgress=()=>{}}={}) {
+export function convertMovie(file, key, {signal,onProgress=()=>{},fastStart='fragmented'}={}) {
   return new Promise((resolve,reject)=>{
     const worker = new Worker(new URL('./movie-conversion.worker.mjs',import.meta.url),{type:'module'});
     const stop = () => {worker.terminate();signal?.removeEventListener('abort',abort);};
@@ -9,10 +9,10 @@ export function convertMovie(file, key, {signal,onProgress=()=>{}}={}) {
     worker.onerror = event => {stop();reject(Error(event.message || 'Video conversion failed.'));};
     worker.onmessage = ({data}) => {
       if(data.type==='progress')onProgress(data.progress);
-      if(data.type==='done'){stop();const result=new File([data.file],file.name.replace(/\.(mkv|mov)$/i,'.mp4'),{type:'video/mp4',lastModified:file.lastModified});result.conversionKey=key;resolve(result);}
+      if(data.type==='done'){stop();const result=new File([data.file],file.name.replace(/\.(mkv|mov|webm)$/i,'.mp4'),{type:'video/mp4',lastModified:file.lastModified});result.conversionKey=key;resolve(result);}
       if(data.type==='error'){stop();reject(Error(data.message));}
     };
-    worker.postMessage({type:'convert',file,key});
+    worker.postMessage({type:'convert',file,key,fastStart});
   });
 }
 
