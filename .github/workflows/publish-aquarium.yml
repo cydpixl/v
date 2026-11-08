@@ -24,6 +24,20 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
+      - name: Verify live R2 upload gateway
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://jqzdszkkrdzmedkcnpzp.supabase.co/functions/v1/newport-public-gallery';
+          const req=await fetch(base+'?action=status');
+          const raw=await req.text();
+          console.log('Gateway status:',req.status,raw.slice(0,600));
+          if(!req.ok)process.exit(1);
+          const status=JSON.parse(raw);
+          if(!status?.providers?.r2){console.error('R2 bucket is not reachable');process.exit(1);}
+          const gallery=await fetch(base+'?action=media');
+          console.log('Gallery status:',gallery.status);
+          if(!gallery.ok)process.exit(1);
+          JS
       - name: Publish without affecting Vela
         run: |
           mkdir -p docs/aq
