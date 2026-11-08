@@ -1,0 +1,31 @@
+name: Audit Aquarium Media
+on:
+  push:
+    paths:
+      - '.github/workflows/aquarium-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inventory gallery without modifying anything
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://newport-aquarium-r2-api.vercel.app/api/gallery';
+          let nextToken='',items=[];
+          for(let i=0;i<100;i++){
+            const url=new URL(base);if(nextToken)url.searchParams.set('nextToken',nextToken);
+            const res=await fetch(url);
+            if(!res.ok)throw Error('Gallery returned HTTP '+res.status);
+            const body=await res.json();
+            items.push(...(body.items||[]));nextToken=body.nextToken||'';
+            if(!nextToken)break;
+          }
+          const screenshots=items.filter(x=>/screen.?shot|capture d.ecran|screenshot|screen_record/i.test(x.name));
+          const videos=items.filter(x=>x.kind==='video');
+          console.log('Total:',items.length,'Video:',videos.length,'Images:',items.length-videos.length);
+          console.log('Screenshot candidates:',JSON.stringify(screenshots.map(x=>({id:x.id,name:x.name,size:x.size}))));
+          console.log('Video filenames:',JSON.stringify(videos.map(x=>({id:x.id,name:x.name,size:x.size,mime:x.mime}))));
+          JS
