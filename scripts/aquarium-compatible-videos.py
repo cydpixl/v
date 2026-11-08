@@ -8,6 +8,7 @@ No permanent R2 credentials or signed media URLs are placed in GitHub.
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -83,7 +84,9 @@ def encode(item, url, target):
         raise RuntimeError("Encoding timed out") from error
     if result.returncode != 0 or not target.exists() or target.stat().st_size < 1024:
         # Do not log signed links appearing in ffmpeg stderr.
-        raise RuntimeError("FFmpeg conversion failed (exit " + str(result.returncode) + ")")
+        cleaned = re.sub(r"https?://[^\\s]+", "[signed-video-url]", result.stderr or "")
+        cleaned = re.sub(r"X-Amz-[^\\s]+", "[signed-field]", cleaned)
+        raise RuntimeError("FFmpeg exit " + str(result.returncode) + ": " + cleaned[-500:])
     inspection = subprocess.run([
         "ffprobe", "-v", "error", "-show_entries",
         "stream=codec_name,codec_type", "-of", "json", str(target)
@@ -123,12 +126,16 @@ def main():
     converted = 0
     skipped = 0
     failures = []
+    attempted = 0
     for item in videos:
         try:
             details = share(item)
             if details.get("browserReady"):
                 skipped += 1
                 continue
+            attempted += 1
+            if attempted > 26:
+                break
             print("Converting", item["name"], "original MB:", round(item.get("size", 0) / 1e6, 1), flush=True)
             with tempfile.TemporaryDirectory(prefix="newport-video-") as directory:
                 target = pathlib.Path(directory) / "chrome.mp4"
@@ -151,7 +158,7 @@ def main():
         except Exception as error:
             failures.append((item.get("name", "(unknown)"), type(error).__name__, str(error)[:120]))
             print("CONVERSION ERROR", item.get("name"), type(error).__name__, str(error)[:100], flush=True)
-            if len(failures) >= 3:
+            if len(failures) >= 13:
                 break
     print("SUMMARY newly converted:", converted, "already ready:", skipped, "errors:", len(failures), flush=True)
     for file, kind, reason in failures:
