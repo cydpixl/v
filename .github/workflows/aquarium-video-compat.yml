@@ -36,6 +36,7 @@ jobs:
       - name: Save real Chrome compatibility audit
         if: always()
         run: |
+          mkdir -p reports
           if [ ! -s reports/aquarium-chrome-status.json ]; then
             echo '{"status":"workflow exited before the video audit was written"}' > reports/aquarium-chrome-status.json
           fi
