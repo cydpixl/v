@@ -13,8 +13,10 @@ const route=(url:string)=>{
   if(path==='/api/identify')return {action:'identify',qs};
   if(path==='/api/upload')return {action:'upload',qs};
   if(path==='/api/admin/check')return {action:'check',qs};
-  if(path.match(/^\/api\/media\/[^/]+\/delete$/))return {action:'delete',qs};
-  if(path.match(/^\/api\/media\/[^/]+$/))return {action:'update',qs};
+  const deleting=path.match(/^\/api\/media\/([^/]+)\/delete$/);
+  if(deleting){qs.set('id',decodeURIComponent(deleting[1]));return {action:'delete',qs};}
+  const editing=path.match(/^\/api\/media\/([^/]+)$/);
+  if(editing){qs.set('id',decodeURIComponent(editing[1]));return {action:'update',qs};}
   throw new Error('Unknown gallery API: '+url);
 };
 async function call(method:'GET'|'POST',url:string,data?:any){
