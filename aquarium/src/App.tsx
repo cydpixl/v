@@ -127,7 +127,7 @@ function App() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
-  const [admin, setAdmin] = useState(false);
+  const admin = true; // uploads and classification are public; deletion remains private
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [skippedSidecars, setSkippedSidecars] = useState(0);
@@ -157,13 +157,6 @@ function App() {
     window.addEventListener('hashchange', fn);
     return () => window.removeEventListener('hashchange', fn);
   }, []);
-  useEffect(()=>{
-    if(!ownerKey)return;
-    let active=true;
-    api.post('/api/admin/check',{ownerKey}).then(()=>{if(active)setAdmin(true);})
-      .catch(()=>{if(active)setAdmin(false);});
-    return ()=>{active=false;};
-  },[ownerKey]);
   useEffect(()=>{
     let active=true;
     api.get('/api/large/status').then(r=>{
@@ -1118,12 +1111,11 @@ function App() {
                   />
                 </label>
                 <div className="modal-actions">
-                  <button
-                    className="danger"
-                    onClick={() => deleteMedia(current)}
-                  >
-                    <Trash2 size={16} /> Delete
-                  </button>
+                  {ownerKey && (
+                    <button className="danger" onClick={() => deleteMedia(current)}>
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  )}
                   <button
                     className="primary-action"
                     onClick={() => saveEdit(current)}

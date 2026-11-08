@@ -39,6 +39,11 @@ jobs:
           const gallery=await media.text();
           console.log('Gallery',media.status,gallery.slice(0,300));
           if(!media.ok||!gallery.includes('"items"'))throw Error('Gallery listing failed');
+          const manage=await fetch('https://newport-aquarium-r2-api.vercel.app/api/manage?action=check',{
+            method:'POST',headers:{'Origin':'https://cydpixl.github.io','Content-Type':'application/json'},
+            body:'{}'});
+          console.log('Classification API:',manage.status);
+          if(!manage.ok)throw Error('Post-upload classification is unavailable');
           const preflight=await fetch(base+'?action=start',{method:'OPTIONS',
              headers:{Origin:'https://cydpixl.github.io','Access-Control-Request-Method':'POST',
                       'Access-Control-Request-Headers':'content-type'}});

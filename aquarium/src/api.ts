@@ -25,7 +25,8 @@ async function call(method:'GET'|'POST',url:string,data?:any){
   qs.set('action',action);
   let result:Response;
   try {
-    result=await fetch(FUNCTION_URL+'?'+qs.toString(),{
+    const target=['check','update','delete'].includes(action)?'/api/manage':'/api';
+    result=await fetch('https://newport-aquarium-r2-api.vercel.app'+target+'?'+qs.toString(),{
       method,headers:method==='POST'?{'Content-Type':'application/json'}:undefined,
       body:method==='POST'?JSON.stringify(data||{}):undefined,
     });
