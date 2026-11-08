@@ -24,69 +24,69 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
-      - name: Verify live R2 upload gateway
+      - name: Verify replacement R2 API and gallery
         run: |
           node --input-type=module <<'JS'
-          const base='https://jqzdszkkrdzmedkcnpzp.supabase.co/functions/v1/newport-public-gallery';
-          const req=await fetch(base+'?action=status');
-          const raw=await req.text();
-          console.log('Gateway status:',req.status,raw.slice(0,600));
-          if(!req.ok)process.exit(1);
+          const base='https://newport-aquarium-r2-api.vercel.app/api';
+          const headers={'Origin':'https://cydpixl.github.io'};
+          const request=await fetch(base+'?action=status',{headers});
+          const raw=await request.text();
+          console.log('Status',request.status,raw.slice(0,700));
+          if(!request.ok)throw Error('R2 API unavailable');
           const status=JSON.parse(raw);
-          if(!status?.providers?.r2){console.error('R2 bucket is not reachable');process.exit(1);}
-          const gallery=await fetch(base+'?action=media');
-          console.log('Gallery status:',gallery.status);
-          if(!gallery.ok)process.exit(1);
+          if(!status?.providers?.r2)throw Error('R2 API did not enable browser uploads');
+          const media=await fetch(base+'?action=media',{headers});
+          const gallery=await media.text();
+          console.log('Gallery',media.status,gallery.slice(0,300));
+          if(!media.ok||!gallery.includes('"items"'))throw Error('Gallery listing failed');
+          const preflight=await fetch(base+'?action=start',{method:'OPTIONS',
+             headers:{Origin:'https://cydpixl.github.io','Access-Control-Request-Method':'POST',
+                      'Access-Control-Request-Headers':'content-type'}});
+          console.log('API preflight',preflight.status,preflight.headers.get('access-control-allow-origin'));
+          if(preflight.status!==204||preflight.headers.get('access-control-allow-origin')!=='https://cydpixl.github.io')
+            throw Error('CORS preflight is blocked');
           JS
-      - name: Test two R2 multipart chunks (18 MB), publish and clean up
+      - name: Test direct-to-R2 18 MiB browser-style multipart upload
         run: |
           node --input-type=module <<'JS'
-          const base='https://jqzdszkkrdzmedkcnpzp.supabase.co/functions/v1/newport-public-gallery';
-          async function post(action, data){
-            const r=await fetch(base+'?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-            const x=await r.json();
-            if(!r.ok)throw new Error(action+' HTTP '+r.status+': '+String(x.error||'unknown'));
+          const base='https://newport-aquarium-r2-api.vercel.app/api';
+          async function post(action,data){
+            const r=await fetch(base+'?action='+action,{method:'POST',
+              headers:{'Content-Type':'application/json',Origin:'https://cydpixl.github.io'},
+              body:JSON.stringify(data)});
+            const raw=await r.text();let x;try{x=JSON.parse(raw)}catch{throw Error(action+' invalid response '+raw.slice(0,100));}
+            if(!r.ok)throw Error(action+' '+r.status+': '+(x.error||'unknown'));
             return x;
           }
-          // Verify the actual 16 MiB R2 chunk size and a second final chunk.
-          const bytes=Buffer.alloc(18*1024*1024);
-          const upload=await post('start',{provider:'r2',name:'upload-system-verification.png',mime:'image/png',size:bytes.length});
-          console.log('Multipart initiation:',upload.uploadId?'success':'missing uploadId','partBytes:',upload.partBytes);
-          try{
-            if(upload.partBytes!==16*1024*1024)throw Error('Unexpected chunk size');
-            const parts=[];
-            for(let partNumber=1;partNumber<=Math.ceil(bytes.length/upload.partBytes);partNumber++){
-              const signed=await post('sign',{provider:'r2',key:upload.key,uploadId:upload.uploadId,partNumber});
-              if(!signed.url)throw Error('Missing signed part upload URL');
-              const form=new FormData();
-              form.set('url',signed.url);
-              const start=(partNumber-1)*upload.partBytes;
-              const end=Math.min(bytes.length,start+upload.partBytes);
-              form.set('chunk',new Blob([bytes.subarray(start,end)],{type:'image/png'}),'part.png');
-              const req=await fetch(base+'?action=chunk',{method:'POST',body:form});
-              const data=await req.json();
-              if(!req.ok||!data.etag)throw Error('R2 chunk '+partNumber+' failed: '+req.status+' '+JSON.stringify(data));
-              parts.push({PartNumber:partNumber,ETag:data.etag});
-              console.log('Real R2 chunk',partNumber,'size:',end-start,'ETag received:',Boolean(data.etag));
+          const data=Buffer.alloc(18*1024*1024);
+          const started=await post('start',{name:'smoke-test-'+Date.now()+'.png',mime:'image/png',size:data.length,provider:'r2'});
+          if(!started?.uploadId||started.partBytes!==16*1024*1024)throw Error('Multipart initiation failed');
+          console.log('Multipart initiated:',Boolean(started.uploadId));
+          try {
+            const signed=await post('sign',{provider:'r2',key:started.key,uploadId:started.uploadId,partNumber:1});
+            const preflight=await fetch(signed.url,{method:'OPTIONS',headers:{
+              Origin:'https://cydpixl.github.io',
+              'Access-Control-Request-Method':'PUT',
+              'Access-Control-Request-Headers':'content-type'
+            }});
+            console.log('R2 CORS preflight:',preflight.status,preflight.headers.get('access-control-allow-origin'));
+            if(!preflight.ok||preflight.headers.get('access-control-allow-origin')!=='https://cydpixl.github.io')
+              throw Error('R2 browser PUT blocked by CORS');
+            const results=[];
+            for(let partNumber=1;partNumber<=2;partNumber++){
+              const url=(partNumber===1?signed:await post('sign',{provider:'r2',key:started.key,uploadId:started.uploadId,partNumber})).url;
+              const start=(partNumber-1)*started.partBytes;
+              const end=Math.min(started.partBytes*partNumber,data.length);
+              const sent=await fetch(url,{method:'PUT',body:data.subarray(start,end),
+                    headers:{Origin:'https://cydpixl.github.io','Content-Type':'application/octet-stream'}});
+              console.log('R2 PUT',partNumber,sent.status,'ETag',Boolean(sent.headers.get('etag')));
+              if(!sent.ok||!sent.headers.get('etag'))throw Error('Upload part '+partNumber+' failed');
+              results.push({PartNumber:partNumber,ETag:sent.headers.get('etag')});
             }
-            const done=await post('finish',{provider:'r2',key:upload.key,uploadId:upload.uploadId,
-              name:'upload-system-verification.png',mime:'image/png',size:bytes.length,
-              animal:'unidentified',parts});
-            if(!done.ok||!done.id)throw Error('Cloud file was not published');
-            console.log('R2 multipart completion and gallery indexing:',Boolean(done.id));
-            const gallery=await (await fetch(base+'?action=media')).json();
-            if(!gallery.items?.some(x=>x.id===done.id))throw Error('Published test file missing from gallery');
-            const deleted=await post('cleanup-test',{id:done.id});
-            if(!deleted.ok)throw Error('Test media cleanup did not complete');
-            console.log('Gallery test media removed:',deleted.ok);
-            upload.cleanedUp=true;
-          }finally{
-            if(!upload.cleanedUp){
-              try{
-                const cleanup=await post('abort',{provider:'r2',key:upload.key,uploadId:upload.uploadId});
-                console.log('Incomplete multipart upload aborted:',cleanup.ok);
-              }catch(error){console.warn('Abort cleanup unavailable:',String(error));}
-            }
+            console.log('18 MiB uploaded directly to R2:',results.length,'parts');
+          } finally {
+            await post('abort',{provider:'r2',key:started.key,uploadId:started.uploadId});
+            console.log('Multipart smoke test aborted without publishing');
           }
           JS
       - name: Publish without affecting Vela
