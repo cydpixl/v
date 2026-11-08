@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,7 +20,9 @@ import urllib.request
 API = "https://newport-aquarium-r2-api.vercel.app/api"
 AUDIENCE = "newport-aquarium-compatible-video-upload"
 MAX_PER_RUN = int(os.environ.get("MAX_VIDEOS", "6"))
-MAX_ENCODE_SECONDS = int(os.environ.get("MAX_ENCODE_SECONDS", "780"))
+MAX_ENCODE_SECONDS = int(os.environ.get("MAX_ENCODE_SECONDS", "480"))
+MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "10"))
+REPORT = pathlib.Path("reports/aquarium-chrome-status.json")
 
 
 def get_json(url, headers=None, payload=None, timeout=45):
@@ -42,13 +45,18 @@ def all_videos():
         token = data.get("nextToken") or ""
         if not token:
             break
-    priority_key = "visitor/1794114056595-ea4fca8e5cfa-IMG_3125.MOV"
-    preferred = [m for m in items if m.get("id") == priority_key]
-    if not preferred:
-        preferred = [m for m in items if m.get("name") == "IMG_3125.MOV"]
+    priority_names = ("IMG_3134.MOV", "IMG_3125.MOV")
+    preferred = []
+    for name in priority_names:
+        preferred.extend(m for m in items if m.get("name", "").upper() == name)
     prioritized_ids = {m.get("id") for m in preferred}
     remaining = [m for m in items if m.get("id") not in prioritized_ids]
     remaining.sort(key=lambda m: (int(m.get("size") or 0), str(m.get("name"))))
+    # A single batch should not get stuck retrying the same early failures forever.
+    # The scheduled workflow rotates its remaining queue on each run.
+    if remaining:
+        offset = (max(0, int(os.environ.get("GITHUB_RUN_NUMBER", "1")) - 1) * MAX_ATTEMPTS) % len(remaining)
+        remaining = remaining[offset:] + remaining[:offset]
     return preferred + remaining
 
 
@@ -134,54 +142,106 @@ def put(file, signed):
         raise RuntimeError("R2 rejected the compatible MP4 upload (curl " + str(result.returncode) + ")")
 
 
+def write_report(data):
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
+    data["checkedAt"] = datetime.now(timezone.utc).isoformat()
+    data["runNumber"] = os.environ.get("GITHUB_RUN_NUMBER", "")
+    REPORT.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def main():
-    videos = all_videos()
-    print("Gallery videos:", len(videos), "per-run conversion limit:", MAX_PER_RUN, flush=True)
-    if not videos:
-        return
-    token = workflow_identity()
-    converted = 0
-    skipped = 0
-    failures = []
-    attempted = 0
-    for item in videos:
+    audit = {"videos": 0, "alreadyReady": 0, "converted": 0,
+             "failed": 0, "unprocessed": 0, "items": [],
+             "priority": "IMG_3134.MOV"}
+    try:
+        videos = all_videos()
+        audit["videos"] = len(videos)
+        print("Gallery videos:", len(videos),
+              "max conversion attempts:", MAX_ATTEMPTS, flush=True)
+        if not videos:
+            return
+
+        # Check all gallery videos, not only the first page or first failure batch.
+        pending = []
+        for item in videos:
+            name = str(item.get("name") or "Unknown video")
+            try:
+                details = share(item)
+                if details.get("browserReady"):
+                    audit["alreadyReady"] += 1
+                    audit["items"].append({"name": name, "status": "ready"})
+                else:
+                    pending.append(item)
+            except Exception as exc:
+                print("Share lookup failed:", name, type(exc).__name__, flush=True)
+                audit["items"].append({"name": name, "status": "lookup-failed",
+                                       "errorType": type(exc).__name__})
+                audit["failed"] += 1
+
+        print("Already Chrome-ready:", audit["alreadyReady"],
+              "not yet ready:", len(pending), flush=True)
+        if not pending:
+            return
+
+        # Only obtain a short-lived GitHub OIDC identity if uploads are needed.
         try:
-            details = share(item)
-            if details.get("browserReady"):
-                skipped += 1
+            token = workflow_identity()
+        except Exception as exc:
+            audit["workflowError"] = "OIDC authorization: " + type(exc).__name__
+            print("Cannot authorize converted-video uploads:", type(exc).__name__, flush=True)
+            return
+
+        for index, item in enumerate(pending):
+            name = str(item.get("name") or "Unknown video")
+            if index >= MAX_ATTEMPTS or audit["converted"] >= MAX_PER_RUN:
+                audit["unprocessed"] += 1
+                audit["items"].append({"name": name, "status": "queued"})
                 continue
-            attempted += 1
-            if attempted > 26:
-                break
-            print("Converting", item["name"], "original MB:", round(item.get("size", 0) / 1e6, 1), flush=True)
-            with tempfile.TemporaryDirectory(prefix="newport-video-") as directory:
-                target = pathlib.Path(directory) / "chrome.mp4"
-                size, audio_tracks = encode(item, details.get("originalUrl") or details["url"], target)
-                signed = get_json(API + "/encode",
-                                  headers={"Authorization": "Bearer " + token},
-                                  payload={"key": item["id"]})
-                if not signed.get("ready"):
-                    if not signed.get("putUrl"):
-                        raise RuntimeError("The upload gateway did not return a signed upload")
-                    put(target, signed["putUrl"])
-                after = share(item)
-                if not after.get("browserReady"):
-                    raise RuntimeError("R2 could not verify the converted playback copy")
-            converted += 1
-            print("DONE", item["name"], "compatible MP4 MB:", round(size / 1e6, 1),
-                  "source audio tracks kept:", audio_tracks, flush=True)
-            if converted >= MAX_PER_RUN:
-                break
-        except Exception as error:
-            failures.append((item.get("name", "(unknown)"), type(error).__name__, str(error)[:120]))
-            print("CONVERSION ERROR", item.get("name"), type(error).__name__, str(error)[:100], flush=True)
-            if len(failures) >= 13:
-                break
-    print("SUMMARY newly converted:", converted, "already ready:", skipped, "errors:", len(failures), flush=True)
-    for file, kind, reason in failures:
-        print("Failed:", file, kind, reason, flush=True)
-    if failures and converted == 0:
-        raise SystemExit("No video conversions succeeded; inspect conversion errors")
+            try:
+                # Refresh the media URL immediately before downloading; signatures expire.
+                details = share(item)
+                if details.get("browserReady"):
+                    audit["alreadyReady"] += 1
+                    audit["items"].append({"name": name, "status": "ready"})
+                    continue
+                original_url = details.get("originalUrl") or details.get("url")
+                if not original_url or not original_url.startswith("https://"):
+                    raise RuntimeError("No playable original-video URL was supplied")
+                print("Converting", name, "original MB:",
+                      round(item.get("size", 0) / 1e6, 1), flush=True)
+                with tempfile.TemporaryDirectory(prefix="newport-video-") as directory:
+                    target = pathlib.Path(directory) / "chrome.mp4"
+                    size, audio_tracks = encode(item, original_url, target)
+                    signed = get_json(API + "/encode",
+                                      headers={"Authorization": "Bearer " + token},
+                                      payload={"key": item["id"]})
+                    if not signed.get("ready"):
+                        if not signed.get("putUrl"):
+                            raise RuntimeError("Upload gateway did not issue a signed R2 URL")
+                        put(target, signed["putUrl"])
+                    after = share(item)
+                    if not after.get("browserReady"):
+                        raise RuntimeError("R2 did not confirm converted video")
+                audit["converted"] += 1
+                audit["items"].append({"name": name, "status": "converted",
+                                       "mp4Bytes": size, "audioTracks": audio_tracks})
+                print("DONE", name, "H.264/AAC MP4 MB:", round(size / 1e6, 1),
+                      "source audio tracks:", audio_tracks, flush=True)
+            except Exception as exc:
+                audit["failed"] += 1
+                # Do not log any signed URL, upload token, or FFmpeg command.
+                audit["items"].append({"name": name, "status": "conversion-failed",
+                                       "errorType": type(exc).__name__})
+                print("CONVERSION ERROR", name, type(exc).__name__,
+                      re.sub(r"https?://\\S+", "[signed URL]", str(exc))[:180], flush=True)
+        print("CHROME AUDIT:", audit["videos"], "total,",
+              audit["alreadyReady"] + audit["converted"], "ready,",
+              audit["failed"], "errors,", audit["unprocessed"], "queued", flush=True)
+    except Exception as exc:
+        audit["workflowError"] = type(exc).__name__
+        print("Video inventory error:", type(exc).__name__, str(exc)[:160], flush=True)
+    finally:
+        write_report(audit)
 
 
 if __name__ == "__main__":
