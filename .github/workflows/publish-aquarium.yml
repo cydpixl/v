@@ -38,7 +38,7 @@ jobs:
           console.log('Gallery status:',gallery.status);
           if(!gallery.ok)process.exit(1);
           JS
-      - name: Test a real R2 multipart chunk and abort cleanly
+      - name: Test two R2 multipart chunks (18 MB), publish and clean up
         run: |
           node --input-type=module <<'JS'
           const base='https://jqzdszkkrdzmedkcnpzp.supabase.co/functions/v1/newport-public-gallery';
@@ -48,22 +48,30 @@ jobs:
             if(!r.ok)throw new Error(action+' HTTP '+r.status+': '+String(x.error||'unknown'));
             return x;
           }
-          const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8F7SwAAAAASUVORK5CYII=','base64');
+          // Verify the actual 16 MiB R2 chunk size and a second final chunk.
+          const bytes=Buffer.alloc(18*1024*1024);
           const upload=await post('start',{provider:'r2',name:'upload-system-verification.png',mime:'image/png',size:bytes.length});
-          console.log('Multipart initiation:',upload.uploadId?'success':'missing uploadId');
+          console.log('Multipart initiation:',upload.uploadId?'success':'missing uploadId','partBytes:',upload.partBytes);
           try{
-            const signed=await post('sign',{provider:'r2',key:upload.key,uploadId:upload.uploadId,partNumber:1});
-            if(!signed.url)throw Error('Missing signed part upload URL');
-            const form=new FormData();
-            form.set('url',signed.url);
-            form.set('chunk',new Blob([bytes],{type:'image/png'}),'part.png');
-            const req=await fetch(base+'?action=chunk',{method:'POST',body:form});
-            const data=await req.json();
-            if(!req.ok||!data.etag)throw Error('R2 chunk failed: '+req.status+' '+JSON.stringify(data));
-            console.log('Real R2 multipart chunk:',req.status,'ETag received:',Boolean(data.etag));
+            if(upload.partBytes!==16*1024*1024)throw Error('Unexpected chunk size');
+            const parts=[];
+            for(let partNumber=1;partNumber<=Math.ceil(bytes.length/upload.partBytes);partNumber++){
+              const signed=await post('sign',{provider:'r2',key:upload.key,uploadId:upload.uploadId,partNumber});
+              if(!signed.url)throw Error('Missing signed part upload URL');
+              const form=new FormData();
+              form.set('url',signed.url);
+              const start=(partNumber-1)*upload.partBytes;
+              const end=Math.min(bytes.length,start+upload.partBytes);
+              form.set('chunk',new Blob([bytes.subarray(start,end)],{type:'image/png'}),'part.png');
+              const req=await fetch(base+'?action=chunk',{method:'POST',body:form});
+              const data=await req.json();
+              if(!req.ok||!data.etag)throw Error('R2 chunk '+partNumber+' failed: '+req.status+' '+JSON.stringify(data));
+              parts.push({PartNumber:partNumber,ETag:data.etag});
+              console.log('Real R2 chunk',partNumber,'size:',end-start,'ETag received:',Boolean(data.etag));
+            }
             const done=await post('finish',{provider:'r2',key:upload.key,uploadId:upload.uploadId,
               name:'upload-system-verification.png',mime:'image/png',size:bytes.length,
-              animal:'unidentified',parts:[{PartNumber:1,ETag:data.etag}]});
+              animal:'unidentified',parts});
             if(!done.ok||!done.id)throw Error('Cloud file was not published');
             console.log('R2 multipart completion and gallery indexing:',Boolean(done.id));
             const gallery=await (await fetch(base+'?action=media')).json();
