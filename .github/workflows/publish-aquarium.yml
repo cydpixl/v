@@ -24,6 +24,11 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
+      - name: Verify video poster files shipped in GitHub build
+        run: |
+          count=$(find aquarium/dist/posters -maxdepth 1 -type f -name '*.jpg' | wc -l)
+          echo "Real video frame thumbnails in release: $count"
+          test "$count" -ge 33
       - name: Verify replacement R2 API and gallery
         run: |
           node --input-type=module <<'JS'
