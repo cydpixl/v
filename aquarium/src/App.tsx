@@ -107,7 +107,7 @@ const dateText = (n: number) =>
   });
 function App() {
   const [route, setRoute] = useState(resolveHash);
-  const [ownerKey] = useState(()=>{
+  const [ownerKey, setOwnerKey] = useState(()=>{
     try{
       const hash=window.location.hash;
       if(hash.startsWith('#owner=')){
@@ -132,6 +132,12 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
   const admin = true; // uploads and classification are public; deletion remains private
+  const [canDelete, setCanDelete] = useState(false);
+  const [deleteUnlockOpen, setDeleteUnlockOpen] = useState(false);
+  const [ownerInput, setOwnerInput] = useState('');
+  const [ownerChecking, setOwnerChecking] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [skippedSidecars, setSkippedSidecars] = useState(0);
@@ -149,6 +155,14 @@ function App() {
   const pageRef = useRef<HTMLDivElement | null>(null);
   const mediaSentinelRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
+  useEffect(()=>{
+    let active=true;
+    if(!ownerKey){setCanDelete(false);return;}
+    api.post('/api/admin/check',{ownerKey})
+      .then(()=>{if(active)setCanDelete(true);})
+      .catch(()=>{if(active)setCanDelete(false);});
+    return ()=>{active=false;};
+  },[ownerKey]);
   const nav = useCallback((path: string) => {
     window.location.hash = path;
     setMenuOpen(false);
@@ -364,15 +378,47 @@ function App() {
       setSaving(false);
     }
   }
+  function requestDelete(m: Media) {
+    setDeleteError('');
+    if(!canDelete){
+      setDeleteUnlockOpen(true);
+      return;
+    }
+    void deleteMedia(m);
+  }
+  async function unlockDeleting() {
+    const candidate=ownerInput.trim();
+    if(!candidate){setDeleteError('Enter your private owner code.');return;}
+    setOwnerChecking(true);
+    setDeleteError('');
+    try{
+      await api.post('/api/admin/check',{ownerKey:candidate});
+      try{localStorage.setItem('newport-archive-owner-link',candidate);}catch{}
+      setOwnerKey(candidate);
+      setCanDelete(true);
+      setOwnerInput('');
+      setDeleteUnlockOpen(false);
+    }catch{
+      setDeleteError('That owner code was not accepted.');
+    }finally{
+      setOwnerChecking(false);
+    }
+  }
   async function deleteMedia(m: Media) {
-    if (!window.confirm('Delete this photo or video permanently?')) return;
+    if(deletingId)return;
+    if(!window.confirm('Permanently delete "'+m.name+'" from the aquarium gallery and R2 storage? This cannot be undone.'))return;
+    setDeletingId(m.id);
+    setDeleteError('');
     try {
       await api.post('/api/media/' + encodeURIComponent(m.id) + '/delete',{ownerKey});
       setMedia(old => old.filter(x => x.id !== m.id));
       setSelected(null);
       setEditing('');
-    } catch {
-      setError('Could not delete this file.');
+    }catch(e){
+      const status=(e as {response?:{data?:{error?:string}}})?.response?.data?.error;
+      setDeleteError(status||'Delete failed. The file was not removed.');
+    }finally{
+      setDeletingId('');
     }
   }
   function openEdit(m: Media) {
@@ -1012,9 +1058,14 @@ function App() {
                             {label(m.animal)} · {dateText(m.createdAt)}
                           </span>
                         </div>
-                        <button onClick={() => openEdit(m)}>
-                          Edit <ArrowRight size={16} />
-                        </button>
+                        <div className="manage-actions">
+                          <button onClick={() => openEdit(m)}>
+                            Edit <ArrowRight size={16} />
+                          </button>
+                          <button className="delete-action" onClick={() => requestDelete(m)} disabled={deletingId === m.id}>
+                            <Trash2 size={15}/> {deletingId === m.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1093,11 +1144,16 @@ function App() {
               <strong>{selected.caption || selected.name}</strong>
               <small>{selected.exhibit || 'Unsorted'}</small>
             </div>
-            {admin && selected.id !== 'visitor-jellies-20261107' && (
-              <button onClick={() => openEdit(selected)}>
-                Edit details <ArrowRight size={16} />
+            <div className="gallery-actions">
+              {admin && selected.id !== 'visitor-jellies-20261107' && (
+                <button onClick={() => openEdit(selected)}>
+                  Edit details <ArrowRight size={16} />
+                </button>
+              )}
+              <button className="delete-action" onClick={() => requestDelete(selected)} disabled={deletingId === selected.id}>
+                <Trash2 size={16}/> {deletingId === selected.id ? 'Deleting...' : 'Delete'}
               </button>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -1150,11 +1206,9 @@ function App() {
                   />
                 </label>
                 <div className="modal-actions">
-                  {ownerKey && (
-                    <button className="danger" onClick={() => deleteMedia(current)}>
-                      <Trash2 size={16} /> Delete
-                    </button>
-                  )}
+                  <button className="danger" onClick={() => requestDelete(current)} disabled={deletingId === current.id}>
+                    <Trash2 size={16} /> {deletingId === current.id ? 'Deleting...' : 'Delete file'}
+                  </button>
                   <button
                     className="primary-action"
                     onClick={() => saveEdit(current)}
@@ -1167,6 +1221,41 @@ function App() {
             </div>
           ) : null;
         })()}
+      {deleteError && !deleteUnlockOpen && (
+        <div className="gallery-delete-error" role="alert">
+          <span>{deleteError}</span>
+          <button onClick={()=>setDeleteError('')} aria-label="Dismiss deletion error"><X size={15}/></button>
+        </div>
+      )}
+      {deleteUnlockOpen && (
+        <div className="modal-scrim owner-unlock-scrim" role="dialog" aria-modal="true" aria-label="Unlock deleting">
+          <form className="owner-unlock-modal" onSubmit={e=>{e.preventDefault();void unlockDeleting();}}>
+            <div className="modal-head">
+              <div>
+                <div className="eyebrow muted">OWNER ACCESS</div>
+                <h2>Enable deleting</h2>
+              </div>
+              <button type="button" aria-label="Close" onClick={()=>{
+                setDeleteUnlockOpen(false);setDeleteError('');setOwnerInput('');
+              }}><X size={20}/></button>
+            </div>
+            <p>Enter your private owner code once to permanently remove photos and videos. Visitors cannot delete files.</p>
+            <label>
+              Owner code
+              <input type="password" value={ownerInput} autoComplete="off" autoCapitalize="none"
+                spellCheck={false} onChange={e=>setOwnerInput(e.target.value)}
+                placeholder="Private owner code" aria-label="Private owner code" />
+            </label>
+            {deleteError && <p className="owner-unlock-error" role="alert">{deleteError}</p>}
+            <div className="modal-actions">
+              <button type="button" onClick={()=>{setDeleteUnlockOpen(false);setDeleteError('');}}>Cancel</button>
+              <button type="submit" className="primary-action" disabled={ownerChecking || !ownerInput.trim()}>
+                {ownerChecking ? 'Checking...' : 'Unlock delete'} <Check size={15}/>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

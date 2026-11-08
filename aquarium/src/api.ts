@@ -28,7 +28,8 @@ async function call(method:'GET'|'POST',url:string,data?:any){
   try {
     const target=action==='media'?'/api/gallery':
       action==='cleanup-new'?'/api/dedupe':
-      ['check','update','delete'].includes(action)?'/api/manage':'/api';
+      action==='check'?'/api/verify-owner':
+      ['update','delete'].includes(action)?'/api/manage':'/api';
     result=await fetch('https://newport-aquarium-r2-api.vercel.app'+target+'?'+qs.toString(),{
       method,headers:method==='POST'?{'Content-Type':'application/json'}:undefined,
       body:method==='POST'?JSON.stringify(data||{}):undefined,

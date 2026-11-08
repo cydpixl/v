@@ -29,6 +29,16 @@ jobs:
           count=$(find aquarium/dist/posters -maxdepth 1 -type f -name '*.jpg' | wc -l)
           echo "Real video frame thumbnails in release: $count"
           test "$count" -ge 33
+      - name: Verify delete access remains owner-only
+        run: |
+          node --input-type=module <<'JS'
+          const res=await fetch('https://newport-aquarium-r2-api.vercel.app/api/verify-owner',{
+            method:'POST',headers:{'Content-Type':'application/json',Origin:'https://cydpixl.github.io'},
+            body:JSON.stringify({ownerKey:'not-an-owner'})
+          });
+          console.log('Unauthorized delete permission check:',res.status);
+          if(res.status!==403)throw new Error('Delete verification must reject public visitors');
+          JS
       - name: Verify replacement R2 API and gallery
         run: |
           node --input-type=module <<'JS'
