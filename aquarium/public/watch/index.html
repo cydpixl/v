@@ -65,7 +65,7 @@
       </div>
     </div>
     <div class="details" id="details" hidden>
-      <div class="details-copy"><p class="eyebrow">Shared video</p><h1 class="name" id="filename"></h1></div>
+      <div class="details-copy"><p class="eyebrow" id="compatState">Checking MP4 status</p><h1 class="name" id="filename"></h1></div>
       <div class="actions"><button class="copy" id="copy" type="button">Copy link</button></div>
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
@@ -86,9 +86,11 @@
   const nameElement=document.getElementById("filename");
   const status=document.getElementById("status");
   const preparing=document.getElementById("preparing");
+  const compatState=document.getElementById("compatState");
   let refreshTimer=0;
   let source="";
   function showPreparing(){
+    compatState.textContent="MP4 pending — automatic conversion";
     loading.style.display="none";
     error.style.display="none";
     player.pause();
@@ -101,6 +103,7 @@
     refreshTimer=window.setTimeout(load,30000);
   }
   function failed(title,message,canOpenOriginal=false){
+    compatState.textContent="Playback unavailable";
     loading.style.display="none";
     preparing.style.display="none";
     clearTimeout(refreshTimer);
@@ -128,6 +131,7 @@
       preparing.style.display="none";
       error.style.display="none";
       status.textContent="";
+      compatState.textContent="H.264 MP4 ready";
       document.title=(data.name||"Shared video")+" — Video";
       const poster="../posters/"+encodeURIComponent(id.split("/").pop())+".jpg";
       const image=new Image();
