@@ -84,8 +84,8 @@ def encode(item, url, target):
         raise RuntimeError("Encoding timed out") from error
     if result.returncode != 0 or not target.exists() or target.stat().st_size < 1024:
         # Do not log signed links appearing in ffmpeg stderr.
-        cleaned = re.sub(r"https?://[^\\s]+", "[signed-video-url]", result.stderr or "")
-        cleaned = re.sub(r"X-Amz-[^\\s]+", "[signed-field]", cleaned)
+        cleaned = re.sub(r"https?://\S+", "[signed-video-url]", result.stderr or "")
+        cleaned = re.sub(r"X-Amz-\S+", "[signed-field]", cleaned)
         raise RuntimeError("FFmpeg exit " + str(result.returncode) + ": " + cleaned[-500:])
     inspection = subprocess.run([
         "ffprobe", "-v", "error", "-show_entries",
