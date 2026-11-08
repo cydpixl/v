@@ -12,39 +12,111 @@ permissions:
   contents: write
   id-token: write
 concurrency:
-  group: newport-chrome-compatible-videos-fixed-v2
+  group: newport-chrome-compatible-videos-parallel-v3
   cancel-in-progress: false
 jobs:
   convert:
+    name: Convert MP4 batch ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
     runs-on: ubuntu-latest
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
-      - name: Install FFmpeg
+      - name: Check FFmpeg
         run: |
           if ! command -v ffmpeg >/dev/null; then
             sudo apt-get update -qq
             sudo apt-get install -y ffmpeg
           fi
           ffmpeg -hide_banner -version | head -n 1
-      - name: Create H.264 video and AAC audio copies in R2
+      - name: Convert assigned videos to Chrome-compatible MP4
         env:
-          MAX_VIDEOS: '30'
-          MAX_ENCODE_SECONDS: '480'
-          MAX_ATTEMPTS: '10'
+          MAX_VIDEOS: '20'
+          MAX_ATTEMPTS: '20'
+          MAX_ENCODE_SECONDS: '840'
+          VIDEO_SHARD_COUNT: '4'
+          VIDEO_SHARD_INDEX: '${{ matrix.shard }}'
         run: python3 scripts/aquarium-compatible-videos.py
-      - name: Save real Chrome compatibility audit
+      - name: Save per-batch audit even if conversion fails
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aquarium-mp4-batch-${{ matrix.shard }}
+          path: reports/aquarium-chrome-status-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 7
+  report:
+    name: Publish verified MP4 inventory
+    if: always()
+    needs: [convert]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download converter reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: aquarium-mp4-batch-*
+          path: reports/parts
+          merge-multiple: true
+      - name: Consolidate real results across workers
         run: |
-          mkdir -p reports
-          if [ ! -s reports/aquarium-chrome-status.json ]; then
-            echo '{"status":"workflow exited before the video audit was written"}' > reports/aquarium-chrome-status.json
-          fi
+          python3 - <<'PY'
+          import glob,json,pathlib
+          from datetime import datetime,timezone
+          paths=sorted(glob.glob('reports/parts/aquarium-chrome-status-*.json'))
+          reports=[]
+          for path in paths:
+              try:
+                  reports.append(json.loads(pathlib.Path(path).read_text()))
+              except (ValueError,OSError) as exc:
+                  print('Invalid worker report',path,type(exc).__name__)
+          by_id={}
+          rank={'converted':5,'ready':4,'conversion-failed':3,'lookup-failed':2,'queued':1}
+          for result in reports:
+              for entry in result.get('items',[]):
+                  key=entry.get('id')
+                  if not key:continue
+                  if rank.get(entry.get('status'),0)>=rank.get(by_id.get(key,{}).get('status'),0):
+                      by_id[key]=entry
+          statuses=list(by_id.values())
+          report={
+              'checkedAt':datetime.now(timezone.utc).isoformat(),
+              'videoCount':max([x.get('videos',0) for x in reports],default=0),
+              'mediaTotal':max([x.get('mediaTotal',0) for x in reports],default=0),
+              'galleryPages':max([x.get('galleryPages',0) for x in reports],default=0),
+              'ready':sum(x.get('status') in ('converted','ready') for x in statuses),
+              'converted':sum(x.get('status')=='converted' for x in statuses),
+              'pending':sum(x.get('status')=='queued' for x in statuses),
+              'failed':sum(x.get('status') in ('lookup-failed','conversion-failed') for x in statuses),
+              'shardsReported':len(reports),
+              'items':statuses,
+          }
+          if len(reports)!=4:
+              report['warning']='Not every MP4 converter worker reported a result.'
+          if any(x.get('workflowError') for x in reports):
+              report['warning']='One or more converter workers failed the inventory scan.'
+          pathlib.Path('reports').mkdir(exist_ok=True)
+          pathlib.Path('reports/aquarium-chrome-status.json').write_text(
+              json.dumps(report,indent=2,ensure_ascii=False)+'\n'
+          )
+          print('LIVE AUDIT',report['mediaTotal'],'media,',report['videoCount'],
+                'videos,',report['ready'],'MP4 ready,',report['pending'],
+                'queued,',report['failed'],'failed; workers:',len(reports))
+          if report.get('warning'):print('WARNING',report['warning'])
+          PY
+      - name: Publish audited conversion status
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add reports/aquarium-chrome-status.json
           if ! git diff --cached --quiet; then
-            git commit -m "chore(aquarium): record Chrome video conversion results [skip ci]"
+            git commit -m "chore(aquarium): audit all Chrome MP4 conversions [skip ci]"
             for attempt in 1 2 3 4 5; do
               git fetch origin main
               if git rebase -X theirs origin/main && git push origin HEAD:main; then
