@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <meta name="robots" content="noindex,nofollow">
+  <meta property="og:type" content="video.other">
+  <meta property="og:title" content="Shared aquarium video">
+  <meta property="og:description" content="Watch a single shared aquarium video.">
+  <title>Shared video</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#000;color:#f1f2f3}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;background:#000}
+    button,a{font:inherit}
+    button{cursor:pointer}
+    .frame{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(12px,3.4vw,44px)}
+    .viewer{width:min(100%,1250px);animation:enter .35s ease-out both}
+    .player-shell{width:100%;aspect-ratio:16/9;background:#070809;position:relative;display:grid;place-items:center;overflow:hidden}
+    video{display:none;width:100%;height:100%;max-height:80dvh;object-fit:contain;background:#000}
+    .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:14px;font-size:13px;color:#9ca4aa}
+    .spinner{width:21px;height:21px;border:2px solid #303338;border-top-color:#eee;border-radius:50%;animation:spin .7s linear infinite}
+    .error{display:none;text-align:center;padding:38px 25px;max-width:440px}
+    .error h1{font-size:19px;letter-spacing:-.04em;font-weight:650;margin:0 0 9px}
+    .error p{color:#a2a9ad;font-size:13px;line-height:1.7;margin:0}
+    .error a{display:inline-block;border:1px solid #54575a;color:#f3f4f4;text-decoration:none;padding:11px 16px;font-size:12px;margin-top:20px}
+    .details{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:19px;min-width:0}
+    .details-copy{min-width:0;overflow:hidden}
+    .details .eyebrow{font-size:10px;letter-spacing:.12em;color:#8a9194;margin:0 0 8px;text-transform:uppercase}
+    .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;line-height:1.5}
+    .actions{display:flex;gap:8px;flex:none}
+    .copy{border:1px solid #404448;background:#161819;color:#edf0f0;padding:11px 15px;font-size:12px;font-weight:600;transition:background .18s,border-color .18s}
+    .copy:hover{background:#292c2e;border-color:#828a8d}
+    .copy:focus-visible,.error a:focus-visible{outline:2px solid #c7d2d5;outline-offset:4px}
+    .status{font-size:12px;min-height:18px;color:#b5c1c5;margin-top:14px;text-align:right}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @media(max-width:650px){.frame{justify-content:flex-start;padding:0 0 18px}.viewer{width:100%}.player-shell{margin-top:calc(max(0px,(100dvh - 100vw*9/16)/3));max-height:70dvh}.details{margin:16px 16px 0}.copy{padding:10px 12px}.status{margin-right:16px}}
+    @media(prefers-reduced-motion:reduce){.spinner,.viewer{animation:none}}
+  </style>
+</head>
+<body>
+<main class="frame">
+  <section class="viewer" aria-label="Shared video">
+    <div class="player-shell">
+      <div class="loading" id="loading" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading video</span></div>
+      <video id="player" playsinline controls preload="metadata" aria-label="Shared aquarium video"></video>
+      <div class="error" id="error" role="alert">
+        <h1 id="errorTitle">Video unavailable</h1>
+        <p id="errorBody">This video could not be loaded.</p>
+        <a id="original" hidden href="#" rel="noopener noreferrer" target="_blank">Open original video</a>
+      </div>
+    </div>
+    <div class="details" id="details" hidden>
+      <div class="details-copy"><p class="eyebrow">Shared video</p><h1 class="name" id="filename"></h1></div>
+      <div class="actions"><button class="copy" id="copy" type="button">Copy link</button></div>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const endpoint="https://newport-aquarium-r2-api.vercel.app/api/share";
+  const id=new URLSearchParams(location.search).get("id")||"";
+  const player=document.getElementById("player");
+  const loading=document.getElementById("loading");
+  const error=document.getElementById("error");
+  const errorTitle=document.getElementById("errorTitle");
+  const errorBody=document.getElementById("errorBody");
+  const original=document.getElementById("original");
+  const details=document.getElementById("details");
+  const nameElement=document.getElementById("filename");
+  const status=document.getElementById("status");
+  let source="";
+  function failed(title,message,canOpenOriginal=false){
+    loading.style.display="none";
+    player.style.display="none";
+    errorTitle.textContent=title;
+    errorBody.textContent=message;
+    original.hidden=!canOpenOriginal;
+    if(canOpenOriginal)original.href=source;
+    error.style.display="block";
+  }
+  async function load(){
+    if(!/^visitor\/[A-Za-z0-9._-]{1,240}\.(mov|mp4|m4v|webm)$/i.test(id)||id.includes("..")){
+      failed("Invalid video link","The shared link does not contain a valid video.");
+      return;
+    }
+    try{
+      const response=await fetch(endpoint+"?id="+encodeURIComponent(id),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok||!data.url)throw Error(data.error||"The video could not be found.");
+      source=data.url;
+      nameElement.textContent=data.name||"Aquarium video";
+      document.title=(data.name||"Shared video")+" — Video";
+      const poster="../posters/"+encodeURIComponent(id.split("/").pop())+".jpg";
+      const image=new Image();
+      image.onload=()=>{player.poster=poster;};
+      image.src=poster;
+      details.hidden=false;
+      player.addEventListener("loadedmetadata",()=>{loading.style.display="none";},{once:true});
+      player.addEventListener("canplay",()=>{loading.style.display="none";},{once:true});
+      player.addEventListener("error",()=>{
+        failed("Cannot play this video in this browser",
+          "Some iPhone MOV videos use HEVC, which not every browser can play. Try opening the original video.",true);
+      },{once:true});
+      player.src=source;
+      player.style.display="block";
+      player.load();
+    }catch(e){
+      failed("Video unavailable",e instanceof Error?e.message:"Could not load this video.");
+    }
+  }
+  document.getElementById("copy").addEventListener("click",async()=>{
+    try{
+      if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(location.href);
+      else{
+        const input=document.createElement("textarea");
+        input.value=location.href;input.style.position="fixed";input.style.opacity="0";
+        document.body.appendChild(input);input.select();
+        const copied=document.execCommand("copy");
+        input.remove();
+        if(!copied)throw Error("Copy failed");
+      }
+      status.textContent="Link copied";
+    }catch{
+      status.textContent="Copy the URL from your browser's address bar.";
+    }
+  });
+  load();
+})();
+</script>
+</body>
+</html>
