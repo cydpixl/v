@@ -1,11 +1,13 @@
 {
-  "videos": 67,
+  "checkedAt": "2026-11-08T09:59:09.573327+00:00",
+  "videoCount": 67,
   "mediaTotal": 133,
   "galleryPages": 2,
-  "alreadyReady": 45,
-  "converted": 6,
+  "ready": 61,
+  "converted": 18,
+  "pending": 0,
   "failed": 0,
-  "unprocessed": 16,
+  "shardsReported": 4,
   "items": [
     {
       "id": "visitor/1794109818531-qsksvcff78-IMG_3229.MOV",
@@ -168,6 +170,11 @@
       "status": "ready"
     },
     {
+      "id": "visitor/1794114142806-150ef5fe0fcd-IMG_3200.MOV",
+      "name": "IMG_3200.MOV",
+      "status": "ready"
+    },
+    {
       "id": "visitor/1794122162863-9d499bfc1cdb-IMG_3245.MOV",
       "name": "IMG_3245.MOV",
       "status": "ready"
@@ -213,24 +220,50 @@
       "status": "ready"
     },
     {
-      "id": "visitor/1794114142806-150ef5fe0fcd-IMG_3200.MOV",
-      "name": "IMG_3200.MOV",
-      "status": "converted",
-      "mp4Bytes": 1548576,
-      "sourceAudioTracks": 1
-    },
-    {
       "id": "visitor/1794124048445-7b99e9482ded-IMG_3213.MOV",
       "name": "IMG_3213.MOV",
+      "status": "ready"
+    },
+    {
+      "id": "visitor/1794124259068-e086b8aeb945-IMG_3197.MOV",
+      "name": "IMG_3197.MOV",
       "status": "converted",
-      "mp4Bytes": 1033812,
+      "mp4Bytes": 5494548,
       "sourceAudioTracks": 1
     },
     {
-      "id": "visitor/1794124090063-86570511acc2-IMG_3239.MOV",
-      "name": "IMG_3239.MOV",
+      "id": "visitor/1794124530374-7706378fdf06-IMG_3241.MOV",
+      "name": "IMG_3241.MOV",
       "status": "converted",
-      "mp4Bytes": 4659614,
+      "mp4Bytes": 3457894,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794124910691-fe662879a97a-IMG_3177.MOV",
+      "name": "IMG_3177.MOV",
+      "status": "converted",
+      "mp4Bytes": 5025618,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794125317166-139a60b19ec1-IMG_3212.MOV",
+      "name": "IMG_3212.MOV",
+      "status": "converted",
+      "mp4Bytes": 5582570,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794125800557-af60f29cc901-IMG_3257.MOV",
+      "name": "IMG_3257.MOV",
+      "status": "converted",
+      "mp4Bytes": 8016014,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794126458981-9a53d203a903-IMG_3199.MOV",
+      "name": "IMG_3199.MOV",
+      "status": "converted",
+      "mp4Bytes": 10215554,
       "sourceAudioTracks": 1
     },
     {
@@ -241,122 +274,81 @@
       "sourceAudioTracks": 1
     },
     {
-      "id": "visitor/1794124195740-ba8beb98ada9-IMG_3252.MOV",
-      "name": "IMG_3252.MOV",
-      "status": "ready"
-    },
-    {
-      "id": "visitor/1794124259068-e086b8aeb945-IMG_3197.MOV",
-      "name": "IMG_3197.MOV",
-      "status": "ready"
-    },
-    {
-      "id": "visitor/1794124322611-8c9fe46089ac-IMG_3238.MOV",
-      "name": "IMG_3238.MOV",
-      "status": "converted",
-      "mp4Bytes": 7753921,
-      "sourceAudioTracks": 1
-    },
-    {
       "id": "visitor/1794124386430-80157b05aec5-IMG_3189.MOV",
       "name": "IMG_3189.MOV",
-      "status": "ready"
-    },
-    {
-      "id": "visitor/1794124451757-e0caf61f4168-IMG_3226.MOV",
-      "name": "IMG_3226.MOV",
-      "status": "ready"
-    },
-    {
-      "id": "visitor/1794124530374-7706378fdf06-IMG_3241.MOV",
-      "name": "IMG_3241.MOV",
       "status": "converted",
-      "mp4Bytes": 3457894,
+      "mp4Bytes": 2467023,
       "sourceAudioTracks": 1
-    },
-    {
-      "id": "visitor/1794124617619-7d45428d8543-IMG_3210.MOV",
-      "name": "IMG_3210.MOV",
-      "status": "queued"
     },
     {
       "id": "visitor/1794124717361-1f2ba550e5b0-IMG_3215.MOV",
       "name": "IMG_3215.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794124814226-4d89eff80249-IMG_3168.MOV",
-      "name": "IMG_3168.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794124910691-fe662879a97a-IMG_3177.MOV",
-      "name": "IMG_3177.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125004784-8e0a28cb4e0e-IMG_3205.MOV",
-      "name": "IMG_3205.MOV",
-      "status": "queued"
+      "status": "converted",
+      "mp4Bytes": 2958745,
+      "sourceAudioTracks": 1
     },
     {
       "id": "visitor/1794125102891-eab82d87d0a6-IMG_3201.MOV",
       "name": "IMG_3201.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125214351-7b0bf14e8a10-IMG_3230.MOV",
-      "name": "IMG_3230.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125317166-139a60b19ec1-IMG_3212.MOV",
-      "name": "IMG_3212.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125425609-66693bc1d44b-IMG_3147.MOV",
-      "name": "IMG_3147.MOV",
-      "status": "queued"
+      "status": "converted",
+      "mp4Bytes": 4324787,
+      "sourceAudioTracks": 1
     },
     {
       "id": "visitor/1794125548881-c58072392bd2-IMG_3142.MOV",
       "name": "IMG_3142.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125674946-76087f6a698f-IMG_3244.MOV",
-      "name": "IMG_3244.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125800557-af60f29cc901-IMG_3257.MOV",
-      "name": "IMG_3257.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794125932873-68b6bd38bee1-IMG_3154.MOV",
-      "name": "IMG_3154.MOV",
-      "status": "queued"
+      "status": "converted",
+      "mp4Bytes": 9049509,
+      "sourceAudioTracks": 1
     },
     {
       "id": "visitor/1794126097614-77317b1c26c3-IMG_3219.MOV",
       "name": "IMG_3219.MOV",
-      "status": "queued"
+      "status": "converted",
+      "mp4Bytes": 10784782,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794124195740-ba8beb98ada9-IMG_3252.MOV",
+      "name": "IMG_3252.MOV",
+      "status": "converted",
+      "mp4Bytes": 3171251,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794124451757-e0caf61f4168-IMG_3226.MOV",
+      "name": "IMG_3226.MOV",
+      "status": "converted",
+      "mp4Bytes": 3603147,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794124814226-4d89eff80249-IMG_3168.MOV",
+      "name": "IMG_3168.MOV",
+      "status": "converted",
+      "mp4Bytes": 4579958,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794125214351-7b0bf14e8a10-IMG_3230.MOV",
+      "name": "IMG_3230.MOV",
+      "status": "converted",
+      "mp4Bytes": 10947798,
+      "sourceAudioTracks": 1
+    },
+    {
+      "id": "visitor/1794125674946-76087f6a698f-IMG_3244.MOV",
+      "name": "IMG_3244.MOV",
+      "status": "converted",
+      "mp4Bytes": 9299843,
+      "sourceAudioTracks": 1
     },
     {
       "id": "visitor/1794126277578-4fe61b9ccc60-IMG_3233.MOV",
       "name": "IMG_3233.MOV",
-      "status": "queued"
-    },
-    {
-      "id": "visitor/1794126458981-9a53d203a903-IMG_3199.MOV",
-      "name": "IMG_3199.MOV",
-      "status": "queued"
+      "status": "converted",
+      "mp4Bytes": 10536369,
+      "sourceAudioTracks": 1
     }
-  ],
-  "shard": 0,
-  "shardCount": 1,
-  "checkedAt": "2026-11-08T09:55:00.505534+00:00",
-  "runNumber": "13"
+  ]
 }
