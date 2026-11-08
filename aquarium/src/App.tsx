@@ -132,6 +132,7 @@ function App() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
+  const [selectedPlayback, setSelectedPlayback] = useState<{id:string;url:string;ready:boolean}|null>(null);
   const [videoContext, setVideoContext] = useState<{media:Media;x:number;y:number}|null>(null);
   const [shareFeedback, setShareFeedback] = useState('');
   const admin = true; // uploads and classification are public; deletion remains private
@@ -157,6 +158,28 @@ function App() {
   const quickPickRef = useRef<HTMLInputElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const mediaSentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(()=>{
+    const item=selected;
+    if(!item||item.kind!=='video')return;
+    let active=true;
+    let fetching=false;
+    async function check(){
+      if(fetching)return;
+      fetching=true;
+      try{
+        const response=await fetch(
+          'https://newport-aquarium-r2-api.vercel.app/api/share?id='+encodeURIComponent(item.id),
+          {cache:'no-store'}
+        );
+        if(!response.ok)return;
+        const data=await response.json();
+        if(active&&data.url)setSelectedPlayback({id:item.id,url:data.url,ready:Boolean(data.browserReady)});
+      }catch{}finally{fetching=false;}
+    }
+    void check();
+    const interval=window.setInterval(()=>void check(),30000);
+    return ()=>{active=false;window.clearInterval(interval);};
+  },[selected?.id,selected?.kind]);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
   useEffect(()=>{
@@ -1217,7 +1240,10 @@ function App() {
             {selected.kind === 'image' ? (
               <img src={selected.url} alt={selected.caption || selected.name} />
             ) : (
-              <video src={selected.url} controls playsInline autoPlay
+              <video
+                src={selectedPlayback?.id===selected.id && selectedPlayback.ready ? selectedPlayback.url : selected.url}
+                poster={videoPosterUrl(selected)}
+                controls playsInline autoPlay
                 onContextMenu={e=>{
                   e.preventDefault();
                   openVideoContext(selected,e.clientX,e.clientY);
