@@ -183,14 +183,6 @@ def main():
         if not pending:
             return
 
-        # Only obtain a short-lived GitHub OIDC identity if uploads are needed.
-        try:
-            token = workflow_identity()
-        except Exception as exc:
-            audit["workflowError"] = "OIDC authorization: " + type(exc).__name__
-            print("Cannot authorize converted-video uploads:", type(exc).__name__, flush=True)
-            return
-
         for index, item in enumerate(pending):
             name = str(item.get("name") or "Unknown video")
             if index >= MAX_ATTEMPTS or audit["converted"] >= MAX_PER_RUN:
@@ -212,8 +204,12 @@ def main():
                 with tempfile.TemporaryDirectory(prefix="newport-video-") as directory:
                     target = pathlib.Path(directory) / "chrome.mp4"
                     size, audio_tracks = encode(item, original_url, target)
+                    # GitHub OIDC identities expire quickly. A token acquired before
+                    # FFmpeg encoding a large MOV can expire mid-conversion.
+                    # Acquire a fresh token only AFTER the MP4 is ready to upload.
+                    fresh_token = workflow_identity()
                     signed = get_json(API + "/encode",
-                                      headers={"Authorization": "Bearer " + token},
+                                      headers={"Authorization": "Bearer " + fresh_token},
                                       payload={"key": item["id"]})
                     if not signed.get("ready"):
                         if not signed.get("putUrl"):
