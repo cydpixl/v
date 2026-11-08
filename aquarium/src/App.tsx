@@ -131,6 +131,7 @@ function VideoPoster({media,localPreview}:{media:Media;localPreview?:string}){
   const [visible,setVisible]=useState(false);
   const [retry,setRetry]=useState(0);
   const [posterMissing,setPosterMissing]=useState(false);
+  const [posterLoaded,setPosterLoaded]=useState(false);
   const [previewUrl,setPreviewUrl]=useState('');
   const [previewFrame,setPreviewFrame]=useState(false);
   const [mp4Status,setMp4Status]=useState<'checking'|'ready'|'pending'|'unavailable'>('checking');
@@ -200,10 +201,10 @@ function VideoPoster({media,localPreview}:{media:Media;localPreview?:string}){
       />
     )}
     <img className="video-poster" src={videoPosterUrl(media)+(retry?'?refresh='+retry:'')}
-      alt={media.caption || media.name} loading="lazy" decoding="async"
-      style={{display:posterMissing?'none':undefined}}
-      onLoad={()=>{setPosterMissing(false);setPreviewFrame(false);}}
-      onError={()=>setPosterMissing(true)}
+      alt={media.caption || media.name} loading={posterMissing?'eager':'lazy'} decoding="async"
+      style={{opacity:posterLoaded?1:0}}
+      onLoad={()=>{setPosterLoaded(true);setPosterMissing(false);setPreviewFrame(false);}}
+      onError={()=>{setPosterLoaded(false);setPosterMissing(true);}}
     />
     {posterMissing && !localPreview && !previewFrame && <span className="video-poster-pending">Preparing thumbnail</span>}
     {visible && <span className={'video-conversion-label '+(mp4Status==='ready'?'ready':'pending')}>
