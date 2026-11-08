@@ -438,7 +438,7 @@ function App() {
             ref={quickPickRef}
             type="file"
             multiple
-            accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,.aav,image/heic,image/heif"
+            accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,image/heic,image/heif"
             style={{display:'none'}}
             onChange={e=>{stageFiles(e.target.files);e.target.value='';}}
             aria-label="Choose media to add"
@@ -832,7 +832,7 @@ function App() {
                       aria-label="Choose photos and videos"
                       type="file"
                       multiple
-                      accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,.aav,image/heic,image/heif"
+                      accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,image/heic,image/heif"
                       onChange={e => {
                         stageFiles(e.target.files);
                         e.target.value = '';
