@@ -6,7 +6,7 @@ on:
       - 'scripts/aquarium-posters.py'
   workflow_dispatch:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/10 * * * *'
 permissions:
   contents: write
 concurrency:
