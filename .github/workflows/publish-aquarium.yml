@@ -143,6 +143,20 @@ jobs:
           git add docs/aq
           if ! git diff --cached --quiet; then
             git commit -m "build(aquarium): publish independent GitHub gallery [skip ci]"
-            git pull --rebase origin main
-            git push origin HEAD:main
+            # Media poster generation and the site publish can push concurrently.
+            # Rebase and retry if the remote branch changes between fetch and push.
+            for attempt in 1 2 3 4 5 6; do
+              git fetch origin main
+              if ! git rebase -X theirs origin/main; then
+                git rebase --abort || true
+                sleep 3
+                continue
+              fi
+              if git push origin HEAD:main; then
+                exit 0
+              fi
+              sleep 3
+            done
+            echo "Could not publish aquarium after retries" >&2
+            exit 1
           fi
