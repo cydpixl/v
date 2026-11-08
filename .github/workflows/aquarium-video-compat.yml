@@ -7,7 +7,7 @@ on:
       - '.github/workflows/aquarium-video-compat.yml'
   workflow_dispatch:
   schedule:
-    - cron: '7,27,47 * * * *'
+    - cron: '*/10 * * * *'
 permissions:
   contents: read
   id-token: write
@@ -29,6 +29,6 @@ jobs:
           ffmpeg -hide_banner -version | head -n 1
       - name: Create H.264 video and AAC audio copies in R2
         env:
-          MAX_VIDEOS: '10'
+          MAX_VIDEOS: '30'
           MAX_ENCODE_SECONDS: '900'
         run: python3 scripts/aquarium-compatible-videos.py
