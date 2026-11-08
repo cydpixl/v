@@ -1,0 +1,44 @@
+name: Test Chrome video and audio playback
+on:
+  push:
+    paths:
+      - '.github/workflows/aquarium-chrome-playback-test.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '20 9 * * *'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install media inspector
+        run: |
+          command -v ffprobe || { sudo apt-get update -qq && sudo apt-get install -y ffmpeg; }
+      - name: Verify share link, range streaming, video and audio codecs
+        run: |
+          node --input-type=module <<'JS'
+          import {spawnSync} from 'node:child_process';
+          const key='visitor/1794113754365-b57cc5613d26-IMG_3251.MOV';
+          const api='https://newport-aquarium-r2-api.vercel.app/api/share?id='+encodeURIComponent(key);
+          const response=await fetch(api,{cache:'no-store',headers:{Origin:'https://cydpixl.github.io'}});
+          const video=await response.json();
+          if(!response.ok||!video.browserReady||video.mime!=='video/mp4'||video.id!==key)
+            throw Error('Original jellyfish share link is not providing compatible MP4 playback');
+          const range=await fetch(video.url,{headers:{Range:'bytes=0-65535'},signal:AbortSignal.timeout(35000)});
+          const bytes=new Uint8Array(await range.arrayBuffer());
+          console.log('R2 range response',range.status,range.headers.get('content-type'),'bytes',bytes.length);
+          if(range.status!==206||bytes.length<100||!range.headers.get('content-type')?.includes('video/mp4'))
+            throw Error('Chrome video byte range playback did not work');
+          const box=String.fromCharCode(...bytes.subarray(4,8));
+          if(box!=='ftyp')throw Error('Playback file is not an MP4 container');
+          const probe=spawnSync('ffprobe',['-v','error','-show_entries','stream=codec_name,codec_type','-of','json',video.url],{encoding:'utf8',timeout:50000});
+          if(probe.status!==0)throw Error('FFprobe could not read Chrome playback media');
+          const streams=JSON.parse(probe.stdout).streams||[];
+          const videoTracks=streams.filter(x=>x.codec_type==='video').map(x=>x.codec_name);
+          const audioTracks=streams.filter(x=>x.codec_type==='audio').map(x=>x.codec_name);
+          console.log('Video codecs',videoTracks.join(','),'Audio codecs',audioTracks.join(','));
+          if(videoTracks.length!==1||videoTracks[0]!=='h264'||!audioTracks.includes('aac'))
+            throw Error('Playback must contain decodable H264 video and AAC audio');
+          console.log('PASS: independent Chrome-compatible playback has playable video and AAC audio');
+          JS
