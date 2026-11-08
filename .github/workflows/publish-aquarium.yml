@@ -46,47 +46,46 @@ jobs:
           if(preflight.status!==204||preflight.headers.get('access-control-allow-origin')!=='https://cydpixl.github.io')
             throw Error('CORS preflight is blocked');
           JS
-      - name: Test direct-to-R2 18 MiB browser-style multipart upload
+      - name: Test 18 MiB multipart upload through 3 MiB gateway chunks
         run: |
           node --input-type=module <<'JS'
           const base='https://newport-aquarium-r2-api.vercel.app/api';
+          const origin='https://cydpixl.github.io';
           async function post(action,data){
             const r=await fetch(base+'?action='+action,{method:'POST',
-              headers:{'Content-Type':'application/json',Origin:'https://cydpixl.github.io'},
-              body:JSON.stringify(data)});
-            const raw=await r.text();let x;try{x=JSON.parse(raw)}catch{throw Error(action+' invalid response '+raw.slice(0,100));}
-            if(!r.ok)throw Error(action+' '+r.status+': '+(x.error||'unknown'));
-            return x;
+              headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(data)});
+            const body=await r.json();if(!r.ok)throw Error(action+' '+r.status+' '+String(body.error));
+            return body;
           }
-          const data=Buffer.alloc(18*1024*1024);
-          const started=await post('start',{name:'smoke-test-'+Date.now()+'.png',mime:'image/png',size:data.length,provider:'r2'});
-          if(!started?.uploadId||started.partBytes!==16*1024*1024)throw Error('Multipart initiation failed');
-          console.log('Multipart initiated:',Boolean(started.uploadId));
-          try {
-            const signed=await post('sign',{provider:'r2',key:started.key,uploadId:started.uploadId,partNumber:1});
-            const preflight=await fetch(signed.url,{method:'OPTIONS',headers:{
-              Origin:'https://cydpixl.github.io',
-              'Access-Control-Request-Method':'PUT',
-              'Access-Control-Request-Headers':'content-type'
-            }});
-            console.log('R2 CORS preflight:',preflight.status,preflight.headers.get('access-control-allow-origin'));
-            if(!preflight.ok||preflight.headers.get('access-control-allow-origin')!=='https://cydpixl.github.io')
-              throw Error('R2 browser PUT blocked by CORS');
-            const results=[];
-            for(let partNumber=1;partNumber<=2;partNumber++){
-              const url=(partNumber===1?signed:await post('sign',{provider:'r2',key:started.key,uploadId:started.uploadId,partNumber})).url;
-              const start=(partNumber-1)*started.partBytes;
-              const end=Math.min(started.partBytes*partNumber,data.length);
-              const sent=await fetch(url,{method:'PUT',body:data.subarray(start,end),
-                    headers:{Origin:'https://cydpixl.github.io','Content-Type':'application/octet-stream'}});
-              console.log('R2 PUT',partNumber,sent.status,'ETag',Boolean(sent.headers.get('etag')));
-              if(!sent.ok||!sent.headers.get('etag'))throw Error('Upload part '+partNumber+' failed');
-              results.push({PartNumber:partNumber,ETag:sent.headers.get('etag')});
+          const bytes=Buffer.alloc(18*1024*1024);
+          const session=await post('start',{name:'newport-archive-test.png',mime:'image/png',size:bytes.length});
+          console.log('Start',session.partBytes,session.chunkSize);
+          if(session.chunkSize!==3*1024*1024||session.partBytes!==12*1024*1024)throw Error('Wrong chunk sizes');
+          const parts=[];
+          try{
+            for(let part=1;part<=2;part++){
+              const begin=(part-1)*session.partBytes,end=Math.min(bytes.length,part*session.partBytes);
+              const count=Math.ceil((end-begin)/session.chunkSize);
+              for(let sub=0;sub<count;sub++){
+                const start=begin+sub*session.chunkSize,stop=Math.min(start+session.chunkSize,end);
+                const url=new URL(base);
+                Object.entries({action:'chunk',key:session.key,uploadId:session.uploadId,partNumber:part,sub}).forEach(([k,v])=>url.searchParams.set(k,String(v)));
+                const request=await fetch(url,{method:'POST',
+                  headers:{Origin:origin,'Content-Type':'application/octet-stream'},
+                  body:bytes.subarray(start,stop)});
+                const out=await request.json();
+                if(!request.ok||!out.ok)throw Error('Chunk upload '+part+'/'+sub+' '+request.status+' '+JSON.stringify(out));
+              }
+              const result=await post('commit-part',{key:session.key,uploadId:session.uploadId,partNumber:part,subCount:count});
+              if(!result.etag)throw Error('Missing part ETag '+part);
+              parts.push({PartNumber:part,ETag:result.etag});
+              console.log('Committed part',part,'subrequests:',count);
             }
-            console.log('18 MiB uploaded directly to R2:',results.length,'parts');
-          } finally {
-            await post('abort',{provider:'r2',key:started.key,uploadId:started.uploadId});
-            console.log('Multipart smoke test aborted without publishing');
+            if(parts.length!==2)throw Error('Expected two completed parts');
+            console.log('18 MiB accepted by R2 multipart upload');
+          }finally{
+            const aborted=await post('abort',{key:session.key,uploadId:session.uploadId});
+            console.log('Multipart cleanup',aborted.ok);
           }
           JS
       - name: Publish without affecting Vela
