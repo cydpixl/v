@@ -31,6 +31,22 @@ jobs:
           const req=await fetch(base+'?action=status');
           const raw=await req.text();
           console.log('Gateway status:',req.status,raw.slice(0,600));
+          if(raw.includes('data-appdeploy-overlay-bootstrap')){
+            const appURL='https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/';
+            const html=await (await fetch(appURL)).text();
+            const scripts=[...html.matchAll(/<script[^>]+src=["']([^"']+)/g)].map(x=>x[1]);
+            console.log('AppDeploy public scripts:',scripts.slice(0,6));
+            for(const file of scripts.slice(0,4)){
+              const url=new URL(file,appURL);
+              if(url.origin!==new URL(appURL).origin)continue;
+              const body=await (await fetch(url)).text();
+              console.log('JavaScript asset',file,'length',body.length);
+              for(const needle of ['api-v2.appdeploy.ai','__appdeploy','apiBaseUrl','/api/large','x-appdeploy','apiBase','apiEndpoint']){
+                const i=body.indexOf(needle);
+                if(i>=0)console.log('Client SDK clue',needle,body.slice(Math.max(0,i-130),Math.min(body.length,i+250)));
+              }
+            }
+          }
           if(!req.ok)process.exit(1);
           const status=JSON.parse(raw);
           if(!status?.providers?.r2){console.error('R2 bucket is not reachable');process.exit(1);}
