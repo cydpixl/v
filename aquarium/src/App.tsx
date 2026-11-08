@@ -191,7 +191,7 @@ function App() {
     return ()=>{active=false;};
   },[ownerKey]);
   const boxLink = useCallback((m:Media)=>{
-    const address = new URL(import.meta.env.BASE_URL + 'watch/', window.location.origin);
+    const address = new URL(import.meta.env.BASE_URL + (m.kind==='image'?'photo/':'watch/'), window.location.origin);
     address.searchParams.set('id',m.id);
     return address.href;
   },[]);
@@ -212,7 +212,7 @@ function App() {
         input.remove();
         if(!ok)throw Error('Copy denied');
       }
-      setShareFeedback('Video link copied');
+      setShareFeedback(m.kind==='image'?'Photo link copied':'Video link copied');
     }catch{
       setShareFeedback('Unable to copy. Open in box and copy its address.');
     }
@@ -516,12 +516,12 @@ function App() {
             key={m.id}
             onClick={() => setSelected(m)}
             onContextMenu={e=>{
-              if(m.kind!=='video')return;
+              
               e.preventDefault();
               openVideoContext(m,e.clientX,e.clientY);
             }}
             onKeyDown={e=>{
-              if(m.kind!=='video')return;
+              
               if(e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey)){
                 e.preventDefault();
                 const rect=e.currentTarget.getBoundingClientRect();
@@ -1206,13 +1206,13 @@ function App() {
         <>
           <div className="video-context-dismiss" onMouseDown={()=>setVideoContext(null)}
             onContextMenu={e=>{e.preventDefault();setVideoContext(null);}} aria-hidden="true"/>
-          <div className="video-context-menu" role="menu" aria-label="Video actions"
+          <div className="video-context-menu" role="menu" aria-label={videoContext.media.kind==='image'?'Photo actions':'Video actions'}
             ref={contextMenuRef} style={{left:videoContext.x,top:videoContext.y}}>
             <button type="button" role="menuitem" onClick={()=>openInBox(videoContext.media)}>
               <ExternalLink size={16}/> Open in box
             </button>
             <button type="button" role="menuitem" onClick={()=>void copyBoxLink(videoContext.media)}>
-              <Copy size={16}/> Copy video link
+              <Copy size={16}/> {videoContext.media.kind==='image'?'Copy photo link':'Copy video link'}
             </button>
           </div>
         </>
@@ -1238,7 +1238,11 @@ function App() {
           </div>
           <div className="lightbox-center">
             {selected.kind === 'image' ? (
-              <img src={selected.url} alt={selected.caption || selected.name} />
+              <img src={selected.url} alt={selected.caption || selected.name}
+                onContextMenu={e=>{
+                  e.preventDefault();
+                  openVideoContext(selected,e.clientX,e.clientY);
+                }} />
             ) : (
               <video
                 src={selectedPlayback?.id===selected.id && selectedPlayback.ready ? selectedPlayback.url : selected.url}
@@ -1256,16 +1260,12 @@ function App() {
               <small>{selected.exhibit || 'Unsorted'}</small>
             </div>
             <div className="gallery-actions">
-              {selected.kind==='video' && (
-                <>
-                  <button type="button" onClick={()=>openInBox(selected)}>
-                    <ExternalLink size={16}/> Open in box
-                  </button>
-                  <button type="button" onClick={()=>void copyBoxLink(selected)}>
-                    <Copy size={16}/> Copy link
-                  </button>
-                </>
-              )}
+              <button type="button" onClick={()=>openInBox(selected)}>
+                <ExternalLink size={16}/> Open in box
+              </button>
+              <button type="button" onClick={()=>void copyBoxLink(selected)}>
+                <Copy size={16}/> Copy link
+              </button>
               {admin && selected.id !== 'visitor-jellies-20261107' && (
                 <button onClick={() => openEdit(selected)}>
                   Edit details <ArrowRight size={16} />
