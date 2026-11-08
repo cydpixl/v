@@ -1,7 +1,16 @@
 import {toggleImmersiveCall} from './immersive-call.js';
 import {CameraVisibility,callViewChoices,bindFullscreenView,revealCallControls} from './call-view.js';
 // Fullscreen the shared workspace so cameras stay beside the selected media.
-export async function fullscreenCall(stage){const target=stage?.matches('.call-tile')?stage:stage?.querySelector('.focused.video-enabled,.screen-tile.video-enabled,.call-tile.video-enabled')||stage;if(!target)return;if(document.fullscreenElement){await document.exitFullscreen();return;}const video=target.matches('video')?target:target.querySelector('video');if(target.requestFullscreen)await target.requestFullscreen();else if(video?.webkitEnterFullscreen)video.webkitEnterFullscreen();else throw Error('Fullscreen is unavailable in this browser.');}
+export async function fullscreenCall(target){
+ // The caller picks the exact tile or call stage. Never substitute the first video,
+ // which is often the local preview rather than the participant the user selected.
+ if(!target?.isConnected||target.hidden)throw Error('The selected video is no longer available.');
+ if(document.fullscreenElement===target){await document.exitFullscreen();return;}
+ const video=target.matches('video')?target:target.querySelector('video');
+ if(target.requestFullscreen)await target.requestFullscreen();
+ else if(video?.webkitEnterFullscreen)video.webkitEnterFullscreen();
+ else throw Error('Fullscreen is unavailable in this browser.');
+}
 
 let floating,refresh;
 export function closeCallPip(){clearInterval(refresh);refresh=null;floating?.close();floating=null;}
