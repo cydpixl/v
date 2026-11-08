@@ -39,3 +39,22 @@ export const api={
   put:(url:string,data?:any)=>call('POST',url,data),
   delete:(url:string,data?:any)=>call('POST',url,data),
 };
+
+/** Forward a signed multipart chunk via the private upload gateway.
+ *  The browser never sends R2 credentials, and Cloudflare R2 CORS isn't needed.
+ */
+export async function proxyUploadChunk(signedUrl:string,chunk:Blob):Promise<string>{
+  const form=new FormData();
+  form.set('url',signedUrl);
+  form.set('chunk',chunk,'part.bin');
+  let result:Response;
+  try{
+    result=await fetch(FUNCTION_URL+'?action=chunk',{method:'POST',body:form});
+  }catch{
+    throw new Error('Upload gateway could not be reached. Check your connection and retry.');
+  }
+  const body=await result.json().catch(()=>({error:'Invalid response from upload gateway'}));
+  if(!result.ok)throw new Error(body.error||'Upload chunk failed');
+  if(!body.etag||typeof body.etag!=='string')throw new Error('Cloud storage did not confirm the chunk.');
+  return body.etag;
+}
