@@ -18,7 +18,24 @@
   </style>
 </head>
 <body>
-  <iframe title="Newport Aquarium animal gallery" src="https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" ></iframe>
+  <iframe id="gallery" title="Newport Aquarium animal gallery" src="about:blank" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" ></iframe>
 
+  <script>
+    (() => {
+      const frame = document.getElementById('gallery');
+      const storageKey = 'newport-archive-owner-link';
+      const base = 'https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/';
+      const incoming = new URLSearchParams(location.hash.slice(1)).get('owner');
+      if (incoming && /^[a-zA-Z0-9_-]{32,128}$/.test(incoming)) {
+        try { localStorage.setItem(storageKey, incoming); } catch {}
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+      let ownerKey = incoming;
+      if (!ownerKey) {
+        try { ownerKey = localStorage.getItem(storageKey); } catch {}
+      }
+      frame.src = base + (ownerKey ? '#owner=' + encodeURIComponent(ownerKey) : '');
+    })();
+  </script>
 </body>
 </html>
