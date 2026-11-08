@@ -28,4 +28,5 @@ jobs:
           console.log('Total:',items.length,'Video:',videos.length,'Images:',items.length-videos.length);
           console.log('Screenshot candidates:',JSON.stringify(screenshots.map(x=>({id:x.id,name:x.name,size:x.size}))));
           console.log('Video filenames:',JSON.stringify(videos.map(x=>({id:x.id,name:x.name,size:x.size,mime:x.mime}))));
+          console.log('Image filenames:',JSON.stringify(items.filter(x=>x.kind==='image').map(x=>({id:x.id,name:x.name,size:x.size,mime:x.mime}))));
           JS
