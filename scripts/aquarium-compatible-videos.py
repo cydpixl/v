@@ -81,7 +81,7 @@ def encode(item, url, target):
     # iPhone edited IMG_E...MOV files can contain an "audio/none" track.
     # Map only decodable audio streams; never synthesize audio.
     probe = subprocess.run([
-        "ffprobe", "-v", "error",
+        "ffprobe", "-v", "error", "-rw_timeout", "30000000",
         "-show_entries", "stream=index,codec_name,codec_type", "-of", "json", url
     ], capture_output=True, text=True, timeout=60)
     try:
@@ -226,10 +226,12 @@ def main():
             except Exception as exc:
                 audit["failed"] += 1
                 # Do not log any signed URL, upload token, or FFmpeg command.
+                reason = re.sub(r"https?://\\S+", "[signed URL]", str(exc))
+                reason = re.sub(r"(?i)(bearer\\s+|x-amz-[a-z-]+=)\\S+",
+                                "[authorization redacted]", reason)[:240]
                 audit["items"].append({"name": name, "status": "conversion-failed",
-                                       "errorType": type(exc).__name__})
-                print("CONVERSION ERROR", name, type(exc).__name__,
-                      re.sub(r"https?://\\S+", "[signed URL]", str(exc))[:180], flush=True)
+                                       "errorType": type(exc).__name__, "reason": reason})
+                print("CONVERSION ERROR", name, type(exc).__name__, reason, flush=True)
         print("CHROME AUDIT:", audit["videos"], "total,",
               audit["alreadyReady"] + audit["converted"], "ready,",
               audit["failed"], "errors,", audit["unprocessed"], "queued", flush=True)
