@@ -51,6 +51,41 @@ jobs:
           if(preflight.status!==204||preflight.headers.get('access-control-allow-origin')!=='https://cydpixl.github.io')
             throw Error('CORS preflight is blocked');
           JS
+      - name: Verify labeled gallery, thumbnails and duplicate scanner
+        run: |
+          node --input-type=module <<'JS'
+          const host='https://newport-aquarium-r2-api.vercel.app';
+          const gallery=await fetch(host+'/api/gallery');
+          const data=await gallery.json();
+          console.log('Gallery API:',gallery.status,'media:',data.items?.length);
+          if(!gallery.ok||!Array.isArray(data.items))throw Error('Updated gallery API unavailable');
+          const photo=data.items.find(x=>x.kind==='image'&&x.thumbnailUrl);
+          if(photo){
+            const thumb=await fetch(photo.thumbnailUrl,{redirect:'manual'});
+            console.log('Thumbnail:',thumb.status,'optimized:',(thumb.headers.get('location')||'').includes('visitor-thumbnails'));
+            if(thumb.status!==302)throw Error('Photo thumbnail could not be served');
+          }
+          const r=await fetch(host+'/api/dedupe?action=preview');
+          const d=await r.json();
+          console.log('Exact duplicate candidates:',JSON.stringify(d));
+          if(!r.ok||typeof d.objects!=='number')throw Error('Duplicate scanner unavailable');
+          JS
+      - name: Remove only verified exact duplicates
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://newport-aquarium-r2-api.vercel.app/api/dedupe';
+          let offset=0,removed=0,saved=0;
+          for(let i=0;i<30;i++){
+            const r=await fetch(base+'?action=cleanup&offset='+offset+'&limit=1');
+            const d=await r.json();
+            if(!r.ok){console.warn('Cleanup stopped:',d.error);break;}
+            removed+=Number(d.removed||0);
+            saved+=Number(d.bytesSaved||0);
+            if(d.nextOffset===null||d.nextOffset===undefined)break;
+            offset=d.nextOffset;
+          }
+          console.log('Verified copies removed:',removed,'bytes recovered:',saved);
+          JS
       - name: Test 18 MiB multipart upload through 3 MiB gateway chunks
         run: |
           node --input-type=module <<'JS'
