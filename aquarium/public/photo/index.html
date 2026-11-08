@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Shared photo">
+  <meta property="og:description" content="View one shared photograph.">
+  <title>Shared photo</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#000;color:#f1f2f3}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:#000}
+    body{min-height:100dvh}
+    button{font:inherit;cursor:pointer}
+    .frame{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,36px)}
+    .viewer{width:min(100%,1300px);animation:enter .32s cubic-bezier(.2,.8,.2,1) both}
+    .photo-shell{height:min(80dvh,940px);width:100%;background:#060606;display:grid;place-items:center;position:relative;overflow:hidden}
+    #photo{display:none;width:100%;height:100%;object-fit:contain;user-select:auto;-webkit-user-drag:auto;animation:appear .24s ease-out both}
+    .loading,.error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center}
+    .loading{gap:12px;color:#abb0b5;font-size:13px}
+    .spinner{width:20px;height:20px;border:2px solid #333;border-top-color:#e3e3e3;border-radius:50%;animation:spin .75s linear infinite}
+    .error{display:none;flex-direction:column;gap:10px;padding:24px}
+    .error h1{margin:0;font-size:18px;letter-spacing:-.02em;font-weight:600}
+    .error p{margin:0;color:#999;font-size:13px;line-height:1.6}
+    .error button{padding:10px 18px;border:1px solid #555;background:#1b1b1b;color:white;margin-top:10px}
+    .details{display:none;align-items:center;justify-content:space-between;gap:16px;min-width:0;margin-top:17px}
+    .details-copy{min-width:0;overflow:hidden}
+    .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin:0 0 6px}
+    .name{font-size:14px;font-weight:600;line-height:1.45;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .actions{display:flex;gap:8px;flex:none}
+    .action{padding:10px 14px;background:#171717;border:1px solid #3c3c3c;color:#f3f3f3;font-size:12px;font-weight:600;transition:background .18s,border-color .18s}
+    .action:hover{background:#2a2a2a;border-color:#696969}
+    .action:focus-visible,.error button:focus-visible{outline:2px solid #f3f3f3;outline-offset:3px}
+    .status{color:#b8bbc0;min-height:18px;margin:12px 0 0;font-size:12px;text-align:right}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+    @keyframes appear{from{opacity:0}to{opacity:1}}
+    @media(max-width:650px){
+      .frame{padding:0 0 16px;align-items:center}
+      .viewer{width:100%}
+      .photo-shell{height:min(77dvh,930px)}
+      .details{margin:14px 15px 0}
+      .status{margin:12px 15px 0}
+      .action{padding:11px 13px}
+    }
+    @media(prefers-reduced-motion:reduce){.viewer,#photo,.spinner{animation:none}}
+  </style>
+</head>
+<body>
+<main class="frame">
+  <section class="viewer" aria-label="Shared photo">
+    <div class="photo-shell">
+      <div class="loading" id="loading" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading photo</span></div>
+      <img id="photo" alt="Shared photo" decoding="async" referrerpolicy="no-referrer">
+      <div class="error" id="error" role="alert">
+        <h1>Photo unavailable</h1>
+        <p id="errorText">This photo could not be loaded.</p>
+        <button id="retry" type="button">Try again</button>
+      </div>
+    </div>
+    <div class="details" id="details">
+      <div class="details-copy"><p class="eyebrow">Shared photo</p><h1 class="name" id="filename">Photo</h1></div>
+      <div class="actions">
+        <button class="action" id="share" type="button" hidden>Share</button>
+        <button class="action" id="copy" type="button">Copy link</button>
+      </div>
+    </div>
+    <p class="status" role="status" aria-live="polite" id="status"></p>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const api='https://newport-aquarium-r2-api.vercel.app/api/gallery';
+  const key=new URLSearchParams(location.search).get('id')||'';
+  const photo=document.getElementById('photo');
+  const loading=document.getElementById('loading');
+  const error=document.getElementById('error');
+  const errorText=document.getElementById('errorText');
+  const details=document.getElementById('details');
+  const filename=document.getElementById('filename');
+  const status=document.getElementById('status');
+  const share=document.getElementById('share');
+  const retry=document.getElementById('retry');
+  let attempts=0;
+
+  function failed(message){
+    loading.style.display='none';
+    photo.style.display='none';
+    details.style.display='none';
+    errorText.textContent=message;
+    error.style.display='flex';
+  }
+  function showLoading(){
+    loading.style.display='flex';
+    error.style.display='none';
+    photo.style.display='none';
+    status.textContent='';
+  }
+  function validKey(value){
+    return /^visitor\/[A-Za-z0-9._/-]{1,240}\.(?:jpe?g|png|webp|gif)$/i.test(value) &&
+      !value.includes('..') && !value.includes('//');
+  }
+  async function findOnePhoto(signal){
+    let token='';
+    const visited=new Set();
+    for(let page=0;page<100;page++){
+      const url=new URL(api);
+      if(token)url.searchParams.set('nextToken',token);
+      const response=await fetch(url.href,{cache:'no-store',signal,credentials:'omit'});
+      if(!response.ok)throw Error('Photo storage is temporarily unavailable.');
+      const data=await response.json();
+      if(!Array.isArray(data.items))throw Error('Invalid photo gallery response.');
+      const item=data.items.find(m=>m&&m.id===key&&m.kind==='image');
+      if(item)return item;
+      const next=String(data.nextToken||'');
+      if(!next||visited.has(next))break;
+      visited.add(next);
+      token=next;
+    }
+    return null;
+  }
+  async function load(){
+    showLoading();
+    if(!validKey(key)){
+      failed('This shared photo link is invalid.');
+      return;
+    }
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),30000);
+    try{
+      const item=await findOnePhoto(controller.signal);
+      if(!item||typeof item.url!=='string'||!/^https:\/\//i.test(item.url)){
+        failed('This photo is unavailable or has been removed.');
+        return;
+      }
+      const name=String(item.name||key.split('/').pop()||'Photo').slice(0,200);
+      filename.textContent=item.caption||name;
+      photo.alt=String(item.caption||name);
+      document.title=name+' — Photo';
+      photo.onload=()=>{
+        loading.style.display='none';
+        error.style.display='none';
+        photo.style.display='block';
+        details.style.display='flex';
+      };
+      photo.onerror=()=>failed('The photo could not be displayed. Try again.');
+      photo.src=item.url;
+    }catch(e){
+      failed(e?.name==='AbortError'?'The request timed out. Try again.':
+        (e instanceof Error?e.message:'Could not load this photo.'));
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
+  async function copyLink(){
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(location.href);
+      }else{
+        const input=document.createElement('textarea');
+        input.value=location.href;
+        input.style.position='fixed';
+        input.style.opacity='0';
+        document.body.appendChild(input);
+        input.select();
+        const ok=document.execCommand('copy');
+        input.remove();
+        if(!ok)throw Error('Copy failed');
+      }
+      status.textContent='Link copied';
+    }catch{
+      status.textContent='Copy the address from your browser instead.';
+    }
+  }
+  document.getElementById('copy').addEventListener('click',copyLink);
+  if(typeof navigator.share==='function'){
+    share.hidden=false;
+    share.addEventListener('click',async()=>{
+      try{await navigator.share({title:'Shared photo',url:location.href})}
+      catch(e){if(e?.name!=='AbortError')status.textContent='Use Copy link to share this photo.'}
+    });
+  }
+  retry.addEventListener('click',()=>{if(++attempts>10)attempts=0;load()});
+  load();
+})();
+</script>
+</body>
+</html>
