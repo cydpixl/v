@@ -39,6 +39,7 @@ type Media = {
   exhibit: string;
   caption: string;
   url: string;
+  thumbnailUrl?: string;
   createdAt: number;
   size: number;
 };
@@ -123,6 +124,8 @@ function App() {
   const [nextToken, setNextToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [mediaGridLimit, setMediaGridLimit] = useState(32);
+  const [manageLimit, setManageLimit] = useState(28);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -143,6 +146,7 @@ function App() {
   const folderRef = useRef<HTMLInputElement | null>(null);
   const quickPickRef = useRef<HTMLInputElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
+  const mediaSentinelRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
   const nav = useCallback((path: string) => {
     window.location.hash = path;
@@ -202,6 +206,20 @@ function App() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, []);
+
+  useEffect(()=>{
+    setMediaGridLimit(32);
+  },[route.page,mediaMode,search]);
+  useEffect(()=>{
+    if(route.page!=='media')return;
+    const node=mediaSentinelRef.current;
+    if(!node)return;
+    const observer=new IntersectionObserver(entries=>{
+      if(entries[0]?.isIntersecting)setMediaGridLimit(n=>Math.min(n+24,500));
+    },{rootMargin:'600px 0px'});
+    observer.observe(node);
+    return ()=>observer.disconnect();
+  },[route.page,mediaGridLimit,mediaMode,search,media.length]);
 
   const visibleMedia = media;
 
@@ -291,7 +309,14 @@ function App() {
           throw Error('Unsupported media format: '+item.file.name);
         change({status:'uploading',message:'Uploading',progress:0});
         if(providers.r2||providers.b2){
-          await sendLargeFile(file,uploadProvider,animalId,(pct,message)=>change({status:'uploading',message,progress:pct}),ownerKey);
+          const uploadedKey=await sendLargeFile(file,uploadProvider,animalId,(pct,message)=>change({status:'uploading',message,progress:pct}),ownerKey);
+          try{
+            const duplicate=await api.post('/api/dupes/cleanup-new',{key:uploadedKey});
+            if(duplicate.data?.duplicate){
+              change({status:'done',animal:animalId,progress:100,message:'Exact duplicate removed — original kept'});
+              continue;
+            }
+          }catch(e){console.warn('Duplicate verification unavailable; uploaded media retained',e);}
         }else{
           const data=await toBase64(file);
           await api.post('/api/upload',{name:file.name,mime,data,animal:animalId,size:file.size,ownerKey});
@@ -371,10 +396,10 @@ function App() {
             aria-label={'Open ' + m.name}
           >
             {m.kind === 'image' ? (
-              <img src={m.url} alt={m.caption || m.name} loading="lazy" />
+              <img src={m.thumbnailUrl || m.url} alt={m.caption || m.name} loading="lazy" decoding="async" fetchPriority="low" />
             ) : (
               <div className="video-thumb">
-                <video src={m.url} muted preload="metadata" playsInline />
+                <div className="video-still" aria-hidden="true"><Film size={27}/><span>VIDEO</span></div>
                 <span className="play-overlay">
                   <Play size={24} fill="currentColor" />
                 </span>
@@ -765,7 +790,12 @@ function App() {
           {loading ? (
             <div className="status">Loading gallery...</div>
           ) : (
-            mediaTiles(matchMedia(visibleMedia))
+            <>
+              {mediaTiles(matchMedia(visibleMedia).slice(0,mediaGridLimit))}
+              {matchMedia(visibleMedia).length>mediaGridLimit&&(
+                <div ref={mediaSentinelRef} className="media-scroll-sentinel" aria-label="Loading more media"/>
+              )}
+            </>
           )}
           {error && (
             <div className="alert">
@@ -963,11 +993,11 @@ function App() {
                     </div>
                   </div>
                   <div className="manage-grid">
-                    {media.map(m => (
+                    {media.slice(0,manageLimit).map(m => (
                       <div className="manage-row" key={m.id}>
                         <div className="manage-icon">
                           {m.kind === 'image' ? (
-                            <img src={m.url} alt="" />
+                            <img src={m.thumbnailUrl || m.url} alt="" loading="lazy" decoding="async" />
                           ) : (
                             <Film />
                           )}
@@ -984,6 +1014,11 @@ function App() {
                       </div>
                     ))}
                   </div>
+                  {media.length>manageLimit&&(
+                    <button className="load-more" onClick={()=>setManageLimit(n=>n+28)}>
+                      Show more uploads <ArrowRight size={16}/>
+                    </button>
+                  )}
                 </div>
               )}
             </>
