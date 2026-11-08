@@ -1,5 +1,5 @@
 
-const FUNCTION_URL = 'https://jqzdszkkrdzmedkcnpzp.supabase.co/functions/v1/newport-public-gallery';
+const FUNCTION_URL = 'https://newport-aquarium-r2-api.vercel.app/api';
 
 const route=(url:string)=>{
   const path=url.split('?')[0];
@@ -8,6 +8,7 @@ const route=(url:string)=>{
   if(path==='/api/media')return {action:'media',qs};
   if(path==='/api/large/start')return {action:'start',qs};
   if(path==='/api/large/sign')return {action:'sign',qs};
+  if(path==='/api/large/commit-part')return {action:'commit-part',qs};
   if(path==='/api/large/finish')return {action:'finish',qs};
   if(path==='/api/large/abort')return {action:'abort',qs};
   if(path==='/api/identify')return {action:'identify',qs};
@@ -42,21 +43,22 @@ export const api={
   delete:(url:string,data?:any)=>call('POST',url,data),
 };
 
-/** Forward a signed multipart chunk via the private upload gateway.
- *  The browser never sends R2 credentials, and Cloudflare R2 CORS isn't needed.
+
+/** Upload one 3 MiB subchunk through the server-side R2 gateway.
+ * File size is not limited by this subchunk size.
  */
-export async function proxyUploadChunk(signedUrl:string,chunk:Blob):Promise<string>{
-  const form=new FormData();
-  form.set('url',signedUrl);
-  form.set('chunk',chunk,'part.bin');
+export async function uploadSubchunk(
+  key:string,uploadId:string,partNumber:number,sub:number,chunk:Blob
+):Promise<void>{
+  const query=new URLSearchParams({action:'chunk',key,uploadId,partNumber:String(partNumber),sub:String(sub)});
   let result:Response;
   try{
-    result=await fetch(FUNCTION_URL+'?action=chunk',{method:'POST',body:form});
+    result=await fetch(FUNCTION_URL+'?'+query.toString(),{
+      method:'POST',headers:{'Content-Type':'application/octet-stream'},body:chunk
+    });
   }catch{
-    throw new Error('Upload gateway could not be reached. Check your connection and retry.');
+    throw new Error('Upload connection interrupted. Re-select the same files to resume.');
   }
-  const body=await result.json().catch(()=>({error:'Invalid response from upload gateway'}));
-  if(!result.ok)throw new Error(body.error||'Upload chunk failed');
-  if(!body.etag||typeof body.etag!=='string')throw new Error('Cloud storage did not confirm the chunk.');
-  return body.etag;
+  const payload=await result.json().catch(()=>({error:'Invalid storage response'}));
+  if(!result.ok||!payload.ok)throw new Error(payload.error||'Chunk upload failed');
 }

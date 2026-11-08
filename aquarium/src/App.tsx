@@ -277,7 +277,7 @@ function App() {
   async function uploadQueue() {
     if(uploadBusy||!queue.some(x=>x.status==='waiting'||x.status==='failed'))return;
     if(!providers.r2&&!providers.b2 && queue.some(x=>(x.status==='waiting'||x.status==='failed')&&x.file.size>3000000)){
-      setError('Connect R2 or B2 storage for large uploads. The website cannot hold your gigabytes of media by itself.');
+      setError('Cloud storage is temporarily unavailable. Retry when the storage connection is restored.');
       return;
     }
     setError('');
@@ -866,7 +866,7 @@ function App() {
                     {(providers.r2||providers.b2) ? (
                       <>
                         <strong className="ready"><Check size={17}/> Large-file uploads connected</strong>
-                        <p>Files up to 100 GB each. Automatic 16 MB chunked uploads, retries and resume by reselecting the same file.</p>
+                        <p>Files up to 100 GB each. Automatic chunked uploads, retries and resume by reselecting the same file.</p>
                         {providers.r2&&providers.b2&&(
                           <label>Upload destination
                             <select value={uploadProvider} onChange={e=>setUploadProvider(e.target.value as UploadProvider)}>
@@ -880,7 +880,7 @@ function App() {
                     ) : (
                       <>
                         <strong><Info size={17}/> Large-file storage needs connecting</strong>
-                        <p>You can queue your full 10–20 GB collection, but publishing large videos needs a connected R2 or B2 bucket. This connection is not active yet. Small files under 3 MB can still use the temporary storage.</p>
+                        <p>Cloud storage is temporarily unavailable. Select your files after the connection is restored; you do not need to convert your videos.</p>
                         <a href="https://dash.cloudflare.com/?to=/:account/r2/overview" target="_blank" rel="noreferrer">Cloudflare R2 setup <ExternalLink size={14}/></a>
                         <small>R2 includes 10 GB of free storage. B2 has a separate 10 GB free tier. Usage and download limits apply.</small>
                       </>
