@@ -1,41 +1,13 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
-  <meta name="description" content="Newport Aquarium Visitor Archive — animal photos and videos">
-  <title>Newport Aquarium Visitor Archive</title>
-  <style>
-    :root{color-scheme:dark}
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-    html,body{overflow:hidden}
-    /* Extend the embedded viewport below the visible page so platform-provided
-       bottom-docked sharing controls remain out of view without covering content. */
-    iframe{display:block;position:fixed;inset:0 auto auto 0;width:100%;height:calc(100vh + 108px);height:calc(100dvh + 108px);border:0;background:#000}
-
-  </style>
-</head>
-<body>
-  <iframe id="gallery" title="Newport Aquarium animal gallery" src="about:blank" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" ></iframe>
-
-  <script>
-    (() => {
-      const frame = document.getElementById('gallery');
-      const storageKey = 'newport-archive-owner-link';
-      const base = 'https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/';
-      const incoming = new URLSearchParams(location.hash.slice(1)).get('owner');
-      if (incoming && /^[a-zA-Z0-9_-]{32,128}$/.test(incoming)) {
-        try { localStorage.setItem(storageKey, incoming); } catch {}
-        history.replaceState(null, '', location.pathname + location.search);
-      }
-      let ownerKey = incoming;
-      if (!ownerKey) {
-        try { ownerKey = localStorage.getItem(storageKey); } catch {}
-      }
-      frame.src = base + (ownerKey ? '#owner=' + encodeURIComponent(ownerKey) : '');
-    })();
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Newport Aquarium — Visitor Archive</title>
+    <script type="module" crossorigin src="/v/aq/assets/index-BpkhU62Y.js"></script>
+    <link rel="stylesheet" crossorigin href="/v/aq/assets/index-PThE8djB.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
