@@ -22,10 +22,27 @@
   </style>
 </head>
 <body>
-  <iframe title="Newport Aquarium animal gallery" src="https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" ></iframe>
+  <iframe id="gallery" title="Newport Aquarium animal gallery" src="about:blank" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" ></iframe>
   <a class="upload" href="https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/#upload" title="Choose photos or videos to add">
     <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M12 5v14M5 12h14"/></svg>
     Add
   </a>
+  <script>
+    (() => {
+      const frame = document.getElementById('gallery');
+      const storageKey = 'newport-archive-owner-link';
+      const base = 'https://newport-aquarium-visitor-archive-pdrkfz.v2.appdeploy.ai/';
+      const incoming = new URLSearchParams(location.hash.slice(1)).get('owner');
+      if (incoming && /^[a-zA-Z0-9_-]{32,128}$/.test(incoming)) {
+        try { localStorage.setItem(storageKey, incoming); } catch {}
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+      let ownerKey = incoming;
+      if (!ownerKey) {
+        try { ownerKey = localStorage.getItem(storageKey); } catch {}
+      }
+      frame.src = base + (ownerKey ? '#owner=' + encodeURIComponent(ownerKey) : '');
+    })();
+  </script>
 </body>
 </html>
