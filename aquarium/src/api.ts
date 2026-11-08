@@ -5,6 +5,7 @@ const route=(url:string)=>{
   const path=url.split('?')[0];
   const qs=url.includes('?')?new URLSearchParams(url.split('?')[1]):new URLSearchParams();
   if(path==='/api/large/status')return {action:'status',qs};
+  if(path==='/api/dupes/cleanup-new')return {action:'cleanup-new',qs};
   if(path==='/api/media')return {action:'media',qs};
   if(path==='/api/large/start')return {action:'start',qs};
   if(path==='/api/large/sign')return {action:'sign',qs};
@@ -25,7 +26,9 @@ async function call(method:'GET'|'POST',url:string,data?:any){
   qs.set('action',action);
   let result:Response;
   try {
-    const target=['check','update','delete'].includes(action)?'/api/manage':'/api';
+    const target=action==='media'?'/api/gallery':
+      action==='cleanup-new'?'/api/dedupe':
+      ['check','update','delete'].includes(action)?'/api/manage':'/api';
     result=await fetch('https://newport-aquarium-r2-api.vercel.app'+target+'?'+qs.toString(),{
       method,headers:method==='POST'?{'Content-Type':'application/json'}:undefined,
       body:method==='POST'?JSON.stringify(data||{}):undefined,

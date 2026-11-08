@@ -149,3 +149,14 @@ button,.app-shell{font-family:'Inter',Arial,sans-serif}
  .footer{padding-top:35px}
 }
 @media(prefers-reduced-motion:reduce){.hero-img,.hero-content,.animal-card{animation:none!important}}
+
+/* Lightweight scrolling and offscreen rendering for large visitor archives. */
+.media-tile,.animal-card,.exhibit-card,.manage-row{content-visibility:auto;contain-intrinsic-size:auto 260px}
+.media-tile{contain-intrinsic-size:auto 250px}
+.manage-row{contain-intrinsic-size:auto 74px}
+.video-still{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#b6c8ca;background:linear-gradient(145deg,#10191d,#19252a)}
+.video-still span{font-size:9px;letter-spacing:.19em;font-weight:700;color:#8ba1a6}
+.media-scroll-sentinel{height:2px;width:100%;pointer-events:none}
+.animal-image img,.animal-card:hover .animal-image img,.exhibit-card>img,.detail-hero>img{filter:none}
+.animal-image img{transition:transform .24s ease-out}
+.exhibit-card>img{transition:transform .24s ease-out}

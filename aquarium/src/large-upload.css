@@ -16,3 +16,5 @@
 .folder-picker-button:hover{background:#242a2c;border-color:#a3adb0;transform:translateY(-1px)}
 .folder-picker-row>span{color:#99a4a7;font-size:12px;line-height:1.5}
 .skipped-files-note{padding:12px 14px;background:#171b1d;border:1px solid #394347;color:#c5d2d5;font-size:12px;line-height:1.6}
+
+.file-progress{contain:layout paint}

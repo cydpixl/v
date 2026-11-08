@@ -85,4 +85,5 @@ export async function sendLargeFile(file:File,provider:UploadProvider,animal:str
     name:file.name,mime,size:file.size,animal,parts,ownerKey});
   try{localStorage.removeItem(identity);}catch{}
   progress(100,'Published');
+  return task.key;
 }
