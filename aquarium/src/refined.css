@@ -191,3 +191,14 @@ button,.app-shell{font-family:'Inter',Arial,sans-serif}
 .gallery-delete-error{position:fixed;z-index:145;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:16px;align-items:center;max-width:calc(100vw - 30px);background:#351c20;color:#ffe0df;border:1px solid #84474e;padding:13px 17px;font-size:12px;box-shadow:0 8px 36px #0008}
 .gallery-delete-error button{background:none;color:inherit}
 @media(max-width:620px){.manage-actions{gap:5px}.manage-actions button{padding:8px 6px!important}.gallery-actions{gap:5px}.gallery-actions button{padding:10px 8px!important}.owner-unlock-modal{padding:18px}}
+
+/* Native-feeling right-click menu for individual video share pages. */
+.video-context-dismiss{position:fixed;inset:0;z-index:180;background:transparent}
+.video-context-menu{position:fixed;z-index:181;width:206px;display:flex;flex-direction:column;gap:2px;background:#101214;border:1px solid #33383b;padding:5px;box-shadow:0 14px 38px #000a;animation:video-context-show .15s ease-out both}
+.video-context-menu button{width:100%;text-align:left;display:flex;align-items:center;gap:10px;color:#edf0f0;background:transparent;border:0;padding:12px 10px;border-radius:2px;font-size:12px;font-weight:600;cursor:pointer;transition:background .12s ease}
+.video-context-menu button:hover,.video-context-menu button:focus-visible{background:#252a2d;outline:none}
+.video-context-menu svg{color:#a3b4b9;flex:none}
+.video-share-toast{position:fixed;z-index:182;bottom:28px;left:50%;transform:translateX(-50%);background:#181d1f;border:1px solid #343a3d;color:#f2f4f4;padding:13px 18px;font-size:12px;box-shadow:0 10px 38px #000a;animation:share-toast-show .2s ease-out both}
+@keyframes video-context-show{from{opacity:0;transform:translateY(-5px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes share-toast-show{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(prefers-reduced-motion:reduce){.video-context-menu,.video-share-toast{animation:none}}

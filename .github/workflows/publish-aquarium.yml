@@ -24,6 +24,40 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
+      - name: Validate isolated video sharing page
+        run: |
+          test -f aquarium/dist/watch/index.html
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const page=fs.readFileSync('aquarium/dist/watch/index.html','utf8');
+          if(!page.includes('/api/share')||!page.includes('Copy link')||page.includes('newport-archive-owner-link'))
+            throw Error('Standalone video page was not built correctly');
+          console.log('Standalone single-video page exists and contains no owner credentials');
+          const api='https://newport-aquarium-r2-api.vercel.app/api';
+          let token='',video=null;
+          for(let pageNo=0;pageNo<15&&!video;pageNo++){
+            const url=new URL(api+'/gallery');
+            if(token)url.searchParams.set('nextToken',token);
+            const res=await fetch(url,{headers:{Origin:'https://cydpixl.github.io'}});
+            if(!res.ok)throw Error('Gallery inventory unavailable');
+            const data=await res.json();
+            video=(data.items||[]).find(item=>item.kind==='video');
+            token=data.nextToken||'';
+            if(!token)break;
+          }
+          if(!video)throw Error('No existing video available to validate share links');
+          const res=await fetch(api+'/share?id='+encodeURIComponent(video.id),{
+            headers:{Origin:'https://cydpixl.github.io'}
+          });
+          const item=await res.json();
+          if(!res.ok||item.id!==video.id||!item.url?.startsWith('https://')||!item.mime?.startsWith('video/'))
+            throw Error('A selected video cannot be fetched independently');
+          const denied=await fetch(api+'/share?id='+encodeURIComponent('visitor/not-a-video.txt'),{
+            headers:{Origin:'https://cydpixl.github.io'}
+          });
+          if(denied.status!==400)throw Error('Share endpoint must reject nonvideo keys');
+          console.log('Verified one-video playback lookup and nonvideo rejection for',video.name);
+          JS
       - name: Verify video poster files shipped in GitHub build
         run: |
           count=$(find aquarium/dist/posters -maxdepth 1 -type f -name '*.jpg' | wc -l)

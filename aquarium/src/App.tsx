@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Copy,
   ChevronDown,
   ExternalLink,
   Film,
@@ -131,6 +132,8 @@ function App() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Media | null>(null);
+  const [videoContext, setVideoContext] = useState<{media:Media;x:number;y:number}|null>(null);
+  const [shareFeedback, setShareFeedback] = useState('');
   const admin = true; // uploads and classification are public; deletion remains private
   const [canDelete, setCanDelete] = useState(false);
   const [deleteUnlockOpen, setDeleteUnlockOpen] = useState(false);
@@ -154,6 +157,7 @@ function App() {
   const quickPickRef = useRef<HTMLInputElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const mediaSentinelRef = useRef<HTMLDivElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
   useEffect(()=>{
     let active=true;
@@ -163,6 +167,53 @@ function App() {
       .catch(()=>{if(active)setCanDelete(false);});
     return ()=>{active=false;};
   },[ownerKey]);
+  const boxLink = useCallback((m:Media)=>{
+    const address = new URL(import.meta.env.BASE_URL + 'watch/', window.location.origin);
+    address.searchParams.set('id',m.id);
+    return address.href;
+  },[]);
+  const openInBox = useCallback((m:Media)=>{
+    window.open(boxLink(m),'_blank','noopener,noreferrer');
+    setVideoContext(null);
+  },[boxLink]);
+  const copyBoxLink = useCallback(async (m:Media)=>{
+    const link=boxLink(m);
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(link);
+      }else{
+        const input=document.createElement('textarea');
+        input.value=link;input.style.position='fixed';input.style.opacity='0';
+        document.body.appendChild(input);input.select();
+        const ok=document.execCommand('copy');
+        input.remove();
+        if(!ok)throw Error('Copy denied');
+      }
+      setShareFeedback('Video link copied');
+    }catch{
+      setShareFeedback('Unable to copy. Open in box and copy its address.');
+    }
+    setVideoContext(null);
+  },[boxLink]);
+  useEffect(()=>{
+    if(!shareFeedback)return;
+    const timer=window.setTimeout(()=>setShareFeedback(''),2800);
+    return ()=>window.clearTimeout(timer);
+  },[shareFeedback]);
+  useEffect(()=>{
+    if(!videoContext)return;
+    contextMenuRef.current?.querySelector('button')?.focus();
+    const onScroll=()=>setVideoContext(null);
+    window.addEventListener('scroll',onScroll,true);
+    return ()=>window.removeEventListener('scroll',onScroll,true);
+  },[videoContext]);
+  const openVideoContext = (m:Media,x:number,y:number)=>{
+    setVideoContext({
+      media:m,
+      x:Math.max(8,Math.min(x,window.innerWidth-216)),
+      y:Math.max(8,Math.min(y,window.innerHeight-124))
+    });
+  };
   const nav = useCallback((path: string) => {
     window.location.hash = path;
     setMenuOpen(false);
@@ -216,6 +267,7 @@ function App() {
       if (e.key === 'Escape') {
         setSelected(null);
         setEditing('');
+        setVideoContext(null);
       }
     };
     window.addEventListener('keydown', key);
@@ -440,6 +492,19 @@ function App() {
             className="media-tile"
             key={m.id}
             onClick={() => setSelected(m)}
+            onContextMenu={e=>{
+              if(m.kind!=='video')return;
+              e.preventDefault();
+              openVideoContext(m,e.clientX,e.clientY);
+            }}
+            onKeyDown={e=>{
+              if(m.kind!=='video')return;
+              if(e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey)){
+                e.preventDefault();
+                const rect=e.currentTarget.getBoundingClientRect();
+                openVideoContext(m,rect.left+24,rect.top+36);
+              }
+            }}
             aria-label={'Open ' + m.name}
           >
             {m.kind === 'image' ? (
@@ -1114,6 +1179,22 @@ function App() {
         </div>
       </footer>
 
+      {videoContext && (
+        <>
+          <div className="video-context-dismiss" onMouseDown={()=>setVideoContext(null)}
+            onContextMenu={e=>{e.preventDefault();setVideoContext(null);}} aria-hidden="true"/>
+          <div className="video-context-menu" role="menu" aria-label="Video actions"
+            ref={contextMenuRef} style={{left:videoContext.x,top:videoContext.y}}>
+            <button type="button" role="menuitem" onClick={()=>openInBox(videoContext.media)}>
+              <ExternalLink size={16}/> Open in box
+            </button>
+            <button type="button" role="menuitem" onClick={()=>void copyBoxLink(videoContext.media)}>
+              <Copy size={16}/> Copy video link
+            </button>
+          </div>
+        </>
+      )}
+      {shareFeedback && <div className="video-share-toast" role="status">{shareFeedback}</div>}
       {selected && (
         <div
           className="lightbox"
@@ -1145,6 +1226,16 @@ function App() {
               <small>{selected.exhibit || 'Unsorted'}</small>
             </div>
             <div className="gallery-actions">
+              {selected.kind==='video' && (
+                <>
+                  <button type="button" onClick={()=>openInBox(selected)}>
+                    <ExternalLink size={16}/> Open in box
+                  </button>
+                  <button type="button" onClick={()=>void copyBoxLink(selected)}>
+                    <Copy size={16}/> Copy link
+                  </button>
+                </>
+              )}
               {admin && selected.id !== 'visitor-jellies-20261107' && (
                 <button onClick={() => openEdit(selected)}>
                   Edit details <ArrowRight size={16} />
