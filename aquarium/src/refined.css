@@ -160,3 +160,13 @@ button,.app-shell{font-family:'Inter',Arial,sans-serif}
 .animal-image img,.animal-card:hover .animal-image img,.exhibit-card>img,.detail-hero>img{filter:none}
 .animal-image img{transition:transform .24s ease-out}
 .exhibit-card>img{transition:transform .24s ease-out}
+
+/* Real, lightweight poster frames exported from each uploaded MOV by FFmpeg.
+   These static JPEGs do not initialize or buffer video as the user scrolls. */
+.video-thumb{position:relative;overflow:hidden}
+.video-thumb .video-poster{
+  display:block;position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:1;transform:translateZ(0);
+}
+.video-thumb .play-overlay{position:absolute;z-index:2}
+.video-thumb .video-still{position:absolute;inset:0}
