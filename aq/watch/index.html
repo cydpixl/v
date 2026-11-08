@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Aquarium video</title>
+<style>*{box-sizing:border-box}html,body{height:100%;margin:0;background:#000;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}main{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px}video{display:block;max-width:100%;max-height:calc(100dvh - 85px);width:auto;height:auto;background:#000;object-fit:contain}#status{max-width:460px;text-align:center;font-size:14px;color:#aaa;line-height:1.5}#status.error{color:#ddd}#title{color:#bdbdbd;font-size:13px;overflow-wrap:anywhere;text-align:center}button{background:#222;color:white;border:1px solid #444;padding:10px 15px;cursor:pointer}button:hover{background:#333}</style></head><body>
+<main><div id="title"></div><div id="status">Loading video…</div><video id="player" controls playsinline preload="metadata" style="display:none" aria-label="Shared aquarium video"></video><button id="retry" style="display:none">Try again</button></main>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js"></script>
+<script>
+(() => {
+const p = new URLSearchParams(location.search);
+const raw = p.get('id') || '';
+const key = raw.replace(/^(r2:|b2:)/,'').split('/').pop() || '';
+const slug = key.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9._-]/g,'_');
+const title = document.getElementById('title');
+const status = document.getElementById('status');
+const video = document.getElementById('player');
+const retry = document.getElementById('retry');
+let hls;
+if (!raw || !slug || slug === '.' || slug === '..') {
+  status.textContent = 'Invalid video link.'; status.className='error'; return;
+}
+title.textContent = key;
+document.title = key + ' · Aquarium';
+const playlist = new URL('../streams/' + encodeURIComponent(slug) + '/stream.m3u8', location.href);
+async function start() {
+  retry.style.display='none'; status.style.display='block'; status.className=''; status.textContent='Loading video…';
+  video.style.display='none';
+  if (hls) { hls.destroy(); hls = undefined; }
+  try {
+    const r = await fetch(playlist.href, {method:'GET',cache:'no-store'});
+    if (!r.ok) throw Error('Video is still being prepared ('+r.status+').');
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = playlist.href;
+    } else if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({enableWorker:true,maxBufferLength:30});
+      hls.loadSource(playlist.href);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR,(_,data)=>{
+        if(data.fatal){ status.className='error'; status.style.display='block'; status.textContent='This video failed to play. Try again.'; retry.style.display='block'; }
+      });
+    } else throw Error('This browser cannot play the video.');
+    video.style.display='block'; status.style.display='none';
+  } catch (err) {
+    video.style.display='none'; status.className='error';
+    status.textContent=String(err && err.message || 'Video not ready yet.'); retry.style.display='block';
+  }
+}
+retry.addEventListener('click',start);
+start();
+})();
+</script></body></html>
