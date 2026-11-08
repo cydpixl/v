@@ -1,5 +1,5 @@
 
-import { api } from './api';
+import { api, proxyUploadChunk } from './api';
 export type UploadProvider = 'r2'|'b2';
 export type UploadProgress = (percentage:number,message:string)=>void;
 type Session={provider:UploadProvider;key:string;uploadId:string;partBytes:number;parts:Array<{PartNumber:number;ETag:string}>};
@@ -39,10 +39,9 @@ export async function sendLargeFile(file:File,provider:UploadProvider,animal:str
       for(let attempt=0;attempt<4&&!succeeded;attempt++){
         try{
           const {data}=await api.post('/api/large/sign',{provider,key:session.key,uploadId:session.uploadId,partNumber,ownerKey});
-          const response=await fetch(String(data.url),{method:'PUT',body:chunk});
-          if(!response.ok)throw Error('Storage returned HTTP '+response.status);
-          const tag=response.headers.get('ETag');
-          if(!tag)throw Error('Storage CORS must expose ETag');
+          // Server-side relay avoids requiring cross-origin R2 permissions on the bucket.
+          // R2 keys remain in the existing private backend, never in GitHub.
+          const tag=await proxyUploadChunk(String(data.url),chunk);
           saved.set(partNumber,tag);
           session.parts=[...saved].map(([PartNumber,ETag])=>({PartNumber,ETag})).sort((a,b)=>a.PartNumber-b.PartNumber);
           try{localStorage.setItem(key,JSON.stringify(session));}catch{}
