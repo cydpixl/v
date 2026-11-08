@@ -27,13 +27,25 @@ jobs:
           ffmpeg -version | head -n 1
       - name: Generate real still frames from public aquarium videos
         run: python3 scripts/aquarium-posters.py
-      - name: Commit new static poster images
+      - name: Publish only missing video thumbnails to live GitHub Pages
         run: |
+          mkdir -p docs/aq/posters
+          for poster in aquarium/public/posters/*.jpg; do
+            [ -f "$poster" ] || continue
+            file="${poster##*/}"
+            if [ ! -s "docs/aq/posters/$file" ]; then
+              cp "$poster" "docs/aq/posters/$file"
+            fi
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add aquarium/public/posters/*.jpg
+          git add aquarium/public/posters/ docs/aq/posters/
           if ! git diff --cached --quiet; then
-            git commit -m "media(aquarium): add real video frame thumbnails"
-            git pull --rebase -X theirs origin main
-            git push origin HEAD:main
+            git commit -m "media(aquarium): publish real video thumbnails to gallery [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              git pull --rebase -X theirs origin main && git push origin HEAD:main && exit 0
+              sleep 3
+            done
+            echo "Failed to publish gallery thumbnails after retries" >&2
+            exit 1
           fi
