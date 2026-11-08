@@ -909,7 +909,7 @@ function App() {
                   </div>
                 </aside>
               </div>
-              {media.length > 0 && (
+              {admin && media.length > 0 && (
                 <div className="manage-block">
                   <div className="section-head compact">
                     <div>
@@ -942,7 +942,6 @@ function App() {
                 </div>
               )}
             </>
-          )}
         </main>
       )}
 
