@@ -405,7 +405,7 @@ function App() {
     setCheckingExisting(true);
     const existing=new Set<string>();
     const matchKey=(name:string,size:number)=>name.toLowerCase()+'|'+size;
-    const storedName=(name:string)=>name.split('/').pop()!.replace(/^\\d{13}-[a-z0-9]{8,}-/i,'');
+    const storedName=(name:string)=>name.split('/').pop()!.replace(/^[0-9]{13}-[a-z0-9]{8,}-/i,'');
     try{
       // This must cover every page, not just the first page currently visible.
       let token='';
@@ -994,6 +994,43 @@ function App() {
               />
             </div>
           </div>
+          <div className="media-filter-row" aria-label="Gallery size and date filters">
+            <label>
+              <span>File size</span>
+              <select aria-label="Filter media by file size" value={sizeFilter}
+                onChange={e=>setSizeFilter(e.target.value as typeof sizeFilter)}>
+                <option value="all">Any size</option>
+                <option value="under10">Under 10 MB</option>
+                <option value="10to100">10–100 MB</option>
+                <option value="100to1000">100 MB–1 GB</option>
+                <option value="over1000">1 GB or larger</option>
+              </select>
+            </label>
+            <label>
+              <span>Uploaded</span>
+              <select aria-label="Filter media by upload date" value={dateFilter}
+                onChange={e=>setDateFilter(e.target.value as typeof dateFilter)}>
+                <option value="all">Any time</option>
+                <option value="day">Last 24 hours</option>
+                <option value="week">Last 7 days</option>
+                <option value="month">Last 30 days</option>
+                <option value="year">This year</option>
+              </select>
+            </label>
+            <label>
+              <span>Sort by</span>
+              <select aria-label="Sort media" value={mediaSort}
+                onChange={e=>setMediaSort(e.target.value as typeof mediaSort)}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="largest">Largest first</option>
+                <option value="smallest">Smallest first</option>
+              </select>
+            </label>
+            <span className="filter-count" role="status">
+              {matchMedia(visibleMedia).length} matching file{matchMedia(visibleMedia).length===1?'':'s'}
+            </span>
+          </div>
           {loading ? (
             <div className="status">Loading gallery...</div>
           ) : (
@@ -1030,7 +1067,7 @@ function App() {
               Add photos &amp; videos<span className="dot-title">.</span>
             </h1>
             <p>
-              Choose your files. Smallest files upload first. Assign animals afterward.
+              Choose your files. Aquarium checks existing filenames and exact byte sizes before transferring; missing files can still upload.
             </p>
           </div>
           <>
@@ -1116,6 +1153,12 @@ function App() {
                       </>
                     )}
                   </div>
+                  {(checkingExisting||skippedExisting>0) && (
+                    <div className="duplicate-check-notice" role="status">
+                      {checkingExisting ? 'Checking the entire gallery for existing files before upload…' :
+                        skippedExisting+' already-uploaded file'+(skippedExisting===1?'':'s')+' skipped and removed from the queue (same name and byte size).'}
+                    </div>
+                  )}
                   {queue.length > 0 && (
                     <section className="queue-panel">
                       <div className="queue-head">
@@ -1178,7 +1221,7 @@ function App() {
                        <SlidersHorizontal size={18} />
                        <h3>Upload now, sort later</h3>
                      </div>
-                     <p className="settings-hint">All photos and videos upload as Unsorted. Assign animals and edit captions after they're published.</p>
+                     <p className="settings-hint">Files already in the gallery with matching names and byte sizes are removed from the queue before transfer. Different-sized versions can still upload. New uploads remain Unsorted.</p>
                    </div>
                    <div className="settings-card compact-card">
                     <h3>Public gallery</h3>
