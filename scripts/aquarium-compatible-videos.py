@@ -42,8 +42,12 @@ def all_videos():
         token = data.get("nextToken") or ""
         if not token:
             break
-    preferred = [m for m in items if m.get("name") == "IMG_3251.MOV"]
-    remaining = [m for m in items if m.get("name") != "IMG_3251.MOV"]
+    priority_key = "visitor/1794114056595-ea4fca8e5cfa-IMG_3125.MOV"
+    preferred = [m for m in items if m.get("id") == priority_key]
+    if not preferred:
+        preferred = [m for m in items if m.get("name") == "IMG_3125.MOV"]
+    prioritized_ids = {m.get("id") for m in preferred}
+    remaining = [m for m in items if m.get("id") not in prioritized_ids]
     remaining.sort(key=lambda m: (int(m.get("size") or 0), str(m.get("name"))))
     return preferred + remaining
 
@@ -65,7 +69,7 @@ def share(item):
 
 
 def encode(item, url, target):
-    scale = "scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p"
+    scale = "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p"
     # iPhone edited IMG_E...MOV files can contain an "audio/none" track.
     # Map only decodable audio streams; never synthesize audio.
     probe = subprocess.run([
@@ -85,7 +89,7 @@ def encode(item, url, target):
         "-rw_timeout", "30000000", "-i", url,
         "-map", "0:v:0", *audio_map,
         "-vf", scale, "-r", "30",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+        "-c:v", "libx264", "-preset", "superfast", "-crf", "25",
         "-pix_fmt", "yuv420p", "-profile:v", "high", "-level:v", "4.1",
         "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
         "-movflags", "+faststart", "-max_muxing_queue_size", "1024",
