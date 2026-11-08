@@ -9,3 +9,10 @@
 .large-upload-status label{font-size:12px}
 .file-progress{width:100%;height:4px;background:#303638;margin-top:7px}
 .file-progress>span{height:100%;display:block;background:#9bd6c3;transition:width .25s}
+
+/* Bulk iPhone exports: concise folder picker and sidecar handling */
+.folder-picker-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 10px}
+.folder-picker-button{display:inline-flex;align-items:center;gap:9px;padding:11px 15px;border:1px solid #3b4245;background:#111516;color:#f0f2f2;border-radius:2px;font-size:13px;font-weight:650;transition:background .18s,border-color .18s,transform .18s}
+.folder-picker-button:hover{background:#242a2c;border-color:#a3adb0;transform:translateY(-1px)}
+.folder-picker-row>span{color:#99a4a7;font-size:12px;line-height:1.5}
+.skipped-files-note{padding:12px 14px;background:#171b1d;border:1px solid #394347;color:#c5d2d5;font-size:12px;line-height:1.6}

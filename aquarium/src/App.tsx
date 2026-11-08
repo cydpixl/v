@@ -51,6 +51,26 @@ type QueueItem = {
   preview?: string;
   progress?: number;
 };
+const isAppleEditSidecar=(file:File)=>/\.aae$/i.test(file.name);
+const isHeic=(file:File)=>/\.(heic|heif)$/i.test(file.name)||/^image\/(heic|heif|heic-sequence|heif-sequence)$/i.test(file.type);
+const isSupportedMedia=(file:File)=>/\.(heic|heif|jpe?g|png|webp|gif|mov|mp4|m4v|webm)$/i.test(file.name);
+const mediaMime=(file:File)=>{
+  if(/\.mov$/i.test(file.name))return 'video/quicktime';
+  if(/\.m4v$/i.test(file.name))return 'video/x-m4v';
+  if(/\.mp4$/i.test(file.name))return 'video/mp4';
+  if(/\.webm$/i.test(file.name))return 'video/webm';
+  if(/\.jpe?g$/i.test(file.name))return 'image/jpeg';
+  if(/\.png$/i.test(file.name))return 'image/png';
+  if(/\.webp$/i.test(file.name))return 'image/webp';
+  if(/\.gif$/i.test(file.name))return 'image/gif';
+  return file.type;
+};
+async function prepareApplePhoto(file:File):Promise<File>{
+  const {heicTo}=await import('heic-to/csp');
+  const converted=await heicTo({blob:file,type:'image/jpeg',quality:0.92});
+  const name=file.name.replace(/\.(heic|heif)$/i,'.jpg');
+  return new File([converted],name.endsWith('.jpg')?name:file.name+'.jpg',{type:'image/jpeg',lastModified:file.lastModified});
+}
 const label = (a: string) => animals.find(x => x.id === a)?.name || 'Unsorted';
 const toBase64 = (f: File | Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -110,6 +130,8 @@ function App() {
   const [admin, setAdmin] = useState(false);
 
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [skippedSidecars, setSkippedSidecars] = useState(0);
+  const [skippedOtherFiles, setSkippedOtherFiles] = useState(0);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [providers, setProviders] = useState<{r2:boolean;b2:boolean}>({r2:false,b2:false});
   const [uploadProvider, setUploadProvider] = useState<UploadProvider>('r2');
@@ -118,6 +140,7 @@ function App() {
   const [editCaption, setEditCaption] = useState('');
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const folderRef = useRef<HTMLInputElement | null>(null);
   const quickPickRef = useRef<HTMLInputElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const [mediaMode, setMediaMode] = useState<'all' | 'image' | 'video' | 'unsorted'>('all');
@@ -223,29 +246,33 @@ function App() {
   const imgFor = (a: Animal) => a.image;
   function stageFiles(files: FileList | File[] | null) {
     if (!files) return;
-    const next = Array.from(files)
-      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/') || /\.(mov|mp4|webm|jpg|jpeg|png|gif|webp)$/i.test(f.name))
-      .sort((a, b) => a.size - b.size || a.name.localeCompare(b.name))
-      .map((file, i) => ({
-        id: Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 7),
-        file,
-        progress: 0,
-        status: 'waiting' as const,
-        animal: 'unidentified',
-        message: '',
-        preview: file.type.startsWith('image/')
-          ? URL.createObjectURL(file)
-          : undefined,
-      }));
-    if(next.length){
-      setQueue(q => {
-        const combined = [...q, ...next];
-        const waiting = combined.filter(item => item.status === 'waiting')
-          .sort((a, b) => a.file.size - b.file.size || a.file.name.localeCompare(b.file.name));
-        return [...combined.filter(item => item.status !== 'waiting'), ...waiting];
-      });
-      nav('upload');
-    }
+    const all = Array.from(files);
+    const sidecars = all.filter(isAppleEditSidecar).length;
+    const ignored = all.filter(f => !isAppleEditSidecar(f) && !isSupportedMedia(f)).length;
+    if(sidecars)setSkippedSidecars(n=>n+sidecars);
+    if(ignored)setSkippedOtherFiles(n=>n+ignored);
+    const sorted = all.filter(isSupportedMedia)
+      .sort((a,b)=>a.size-b.size || a.name.localeCompare(b.name));
+    if(!sorted.length){nav('upload');return;}
+    setQueue(existing=>{
+      const seen = new Set(existing.map(q=>[q.file.webkitRelativePath||q.file.name,q.file.size,q.file.lastModified].join(':')));
+      const next:QueueItem[] = [];
+      for(const file of sorted){
+        const identity=[file.webkitRelativePath||file.name,file.size,file.lastModified].join(':');
+        if(seen.has(identity))continue;
+        seen.add(identity);
+        next.push({
+          id:Date.now()+'-'+Math.random().toString(36).slice(2,11),
+          file,progress:0,status:'waiting',animal:'unidentified',message:'',
+          preview:!isHeic(file)&&file.type.startsWith('image/')?URL.createObjectURL(file):undefined,
+        });
+      }
+      const combined=[...existing,...next];
+      const waiting=combined.filter(q=>q.status==='waiting')
+        .sort((a,b)=>a.file.size-b.file.size||a.file.name.localeCompare(b.file.name));
+      return [...combined.filter(q=>q.status!=='waiting'),...waiting];
+    });
+    nav('upload');
   }
   async function uploadQueue() {
     if(uploadBusy||!queue.some(x=>x.status==='waiting'||x.status==='failed'))return;
@@ -259,18 +286,22 @@ function App() {
     for(const item of queue.filter(x=>x.status==='waiting'||x.status==='failed')
       .sort((a,b)=>a.file.size-b.file.size||a.file.name.localeCompare(b.file.name))){
       const change=(patch:Partial<QueueItem>)=>setQueue(q=>q.map(x=>x.id===item.id?{...x,...patch}:x));
-      const mime=item.file.type || (item.file.name.toLowerCase().endsWith('.mov')?'video/quicktime':'');
-      if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v'].includes(mime)){
-        change({status:'failed',message:'Unsupported file. Choose JPG, PNG, MP4, MOV or WebM.'});continue;
-      }
       const animalId = 'unidentified';
       try {
+        let file = item.file;
+        if(isHeic(file)){
+          change({status:'uploading',message:'Preparing HEIC photo for the gallery',progress:0});
+          file=await prepareApplePhoto(file);
+        }
+        const mime=mediaMime(file);
+        if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','video/x-m4v'].includes(mime))
+          throw Error('Unsupported media format: '+item.file.name);
         change({status:'uploading',message:'Uploading',progress:0});
         if(providers.r2||providers.b2){
-          await sendLargeFile(item.file,uploadProvider,animalId,(pct,message)=>change({status:'uploading',message,progress:pct}),ownerKey);
+          await sendLargeFile(file,uploadProvider,animalId,(pct,message)=>change({status:'uploading',message,progress:pct}),ownerKey);
         }else{
-          const data=await toBase64(item.file);
-          await api.post('/api/upload',{name:item.file.name,mime,data,animal:animalId,size:item.file.size,ownerKey});
+          const data=await toBase64(file);
+          await api.post('/api/upload',{name:file.name,mime,data,animal:animalId,size:file.size,ownerKey});
         }
         change({status:'done',animal:animalId,progress:100,message:'Published'});
       }catch(e){
@@ -407,7 +438,7 @@ function App() {
             ref={quickPickRef}
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mov,.m4v"
+            accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,.aav,image/heic,image/heif"
             style={{display:'none'}}
             onChange={e=>{stageFiles(e.target.files);e.target.value='';}}
             aria-label="Choose media to add"
@@ -794,14 +825,14 @@ function App() {
                       <UploadCloud size={31} />
                     </div>
                     <h2>Choose photos and videos</h2>
-                    <p>Select multiple files or drop them here. Smallest files upload first.</p>
-                    <span>JPG, PNG, WebP, GIF, MP4, MOV, WebM</span>
+                    <p>Choose your files or drop them here. Smallest files upload first.</p>
+                    <span>HEIC, HEIF, JPG, PNG, WebP, GIF, MOV, MP4, M4V, WebM</span>
                     <input
                       ref={inputRef}
                       aria-label="Choose photos and videos"
                       type="file"
                       multiple
-                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mov,.m4v"
+                      accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.mov,.mp4,.m4v,.webm,.aae,.aav,image/heic,image/heif"
                       onChange={e => {
                         stageFiles(e.target.files);
                         e.target.value = '';
@@ -809,12 +840,33 @@ function App() {
                       hidden
                     />
                   </div>
+                  <div className="folder-picker-row">
+                    <input
+                      ref={folderRef}
+                      type="file"
+                      multiple
+                      {...{webkitdirectory: ''}}
+                      aria-label="Choose entire photo or video folder"
+                      onChange={e=>{stageFiles(e.target.files);e.target.value='';}}
+                      hidden
+                    />
+                    <button type="button" className="folder-picker-button" onClick={()=>folderRef.current?.click()}>
+                      <ImageIcon size={16}/> Choose entire folder
+                    </button>
+                    <span>Includes subfolders. iPhone .AAE edit files are skipped automatically.</span>
+                  </div>
+                  {(skippedSidecars>0||skippedOtherFiles>0)&&(
+                    <div className="skipped-files-note" role="status">
+                      {skippedSidecars>0&&<span>{skippedSidecars} .AAE edit sidecar{skippedSidecars===1?'':'s'} skipped (not photos or videos). </span>}
+                      {skippedOtherFiles>0&&<span>{skippedOtherFiles} unsupported file{skippedOtherFiles===1?'':'s'} skipped.</span>}
+                    </div>
+                  )}
 
                   <div className="large-upload-status">
                     {(providers.r2||providers.b2) ? (
                       <>
                         <strong className="ready"><Check size={17}/> Large-file uploads connected</strong>
-                        <p>Files up to 100 GB each. Direct 16 MB chunked uploads with progress, retries and resume by reselecting the same file.</p>
+                        <p>Files up to 100 GB each. Automatic 16 MB chunked uploads, retries and resume by reselecting the same file.</p>
                         {providers.r2&&providers.b2&&(
                           <label>Upload destination
                             <select value={uploadProvider} onChange={e=>setUploadProvider(e.target.value as UploadProvider)}>
