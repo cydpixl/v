@@ -27,6 +27,8 @@ jobs:
           node-version: '22'
       - name: Mirror existing production app
         run: node scripts/sync-daily-thoughts.mjs
+      - name: Check username-only authentication
+        run: node scripts/check-dt-account.mjs
       - name: Commit GitHub Pages files
         run: |
           git config user.name "github-actions[bot]"
