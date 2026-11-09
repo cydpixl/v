@@ -75,7 +75,9 @@ while (queue.length) {
   const isText = /\.(?:js|mjs|css|svg|json|txt|webmanifest)$/i.test(name);
   let output = raw;
   if (isText) {
-    const body = patchSignup(decoder.decode(raw)).replaceAll('location.origin+"/"', 'location.origin+location.pathname');
+    const body = patchSignup(decoder.decode(raw))
+      .replaceAll('location.origin+"/"', 'location.origin+location.pathname')
+      .replace('children:r.body})]},r.id)})}),', 'children:r.body})]},r.id))}),');
     discover(body, '/' + name);
     output = Buffer.from(encoder.encode(rebase(body)));
   }
