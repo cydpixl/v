@@ -35,6 +35,18 @@ function discover(text, current = '/') {
   for (const m of text.matchAll(/(?:import\s*\(|from\s*)["'](\.{1,2}\/[^"']+\.(?:js|css|mjs))["']/g)) enqueue(m[1], current);
 }
 
+
+// Keep account sessions and existing app behavior unchanged; only remove the signup-confirmation step.
+function patchSignup(text) {
+  const original = "else if(e===\"signup\"){const{data:K,error:L}=await le.auth.signUp({email:r.trim(),password:u,options:{data:{display_name:d.trim().slice(0,40)||r.trim().split(\"@\")[0]},emailRedirectTo:location.origin+\"/\"}});if(L)throw L;K.session?i(K.session):K.user?.identities?.length===0?_(\"This email already has an account. Sign in or reset your password.\"):T(\"Check your email to confirm your account.\")}";
+  const updated = "else if(e===\"signup\"){const{data:K,error:L}=await le.functions.invoke(\"dt-signup\",{body:{email:r.trim(),password:u,display_name:d.trim().slice(0,40)||r.trim().split(\"@\")[0]}});if(L||K?.error)throw new Error(K?.error||L?.message||\"Could not create account\");const{data:Y,error:W}=await le.auth.signInWithPassword({email:r.trim(),password:u});if(W)throw W;if(Y.session)i(Y.session)}";
+  if (text.includes(updated)) return text;
+  const hits = text.split(original).length - 1;
+  if (!hits) return text;
+  if (hits !== 1) throw new Error("Ambiguous signup flow; refusing to publish.");
+  return text.replace(original, updated);
+}
+
 function rebase(text) {
   return text
     .replaceAll('/assets/', base + 'assets/')
@@ -63,7 +75,7 @@ while (queue.length) {
   const isText = /\.(?:js|mjs|css|svg|json|txt|webmanifest)$/i.test(name);
   let output = raw;
   if (isText) {
-    const body = decoder.decode(raw);
+    const body = patchSignup(decoder.decode(raw)).replaceAll('location.origin+"/"', 'location.origin+location.pathname');
     discover(body, '/' + name);
     output = Buffer.from(encoder.encode(rebase(body)));
   }
