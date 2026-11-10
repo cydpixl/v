@@ -18,3 +18,7 @@
 /* The conversation spans the Chat window: incoming at the left edge, yours at the right. */
 .single-chat-window #messages{width:100%!important;max-width:none!important;margin:0!important;align-self:stretch}.single-chat-window .message{max-width:none!important;align-self:stretch;box-sizing:border-box}.single-chat-window .message.mine{justify-content:flex-start}.single-chat-window .message.incoming{justify-content:flex-start}.single-chat-window .chat-content #composer-form{width:calc(100% - 40px)!important;max-width:none!important}.single-chat-window .message.mine .message-toolbar{left:auto;right:40px}@media(max-width:700px){.single-chat-window .chat-content #composer-form{width:calc(100% - 16px)!important}}
 @media(max-width:700px){.desktop-system-bar[data-alignment=center] .system-apps{position:static;transform:none;left:auto;max-width:none;flex:1;justify-content:center}.desktop-system-bar[data-alignment=center] .system-running{display:none}.desktop-system-bar .system-clock,.desktop-system-bar [data-system-volume],.desktop-system-bar [data-system-tray],.desktop-system-bar .system-home{flex-shrink:0}}
+
+/* Standalone expressions retain their alpha instead of inheriting the text bubble. */
+.single-chat-window .message .message-text.expression-only{background:transparent;padding:0;box-shadow:none;border-radius:0;line-height:1}
+.single-chat-window .message.mine .message-text.expression-only{background:transparent}
