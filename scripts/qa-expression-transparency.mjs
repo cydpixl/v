@@ -21,6 +21,14 @@ try{
   renderEmoji(document.body);
   window.rerenderExpressions=()=>renderEmoji(document.body);
  });
+ if(process.env.VELA_LIVE){
+  const origin='https://cydpixl.github.io',html=await (await fetch(origin+'/v/')).text();
+  const js=html.match(/src="(\/v\/assets\/index-[^"]+\.js)"/)[1];
+  assert.ok((await (await fetch(origin+js)).text()).includes('expression-only'),'Live JavaScript must include the fix');
+  const css=html.match(/href="(\/v\/assets\/index-[^"]+\.css)"/)[1];
+  await page.evaluate(()=>document.querySelectorAll('style,link[rel=stylesheet]').forEach(el=>el.remove()));
+  await page.addStyleTag({url:origin+css});
+ }
  await mkdir('output/playwright',{recursive:true});
  for(const width of [1280,390]){
   await page.setViewportSize({width,height:900});await page.addStyleTag({content:'html,body{height:auto!important;overflow:auto!important}main.single-chat-window{position:static!important;width:100%!important;height:auto!important;max-height:none!important}#fixtures{overflow:visible!important;height:auto!important}'});
