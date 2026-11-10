@@ -1,21 +1,18 @@
 import {escape as e} from './util.js';
 import {desktopProfile,unlockDesktop,profilePicture} from './desktop-profile.mjs';
 import './desktop-boot.css';
-let screen,pending,screenClock;
+let screen,screenClock;
 const mark='<svg viewBox="0 0 512 512" aria-hidden="true"><path d="M92 106h91l73 201 73-201h91L307 411H205z" fill="currentColor"/><path d="M216 166h80l-40 113z" fill="currentColor"/></svg>';
 function createScreen(label){const dialog=document.createElement('dialog');dialog.className='desktop-boot-screen';dialog.setAttribute('aria-label',label);dialog.addEventListener('cancel',event=>event.preventDefault());document.body.append(dialog);dialog.showModal();return dialog;}
-export function startDesktopBoot(){if(!pending){screen=window.__velaInitialBoot?.element;pending=Promise.resolve();}return pending;}
-export function finishBoot(){clearInterval(screenClock);screen?.close();screen?.remove();screen=null;document.getElementById('vela-first-paint-boot-style')?.remove();}
+export function finishBoot(){clearInterval(screenClock);screen?.close();screen?.remove();screen=null;}
 // VELA authentication is handled by the existing sign-in form.
 // Desktop password/PIN setup is never required to enter the app.
 // Previously configured desktop locks remain available only when a user explicitly locks it.
 export async function enterDesktop({user,onDone=()=>{},forceLock=false}){
- await startDesktopBoot();
  const uid=user.uid,profile=desktopProfile(uid);
  if(!forceLock||!profile){finishBoot();onDone();return;}
  if(!screen?.isConnected)screen=createScreen('Unlock VELA Desktop');
  screen.removeAttribute('id');
- document.getElementById('vela-first-paint-boot-style')?.remove();
  screen.dataset.phase='lock';
  return new Promise(resolve=>{
   const done=()=>{finishBoot();onDone();resolve()};

@@ -8,7 +8,7 @@ import {mergeMessagePage} from './message-page.mjs';
 import {loadAppBranding} from './app-branding.mjs';
 import {listeningLabel,paintChatListening} from './chat-listening.mjs';
 import {soundData} from './sound-data.mjs';
-import {startDesktopBoot,enterDesktop,finishBoot} from './desktop-boot.mjs';
+import {enterDesktop,finishBoot} from './desktop-boot.mjs';
 import {mountTaskbarLayout} from './desktop-layout.mjs';
 import {setMediaBase,registerAppMedia} from './audio-mixer.mjs';
 import {mountPersonalization} from './settings-personalization.mjs';
@@ -83,7 +83,7 @@ import {uploadRequest as sendUploadRequest} from './upload-transport.js';
 import {validateChatSelection} from './media-policy.mjs';
 import {registerPWA} from './pwa.js';
 const $=s=>document.querySelector(s),root=$('#app'),layers=$('#layers');
-const desktopBootReady=startDesktopBoot();
+
 const S={session:0,user:null,friends:[],conversations:[],blocks:[],blockedBy:[],active:null,view:'friends',tab:'online',messages:[],more:false,query:'',reply:null,upload:null,outbox:[],prefs:{},incoming:null};
 let hub;
 let disposeCallResizer,disposeComposer,disposeSlash;let initialThemePromptShown=false;
@@ -596,7 +596,7 @@ window.addEventListener('online',()=>{if(root.dataset.startupFailed){location.re
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.user){flushOutbox();refresh().catch(()=>{});if(!live||live.readyState>1)connectLive();if(S.active){loadMessages().catch(()=>{});api('/conversations/'+encodeURIComponent(S.active)+'/read',{method:'POST'}).catch(()=>{});}}});
 window.addEventListener('pagehide',()=>{live?.close();engine?.leave({keepalive:true}).catch(()=>{});});
 let observedAuthUid;
-onAuthStateChanged(auth,async firebaseUser=>{const nextUid=firebaseUser?.uid||null;if(observedAuthUid===nextUid)return;observedAuthUid=nextUid;shop.unmount();S.session++;musicSharing.reset();listeningTracker.reset();creative.resetSession();if(firebaseUser){root.querySelector('#auth-form')?.setAttribute('aria-busy','true');await startup();}else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];layers.innerHTML='';await desktopBootReady;if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
+onAuthStateChanged(auth,async firebaseUser=>{const nextUid=firebaseUser?.uid||null;if(observedAuthUid===nextUid)return;observedAuthUid=nextUid;shop.unmount();S.session++;musicSharing.reset();listeningTracker.reset();creative.resetSession();if(firebaseUser){root.querySelector('#auth-form')?.setAttribute('aria-busy','true');await startup();}else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];layers.innerHTML='';if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
 // Runtime is intentionally small and useful for local end-to-end verification.
 if(import.meta.env.DEV)window.__pixl={get state(){return S},get call(){return engine},api};
 
