@@ -43,7 +43,7 @@ export function renderChatVideo(file,src) {
  const poster=typeof file.poster==='string'&&file.poster.startsWith('data:image/jpeg;base64,')?file.poster:'';
  const label=e(file.name||'Video');
  return '<div class="vela-video-card"><button type="button" class="vela-video-launch" aria-label="Play '+label+'">'+
- '<video class="vela-video-thumb" playsinline muted preload="metadata" aria-hidden="true" tabindex="-1"'+
+ '<video class="vela-video-thumb" playsinline muted preload="'+(poster?'none':'metadata')+'" aria-hidden="true" tabindex="-1"'+
  (poster?' poster="'+e(poster)+'"':'')+' src="'+e(src)+'"></video>'+
  '<span class="vela-video-play" aria-hidden="true">'+icon('play',25)+'</span>'+
  '<span class="vela-video-foot">'+icon('video',14)+'<span>'+label+'</span></span>'+
@@ -144,6 +144,12 @@ export function installChatVideoViewer() {
   if(dialog.requestFullscreen){try{await dialog.requestFullscreen();return;}catch{}}
   dialog.classList.toggle('vela-video-fallback-fullscreen');
  });
+ document.addEventListener('loadedmetadata',event=>{
+  const thumbnail=event.target;
+  if(!thumbnail.matches?.('video.vela-video-thumb')||thumbnail.hasAttribute('poster'))return;
+  // Seeking a fraction into older clips encourages a visible first frame where supported.
+  if(Number.isFinite(thumbnail.duration)&&thumbnail.duration>0.4){try{thumbnail.currentTime=Math.min(0.3,thumbnail.duration*0.1);}catch{}}
+ },true);
  document.addEventListener('click',event=>{
   const trigger=event.target.closest('.vela-video-launch');
   if(!trigger)return;
