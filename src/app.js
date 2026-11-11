@@ -81,6 +81,8 @@ import './desktop-apps.css';
 import './camera-capture.css';
 import {uploadRequest as sendUploadRequest} from './upload-transport.js';
 import {validateChatSelection} from './media-policy.mjs';
+import {makeChatVideoPoster,renderChatVideo,installChatVideoViewer} from './chat-video.mjs';
+import './chat-video.css';
 import {registerPWA} from './pwa.js';
 const $=s=>document.querySelector(s),root=$('#app'),layers=$('#layers');
 
@@ -88,8 +90,8 @@ const S={session:0,user:null,friends:[],conversations:[],blocks:[],blockedBy:[],
 let hub;
 let disposeCallResizer,disposeComposer,disposeSlash;let initialThemePromptShown=false;
 function showOpeningTheme(){}
-let uploadRequest=0,uploading=false,uploadName='',uploadPercent=0,uploadFailure=null,uploadStage='Uploading',uploadPreparation=null;
-function invalidateUpload(){uploadPreparation?.abort();uploadPreparation=null;uploadRequest++;uploading=false;uploadName='';uploadFailure=null;}
+let uploadRequest=0,uploading=false,uploadName='',uploadPercent=0,uploadFailure=null,uploadStage='Uploading',uploadPreparation=null,uploadActivePoster='';
+function invalidateUpload(){uploadPreparation?.abort();uploadPreparation=null;uploadRequest++;uploading=false;uploadName='';uploadFailure=null;uploadActivePoster='';}
 let engine,live,liveRetry,liveGeneration=0,liveFailures=0,refreshTimer,refreshing=false,dirty=false,typingTimer,lastTyping=0,authMode='login',refreshId=0,callLayout='grid',focusTile=null;
 const messageCache=new Map(),messageRequests=new Map(),messagePrefetching=new Set();
 const callEvents=new Map();
@@ -308,9 +310,9 @@ async function hydrateFiles(messages){
  for(let offset=0;offset<attachments.length;offset+=50){const batch=attachments.slice(offset,offset+50),data=await api('/file-links',{method:'POST',body:{ids:batch.map(a=>a.id)}});for(const a of batch)a.url=data.links[a.id];}
 }
 async function acceptLiveMessage(data){if(data.conversation!==S.active)return;if(!data.message)return loadMessages();const message=data.message,index=S.messages.findIndex(item=>item.id===message.id),local=S.outbox.find(item=>item.id===message.id);if(message.attachment&&!message.attachment.url){message.attachment.url=local?.attachment?.url||S.messages[index]?.attachment?.url;}if(index<0)S.messages.push(message);else S.messages[index]=message;S.messages.sort((a,b)=>a.created-b.created||a.id.localeCompare(b.id));S.outbox=S.outbox.filter(item=>item.id!==message.id);persistOutbox();await hydrateFiles([message]);if(data.conversation===S.active)renderMessages();}
-function attachment(a){if(a.kind==='files')return '<div class="message-attachments">'+a.files.map(attachment).join('')+'</div>';if(['bodycam-library','daily-dose-library','command-help'].includes(a.kind))return renderBotAttachment(a);if(a.kind==='gif'&&a.expressionId)return '<img class="gif-attachment" src="'+e(a.url||'')+'" alt="'+e(a.name)+'">';if(a.kind==='sticker'||a.kind==='emoji')return '<img class="'+(a.kind==='sticker'?'sticker-attachment':'custom-emoji-attachment')+'" src="'+e(a.url||'')+'" alt="'+e(a.name)+'">';const src=a.url||apiURL('/files/'+encodeURIComponent(a.id));if(a.type.startsWith('image/'))return `<button class="image-attachment" data-image="${e(src)}" aria-label="View ${e(a.name)}"><img src="${src}" alt="${e(a.name)}" loading="lazy"></button>`;if(a.type.startsWith('video/'))return `<video class="media-attachment" aria-label="${e(a.name)}" src="${e(src)}" controls playsinline preload="none"></video>`;if(a.type.startsWith('audio/'))return `<audio data-user-media-src="${e(src)}" controls preload="none"></audio>`;return `<a class="file-attachment" href="${src}" download="${e(a.name)}">${icon('file',28)}<span><strong>${e(a.name)}</strong><small>${bytes(a.size)}</small></span></a>`;}
+function attachment(a){if(a.kind==='files')return '<div class="message-attachments">'+a.files.map(attachment).join('')+'</div>';if(['bodycam-library','daily-dose-library','command-help'].includes(a.kind))return renderBotAttachment(a);if(a.kind==='gif'&&a.expressionId)return '<img class="gif-attachment" src="'+e(a.url||'')+'" alt="'+e(a.name)+'">';if(a.kind==='sticker'||a.kind==='emoji')return '<img class="'+(a.kind==='sticker'?'sticker-attachment':'custom-emoji-attachment')+'" src="'+e(a.url||'')+'" alt="'+e(a.name)+'">';const src=a.url||apiURL('/files/'+encodeURIComponent(a.id));if(a.type.startsWith('image/'))return `<button class="image-attachment" data-image="${e(src)}" aria-label="View ${e(a.name)}"><img src="${src}" alt="${e(a.name)}" loading="lazy"></button>`;if(a.type.startsWith('video/'))return renderChatVideo(a,src);if(a.type.startsWith('audio/'))return `<audio data-user-media-src="${e(src)}" controls preload="none"></audio>`;return `<a class="file-attachment" href="${src}" download="${e(a.name)}">${icon('file',28)}<span><strong>${e(a.name)}</strong><small>${bytes(a.size)}</small></span></a>`;}
 function persistOutbox(){localStorage.setItem('pixl.outbox.'+S.user.uid,JSON.stringify(S.outbox));}
-async function sendMessage(event){event.preventDefault();if(conversationRestriction(active()))return toast(conversationRestriction(active()));if(uploading)return toast('Wait for the attachment to finish uploading.');const input=$('#composer');let text=input.value.trim();const command=parseCommand(text);if(command?.name==='rewrites'){if(!S.user.site_admin)return toast('Site administrator access required.');input.value='';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);await openRewriteRules({api,modal,toast});return;}if(command&&S.upload)return toast('Send or remove your attachment before using a command.');if(command?.name==='saved'){input.value='';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);S.view='bookmarks';render();return;}if(command?.name==='shrug')text=(command.args?command.args+' ':'')+'¯\\_(ツ)_/¯';if(!text&&!S.upload)return;const cleanText=kindMessage(text);if(cleanText!==text)toast('Rewritten with kinder words.');text=cleanText;const botCommand=command&&['bodycam','dailydose','help'].includes(command.name);const message={id:crypto.randomUUID(),conversation:S.active,sender:S.user.uid,text,...(botCommand?{command:command.name,commandArgs:command.args}:{}),upload:S.upload?.id,uploads:S.upload?.kind==='files'?S.upload.files.map(f=>f.id):undefined,attachment:S.upload,reply_to:S.reply?.id,created:Date.now(),pending:true};S.outbox.push(message);persistOutbox();input.value='';input.style.height='auto';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);S.reply=null;S.upload=null;renderReply();renderUpload();renderMessages();$('#message-scroll').scrollTop=$('#message-scroll').scrollHeight;await flushOutbox();}
+async function sendMessage(event){event.preventDefault();if(conversationRestriction(active()))return toast(conversationRestriction(active()));if(uploading)return toast('Wait for the attachment to finish uploading.');const input=$('#composer');let text=input.value.trim();const command=parseCommand(text);if(command?.name==='rewrites'){if(!S.user.site_admin)return toast('Site administrator access required.');input.value='';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);await openRewriteRules({api,modal,toast});return;}if(command&&S.upload)return toast('Send or remove your attachment before using a command.');if(command?.name==='saved'){input.value='';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);S.view='bookmarks';render();return;}if(command?.name==='shrug')text=(command.args?command.args+' ':'')+'¯\\_(ツ)_/¯';if(!text&&!S.upload)return;const cleanText=kindMessage(text);if(cleanText!==text)toast('Rewritten with kinder words.');text=cleanText;const botCommand=command&&['bodycam','dailydose','help'].includes(command.name);const videoFiles=S.upload?.kind==='files'?S.upload.files:S.upload?[S.upload]:[];const posters=Object.fromEntries(videoFiles.filter(f=>f.type?.startsWith('video/')&&f.poster).map(f=>[f.id,f.poster]));const message={id:crypto.randomUUID(),conversation:S.active,sender:S.user.uid,text,...(botCommand?{command:command.name,commandArgs:command.args}:{}),upload:S.upload?.id,uploads:S.upload?.kind==='files'?S.upload.files.map(f=>f.id):undefined,posters,attachment:S.upload,reply_to:S.reply?.id,created:Date.now(),pending:true};S.outbox.push(message);persistOutbox();input.value='';input.style.height='auto';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);S.reply=null;S.upload=null;renderReply();renderUpload();renderMessages();$('#message-scroll').scrollTop=$('#message-scroll').scrollHeight;await flushOutbox();}
 function acceptedMessage(local,result){
  const message=result.message||{...local,pending:false,failed:false};
  // Keep the preview URL while the server's private media link resolves.
@@ -320,7 +322,7 @@ function acceptedMessage(local,result){
  const c=S.conversations.find(x=>x.id===local.conversation);if(c){c.preview=message.text;c.preview_attachment=message.attachment;c.updated=message.created;renderSidebar();}
  if(local.conversation===S.active){renderMessages();hydrateFiles([message]).then(()=>{if(local.conversation===S.active)renderMessages();}).catch(()=>{});}
 }
-const outboxPump=createOutboxPump({state:()=>S,send:m=>api('/conversations/'+encodeURIComponent(m.conversation)+(m.command?'/commands':'/messages'),{method:'POST',signal:AbortSignal.timeout(15000),body:m.command?{id:m.id,command:m.command,args:m.commandArgs||''}:{id:m.id,text:m.text,upload:m.upload,uploads:m.uploads,asset:m.asset,gif:m.gif,replyTo:m.reply_to}}),accept:acceptedMessage,changed:()=>{persistOutbox();renderMessages();}});
+const outboxPump=createOutboxPump({state:()=>S,send:m=>api('/conversations/'+encodeURIComponent(m.conversation)+(m.command?'/commands':'/messages'),{method:'POST',signal:AbortSignal.timeout(15000),body:m.command?{id:m.id,command:m.command,args:m.commandArgs||''}:{id:m.id,text:m.text,upload:m.upload,uploads:m.uploads,posters:m.posters,asset:m.asset,gif:m.gif,replyTo:m.reply_to}}),accept:acceptedMessage,changed:()=>{persistOutbox();renderMessages();}});
 const flushOutbox=()=>outboxPump.flush();
 
 // Live music cards use Vela's existing message update/broadcast endpoint.
@@ -438,19 +440,22 @@ async function uploadFiles(files){
      if(uploadPreparation===controller)uploadPreparation=null;
     }
     if(!current())break;
-    uploadStage='Uploading';uploadName=files.length===1?file.name:files.length+' files';uploadPercent=Math.round(index/files.length*100);renderUpload();
+    uploadStage='Uploading';uploadName=files.length===1?file.name:files.length+' files';uploadPercent=Math.round(index/files.length*100);uploadActivePoster='';renderUpload();
+    const posterTask=file.type.startsWith('video/')?makeChatVideoPoster(file):Promise.resolve('');
+    posterTask.then(poster=>{if(current()&&poster){uploadActivePoster=poster;renderUpload();}}).catch(()=>{});
     const {upload}=await connections.queue.add(file,cid,{onProgress:p=>{if(current()){uploadPercent=Math.round((index+p/100)/files.length*100);renderUpload();}}});
+    const poster=await posterTask;if(poster)upload.poster=poster;
     results.push(upload);
     if(!current())break;
     setUploads(results);await hydrateFiles([{attachment:S.upload}]);
    }finally{await releaseConvertedFile(file);}
   }
  }catch(error){if(current()){if(error.uploadJob&&error.code!=='UPLOAD_CANCELLED')uploadFailure={name:uploadName,job:error.uploadJob};toast(error.message);}}
- finally{if(request===uploadRequest){uploadPreparation=null;uploading=false;uploadName='';renderUpload();}}
+ finally{if(request===uploadRequest){uploadPreparation=null;uploading=false;uploadName='';uploadActivePoster='';renderUpload();}}
 }
 function renderUpload(){
  const preview=$('#upload-preview'),files=selectedUploads();if(uploadFailure&&connections.queue.list().find(j=>j.id===uploadFailure.job)?.status==='done')uploadFailure=null;
- if(preview)preview.innerHTML=(uploading?`<div class="upload-progress" role="status"><span>${e(uploadStage)} ${e(uploadName)} · ${uploadPercent}%</span><button type="button" class="text-button" data-action="upload-manager">Manage</button><progress value="${uploadPercent}" max="100" aria-label="Upload progress"></progress></div>`:uploadFailure?`<div class="upload-progress" role="status"><span>${e(uploadFailure.name)} · Saved in Uploads</span><button type="button" class="text-button" data-action="upload-manager">Resume / Retry</button>${button('close','Dismiss upload status','dismiss-upload-error')}</div>`:'')+files.map(file=>`<div class="upload-progress attachment-preview">${file.type.startsWith('image/')&&file.url?`<img class="upload-thumbnail" src="${e(file.url)}" alt="${e(file.name)} preview">`:icon('file')}<span><strong>${e(file.name)}</strong><small>${bytes(file.size)}</small></span><button type="button" class="icon-button" data-remove-attachment="${e(file.id)}" aria-label="Remove ${e(file.name)}">${icon('close')}</button></div>`).join('');
+ if(preview)preview.innerHTML=(uploading?`<div class="upload-progress" role="status">${uploadActivePoster?`<img class="upload-stage-preview" src="${e(uploadActivePoster)}" alt="">`:''}<span>${e(uploadStage)} ${e(uploadName)} · ${uploadPercent}%</span><button type="button" class="text-button" data-action="upload-manager">Manage</button><progress value="${uploadPercent}" max="100" aria-label="Upload progress"></progress></div>`:uploadFailure?`<div class="upload-progress" role="status"><span>${e(uploadFailure.name)} · Saved in Uploads</span><button type="button" class="text-button" data-action="upload-manager">Resume / Retry</button>${button('close','Dismiss upload status','dismiss-upload-error')}</div>`:'')+files.map(file=>`<div class="upload-progress attachment-preview">${file.type.startsWith('video/')&&file.poster?`<img class="upload-thumbnail" src="${e(file.poster)}" alt="${e(file.name)} preview">`:file.type.startsWith('image/')&&file.url?`<img class="upload-thumbnail" src="${e(file.url)}" alt="${e(file.name)} preview">`:icon(file.type.startsWith('video/')?'film':'file')}<span><strong>${e(file.name)}</strong><small>${bytes(file.size)}</small></span><button type="button" class="icon-button" data-remove-attachment="${e(file.id)}" aria-label="Remove ${e(file.name)}">${icon('close')}</button></div>`).join('');
  preview?.querySelectorAll('[data-remove-attachment]').forEach(b=>b.onclick=()=>{setUploads(selectedUploads().filter(f=>f.id!==b.dataset.removeAttachment));renderUpload();});
  const send=$('#composer-form .send-button');if(send)send.disabled=uploading;
 }
@@ -637,7 +642,7 @@ document.addEventListener('click',event=>{
    break;
   }
   case'music-share':await hub.open('music');break;
-  case'attach':openShareDock(trigger,{enabled:id=>featureEnabled(S.user.uid,id),file:()=>{$('#file-input').accept='';$('#file-input').value='';$('#file-input').click()},music:()=>musicSharing.open(),photo:takeChatPhoto,screenshot:()=>captureScreenshot({modal,upload:uploadFile,toast}),gif:()=>emojiPicker(trigger,'gif'),sticker:()=>emojiPicker(trigger,'sticker'),voice:()=>connections.voiceNote(),draw:()=>creative.open('draw'),schedule:scheduleMessage});break;
+  case'attach':openShareDock(trigger,{enabled:id=>featureEnabled(S.user.uid,id),file:()=>{$('#file-input').accept='';$('#file-input').value='';$('#file-input').click()},video:()=>{$('#file-input').accept='video/*';$('#file-input').value='';$('#file-input').click()},music:()=>musicSharing.open(),photo:takeChatPhoto,screenshot:()=>captureScreenshot({modal,upload:uploadFile,toast}),gif:()=>emojiPicker(trigger,'gif'),sticker:()=>emojiPicker(trigger,'sticker'),voice:()=>connections.voiceNote(),draw:()=>creative.open('draw'),schedule:scheduleMessage});break;
   case'take-photo':await takeChatPhoto();break;
   case'schedule-message':scheduleMessage();break;
   case'scheduled-messages':await scheduledMessages();break;
@@ -761,6 +766,7 @@ window.addEventListener('vela-desktop-lock',()=>{if(!S.user)return;document.quer
 window.addEventListener('vela-windows-changed',()=>{if(chatRenderPending&&!document.body.classList.contains('chat-app-hidden'))renderMessages()});
 
 installChatFullscreen();
+installChatVideoViewer();
 
 import './desktop-performance.css';
 import './desktop-experience.css';
