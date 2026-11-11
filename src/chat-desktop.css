@@ -6,3 +6,14 @@
 .welcome-next{border-radius:999px;padding:13px 14px 13px 26px;gap:25px;min-width:174px;font-size:13px;background:#f2f6fd;color:#192a3d;box-shadow:0 8px 28px #0003}.welcome-next svg{box-sizing:content-box;width:18px;height:18px;padding:9px;background:#142b4812;border-radius:50%;transition:transform .2s}.welcome-next:hover svg{transform:translateX(3px)}.welcome-preview>img{object-fit:contain;background:#111b29}.welcome-preview{min-height:120px}
 .hub-ready #app>.single-chat-window{grid-template-rows:minmax(0,1fr)!important;grid-template-columns:minmax(0,1fr)!important}.single-chat-window #incoming-call:empty{display:none!important}.single-chat-window .workspace{grid-row:1!important;grid-column:1!important;height:100%!important}.single-chat-window .header-actions>[data-connection-action=gallery]{display:none}
 html[data-theme] .single-chat-window .workspace:has(.chat-content) #workspace-header{background:transparent;backdrop-filter:blur(28px);border-bottom-color:var(--border)}html[data-theme] .single-chat-window #live-music-dock{background:transparent!important}
+.header-friends{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:36px;padding:0 10px;border:1px solid var(--border);border-radius:12px;background:var(--hover);font-size:12px;font-weight:600;white-space:nowrap}
+.header-friends:hover,.header-friends:focus-visible{background:var(--selected)}
+.friends-panel .friend-request-form label{margin:0}
+.friends-panel .friend-request-form .primary{margin-top:12px}
+.friends-panel section{border-top:1px solid var(--border);margin-top:16px;padding-top:14px}
+.friends-panel section h3{font-size:14px;margin:0 0 8px}
+.friends-panel .friend-request-result{margin:0;color:var(--text)}
+.friends-panel .friend-request-result:not(:empty){margin:10px 0}
+.friends-panel .friend-name{overflow-wrap:anywhere}
+.friends-panel button.friend-name:hover strong{text-decoration:underline}
+@media(max-width:550px){.header-friends{min-height:30px;padding-inline:7px}.header-friends>svg{display:none}}

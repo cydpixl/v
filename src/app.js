@@ -112,7 +112,7 @@ function applyCallPresence(data){
  if(conversation.call&&conversation.call.id!==data.id&&(!data.call||conversation.call.created>data.call.created))return;
  callEvents.set(data.conversation,{id:data.id,revision:data.revision||0,call:data.call,receivedAt:Date.now()});conversation.call=data.call;
  if(data.call?.status==='active'&&engine?.info?.id===data.id)engine.info.status='active';
- renderSidebar();if(S.view==='chat'){renderHeader();renderCallPresence();}else if(S.view==='friends'&&S.tab!=='add')renderContent();syncIncoming();updateCall();
+ renderSidebar();if(S.view==='chat'){renderHeader();renderCallPresence();}else if(S.view==='friends')renderContent();syncIncoming();updateCall();
 }
 function syncMobileViewport(){const viewport=window.visualViewport;if(viewport&&Math.abs(viewport.scale-1)>.05)return;const height=Math.round(viewport?.height||window.innerHeight),top=Math.round(viewport?.offsetTop||0);document.documentElement.style.setProperty('--vela-app-height',height+'px');document.documentElement.style.setProperty('--vela-viewport-top',top+'px');document.documentElement.classList.toggle('keyboard-open',!!viewport&&window.innerHeight-height>120);if(document.activeElement?.id==='composer'){const scroll=$('#message-scroll');requestAnimationFrame(()=>{if(scroll)scroll.scrollTop=scroll.scrollHeight})}}
 syncMobileViewport();window.visualViewport?.addEventListener('resize',syncMobileViewport);window.visualViewport?.addEventListener('scroll',syncMobileViewport);window.addEventListener('resize',syncMobileViewport);
@@ -222,7 +222,7 @@ function renderSidebar(){
  $('#dm-list').innerHTML=connections.sort(S.conversations).filter(c=>c.kind==='direct').slice(0,1).map(c=>`<button aria-label="Open ${e(title(c))}" title="${e(title(c))}" class="dm-row ${S.active===c.id&&S.view==='chat'?'selected':''} ${c.unread?'unread':''}" data-open="${e(c.id)}">${c.kind==='group'?`<span class="avatar group">${icon('users')}</span>`:avatar(other(c))}<span class="dm-identity"><strong>${e(title(c))}</strong><small>${c.call?.participants?.length?'<span class="call-presence-label">In call: '+e(callNames(c.call))+'</span>':c.kind==='group'?c.members.length+' Members':c.blocked?'You blocked this account':c.blockedBy?'This account blocked you':e(other(c).custom_status||messagePreview(c.preview,c.preview_attachment))}</small>${listeningLabel(other(c)?.uid)}</span>${c.unread?'<b class="badge">'+c.unread+'</b>':''}${c.call?icon('phone',15):''}</button>`).join('')||'<p class="sidebar-empty">Your conversations appear here.</p>';
  paintChatListening({avatar,toast});
 }
-function renderHeader(){const c=active(),chat=S.view==='chat'&&c,label=S.view==='shop'?'Fortnite':S.view==='music'?'Music':'Messages';$('#workspace-header').innerHTML=`<div class="app-window-controls traffic-lights" aria-label="Messages window controls"><button data-action="window-close" aria-label="Close Messages" title="Close Messages and return to desktop"></button><button data-action="window-minimize" aria-label="Minimize Messages" title="Minimize Messages to desktop"></button><button data-action="window-maximize" aria-label="Maximize Messages" title="Expand Chat. Right-click for browser fullscreen."></button></div><div class="header-identity">${chat?profileAvatar(other(c),'small')+`<span class="header-listening-person"><button class="header-profile-name" data-profile="${e(other(c).uid)}" title="View profile, friendship dates, and shared media">${e(title(c))}</button>${listeningLabel(other(c)?.uid)}</span>`:`<strong>${label}</strong>`}</div><div class="header-actions">${chat?`<span class="header-call-buttons">${button('phone','Start Voice Call','voice-call')}${button('video','Start Video Call','video-call')}</span>${button('more','Conversation Options','conversation-more')}`:button('chat','Back to Chat','back-chat')}</div>`;paintChatListening({avatar,toast});}
+function renderHeader(){const c=active(),chat=S.view==='chat'&&c,label=S.view==='shop'?'Fortnite':S.view==='music'?'Music':'Messages';$('#workspace-header').innerHTML=`<div class="app-window-controls traffic-lights" aria-label="Messages window controls"><button data-action="window-close" aria-label="Close Messages" title="Close Messages and return to desktop"></button><button data-action="window-minimize" aria-label="Minimize Messages" title="Minimize Messages to desktop"></button><button data-action="window-maximize" aria-label="Maximize Messages" title="Expand Chat. Right-click for browser fullscreen."></button></div><div class="header-identity">${chat?profileAvatar(other(c),'small')+`<span class="header-listening-person"><button class="header-profile-name" data-profile="${e(other(c).uid)}" title="View profile, friendship dates, and shared media">${e(title(c))}</button>${listeningLabel(other(c)?.uid)}</span>`:`<strong>${label}</strong>`}</div><div class="header-actions">${friendsButton()}${chat?`<span class="header-call-buttons">${button('phone','Start Voice Call','voice-call')}${button('video','Start Video Call','video-call')}</span>${button('more','Conversation Options','conversation-more')}`:button('chat','Back to Chat','back-chat')}</div>`;paintChatListening({avatar,toast});}
 
 function renderContent(){if(S.view!=='chat')musicDock.reset();disposeSlash?.();disposeSlash=null;disposeComposer?.();disposeComposer=null;
  const content=$('#main-content');if(S.view==='shop'){shop.mount(content);return;}if(S.view==='music'){musicPage.render(content);return;}content.className=S.view==='chat'?'chat-content':'friends-content';
@@ -237,12 +237,45 @@ function renderContent(){if(S.view!=='chat')musicDock.reset();disposeSlash?.();d
 }
 function empty(sym,title,description){return `<div class="empty-state"><div class="empty-symbol">${icon(sym,64)}</div><h2>${e(title)}</h2><p>${e(description)}</p></div>`;}
 function renderFriends(content){
- if(S.tab==='add'){content.innerHTML=`<div class="add-friend"><h2>Add Friend</h2><p>You can add friends with their Vela username.</p><form id="add-friend-form"><input name="handle" autocomplete="off" placeholder="Enter a username" maxlength="20" required aria-label="Friend username"><button class="primary">Send Friend Request</button></form><p class="form-error" id="friend-result" role="status"></p></div>${empty('users','Make room for your people','Add a friend, send a message, or start a call.')}`;$('#add-friend-form').onsubmit=async ev=>{ev.preventDefault();const form=ev.currentTarget;form.querySelector('button').disabled=true;try{await api('/friends',{method:'POST',body:{handle:new FormData(form).get('handle')}});$('#friend-result').textContent='Friend request sent.';form.reset();await refresh();}catch(err){$('#friend-result').textContent=err.message;}finally{form.querySelector('button').disabled=false;}};return;}
  const list=S.friends.filter(f=>S.tab==='pending'?f.status==='pending':f.status==='accepted'&&(S.tab!=='online'||online({...f,status:f.presence})));content.innerHTML=`<section class="friends-list"><div class="list-search">${icon('search',20)}<input id="friends-search" placeholder="Search" aria-label="Search friends"></div><h2 class="eyebrow">${S.tab==='pending'?'Pending':S.tab==='all'?'All friends':'Online'} — ${list.length}</h2><div id="friends-rows">${list.map(f=>friendRow(f)).join('')||empty('users',S.tab==='online'?'No one’s online right now':S.tab==='pending'?'No pending requests':'Your friends belong here',S.tab==='online'?'You can still message friends from the All tab.':'Add someone by their username to get started.')}</div></section><aside class="active-now"><h2>Active Now</h2>${S.conversations.filter(c=>c.call).map(c=>`<button class="activity-card" data-open="${e(c.id)}"><span class="activity-icon">${icon('phone')}</span><strong>${e(title(c))}</strong><span>In call: ${e(callNames(c.call))}</span></button>`).join('')||'<div class="quiet-state"><strong>It’s quiet for now…</strong><p>When a call starts, it will appear here.</p></div>'}</aside>`;$('#friends-search').oninput=ev=>{const value=ev.target.value.toLowerCase();document.querySelectorAll('.friend-row').forEach(el=>el.hidden=!el.textContent.toLowerCase().includes(value));};
  paintChatListening({avatar,toast});
 }
 function friendRow(f){const pending=f.status==='pending',incoming=f.requested_by!==S.user.uid;return `<div class="friend-row" data-friend="${e(f.uid)}">${profileAvatar({...f,status:f.presence})}<button class="friend-name" data-chat="${e(f.uid)}"><strong>${e(f.name)}</strong><span>${f.blocked?'You blocked this account':f.blockedBy?'This account blocked you':pending?(incoming?'Incoming Friend Request':'Outgoing Friend Request'):(online({...f,status:f.presence})?f.presence==='dnd'?'Do Not Disturb':f.presence==='idle'?'Idle':'Online':'Offline')}</span>${listeningLabel(f.uid)}</button><div class="row-actions">${pending?`${incoming?button('check','Accept Friend Request','accept:'+f.id):''}${button('close',incoming?'Ignore Friend Request':'Cancel Friend Request',(incoming?'decline:':'cancel:')+f.id)}`:`<button class="round-action" data-chat="${e(f.uid)}" aria-label="Message ${e(f.name)}" data-tip="Message">${icon('chat')}</button><button class="round-action" data-friend-menu="${e(f.uid)}" aria-label="More options for ${e(f.name)}" data-tip="More">${icon('more')}</button>`}</div></div>`;}
 function renderRequests(content){const incoming=S.friends.filter(f=>f.status==='pending'&&f.requested_by!==S.user.uid);content.innerHTML=`<section class="request-page"><h2>Pending Requests — ${incoming.length}</h2><p>Accept a friend request to start messaging and calling.</p>${incoming.map(friendRow).join('')||empty('inbox','You’re all caught up','New requests will appear here.')}</section>`;}
+function friendsButton(){
+ const count=S.friends.filter(f=>f.status==='pending'&&f.requested_by!==S.user.uid).length;
+ return `<button type="button" class="header-friends" data-action="friends-panel" aria-haspopup="dialog" aria-label="Friends${count?`, ${count} incoming ${count===1?'request':'requests'}`:''}">${icon('users',16)}<span>Friends</span>${count?`<b class="badge" aria-hidden="true">${count}</b>`:''}</button>`;
+}
+function updateFriendsPanel(){
+ const dialog=$('.friends-panel[open]');if(!dialog)return;
+ const rows=(friends,emptyText)=>friends.map(f=>{
+  const pending=f.status==='pending',incoming=f.requested_by!==S.user.uid;
+  const details=`<strong>${e(f.name)}</strong><span>@${e(f.handle)}</span>`;
+  return `<div class="friend-row">${avatar({...f,status:f.presence})}${pending?`<div class="friend-name">${details}<span>${incoming?'Incoming request':'Request sent'}</span></div>`:`<button type="button" class="friend-name" data-chat="${e(f.uid)}" aria-label="Message ${e(f.name)}">${details}</button>`}${pending?`<div class="row-actions">${incoming?button('check','Accept Friend Request','accept:'+f.id):''}${button('close',incoming?'Ignore Friend Request':'Cancel Friend Request',(incoming?'decline:':'cancel:')+f.id)}</div>`:''}</div>`;
+ }).join('')||`<p class="muted">${emptyText}</p>`;
+ const lists={requests:rows(S.friends.filter(f=>f.status==='pending'),'No pending requests.'),friends:rows(S.friends.filter(f=>f.status==='accepted'),'No friends yet.')};
+ for(const [section,markup] of Object.entries(lists)){
+  const target=dialog.querySelector(`[data-friends-list="${section}"]`);
+  if(target.dataset.markup===markup)continue;
+  target.dataset.markup=markup;
+  target.innerHTML=markup;
+ }
+}
+function openFriendsPanel(){
+ const dialog=modal('Friends',`<form class="friend-request-form"><label>Vela username<input name="handle" placeholder="@username" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus></label><button type="submit" class="primary">Send Friend Request</button><p class="friend-request-result" role="status"></p></form><section><h3>Requests</h3><p class="friend-request-result" data-request-result role="status"></p><div data-friends-list="requests"></div></section><section><h3>Friends</h3><div data-friends-list="friends"></div></section>`);
+ dialog.classList.add('friends-panel');
+ updateFriendsPanel();
+ const form=dialog.querySelector('form'),submit=form.querySelector('button'),result=form.querySelector('[role=status]');
+ form.onsubmit=async event=>{
+  event.preventDefault();if(submit.disabled)return;
+  const handle=form.elements.handle.value.trim().replace(/^@/,'').toLowerCase();
+  if(!/^[a-z0-9_]{3,20}$/.test(handle)){result.textContent='Enter a Vela username with 3–20 letters, numbers or underscores.';return;}
+  submit.disabled=true;result.textContent='';
+  try{await api('/friends',{method:'POST',body:{handle}});form.reset();result.textContent=`Friend request sent to @${handle}.`;await refresh().catch(()=>{});}
+  catch(error){result.textContent=error.message;}
+  finally{submit.disabled=false;}
+ };
+}
 async function refresh(){
  if(refreshing){dirty=true;return refreshing;}
  const uid=S.user?.uid;
@@ -251,8 +284,10 @@ async function refresh(){
   S.user=data.user;S.friends=data.friends;S.conversations=data.conversations;S.blocks=data.blocks||[];S.blockedBy=data.blockedBy||[];document.querySelectorAll('[data-profile] .presence').forEach(dot=>{const person=user(dot.closest('[data-profile]').dataset.profile);dot.className='presence '+(online(person)?person.presence||person.status||'online':'offline');});
   for(const c of S.conversations){const event=callEvents.get(c.id);if(!c.communicationBlocked&&event&&(event.receivedAt>=requestedAt||c.call?.id===event.id&&event.revision>(c.call.revision||0)))c.call=event.call;}
   prefetchConversations(S.conversations);renderSidebar();updateDock();
-  if(!['chat','movies','library','bookmarks','music','shop'].includes(S.view)&&S.tab!=='add')renderContent();
-  if(S.view==='chat'){renderHeader();renderReadReceipts();renderCallPresence();syncRelationshipUI();}
+  if(!['chat','movies','library','bookmarks','music','shop'].includes(S.view))renderContent();
+  updateFriendsPanel();
+  renderHeader();
+  if(S.view==='chat'){renderReadReceipts();renderCallPresence();syncRelationshipUI();}
   syncIncoming();connections.enhance();if(S.view==='chat')syncRelationshipUI();
 
  }while(dirty&&S.user?.uid===uid);})();
@@ -551,7 +586,7 @@ function toggle(name,label,value){return `<label class="toggle-row"><span>${e(la
 document.addEventListener('click',event=>{
  if(document.body.classList.contains('nav-open')&&event.target.closest('.workspace')&&!event.target.closest('[data-action=mobile-nav]')){document.body.classList.remove('nav-open');return;}
  const open=event.target.closest('[data-open]');if(open){act(()=>openChat(open.dataset.open));return;}
- const chat=event.target.closest('[data-chat]');if(chat){act(()=>chatWith(chat.dataset.chat));return;}
+ const chat=event.target.closest('[data-chat]');if(chat){act(async()=>{const panel=chat.closest('.friends-panel');await chatWith(chat.dataset.chat);if(panel?.open)panel.close();});return;}
  const tab=event.target.closest('[data-tab]');if(tab){S.tab=tab.dataset.tab;S.view='friends';render();return;}
  const prof=event.target.closest('[data-profile]');if(prof){profiles.show(prof.dataset.profile,prof);return;}
  const fm=event.target.closest('[data-friend-menu]');if(fm){friendMenu(fm.dataset.friendMenu,fm);return;}
@@ -569,7 +604,7 @@ document.addEventListener('click',event=>{
   case'retry-upload':case'upload-manager':connections.queue.open();break;
   case'dismiss-upload-error':uploadFailure=null;renderUpload();break;
   case'app-dock':openAppDock(trigger,{uid:S.user.uid,open:id=>{if(id==='fortnite')shop.show();else if(id==='music'){S.view='music';render()}else settings('features')},settings:()=>settings('features')});break;
-  case'add-friend':S.view='friends';S.tab='add';render();break;
+  case'add-friend':case'friends-panel':openFriendsPanel();break;
   case'window-close':hub.closeChat();updateCall();break;
   case'window-minimize':hub.minimizeChat();updateCall();break;
   case'window-maximize':document.body.classList.toggle('chat-expanded');for(const name of ['left','top','right','bottom','width','height','transform'])root.style.removeProperty(name);break;
@@ -591,7 +626,16 @@ document.addEventListener('click',event=>{
   case'settings':settings();break;
 
   case'voice-settings':settings('voice');break;
-  case'accept':case'decline':case'cancel':await api('/friends/'+encodeURIComponent(id),{method:'PATCH',body:{action}});await refresh();break;
+  case'accept':case'decline':case'cancel':{
+   if(trigger.disabled)break;
+   const status=trigger.closest('.friends-panel')?.querySelector('[data-request-result]');
+   trigger.disabled=true;
+   if(status)status.textContent='';
+   try{await api('/friends/'+encodeURIComponent(id),{method:'PATCH',body:{action}});await refresh();}
+   catch(error){if(!status)throw error;status.textContent=error.message;}
+   finally{trigger.disabled=false;}
+   break;
+  }
   case'music-share':await hub.open('music');break;
   case'attach':openShareDock(trigger,{enabled:id=>featureEnabled(S.user.uid,id),file:()=>{$('#file-input').accept='';$('#file-input').value='';$('#file-input').click()},music:()=>musicSharing.open(),photo:takeChatPhoto,screenshot:()=>captureScreenshot({modal,upload:uploadFile,toast}),gif:()=>emojiPicker(trigger,'gif'),sticker:()=>emojiPicker(trigger,'sticker'),voice:()=>connections.voiceNote(),draw:()=>creative.open('draw'),schedule:scheduleMessage});break;
   case'take-photo':await takeChatPhoto();break;
