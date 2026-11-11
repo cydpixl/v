@@ -22,6 +22,7 @@ const {friends:[initialRequest]}=await api(existing,'/state');
 await api(existing,'/friends/'+initialRequest.id,'PATCH',{action:'accept'});
 
 const browser=await (process.env.QA_WEBKIT?webkit.launch():chromium.launch({channel:'chrome'}));
+const upstreamSockets=new Set();
 async function openMessages(person,viewport){
  const context=await browser.newContext({viewport,serviceWorkers:'block'});
  const page=await context.newPage();
@@ -45,10 +46,11 @@ async function openMessages(person,viewport){
   const url=new URL(new URL(socket.url()).search,worker);
   url.protocol='ws:';url.pathname='/api/live';
   const upstream=new WebSocket(url);
+  upstreamSockets.add(upstream);
   upstream.addEventListener('open',socketReady);
   upstream.addEventListener('message',event=>socket.send(event.data));
   upstream.addEventListener('error',()=>socket.close());
-  upstream.addEventListener('close',()=>socket.close());
+  upstream.addEventListener('close',()=>{upstreamSockets.delete(upstream);socket.close();});
   socket.onClose(()=>upstream.close());
   socket.onMessage(message=>{if(upstream.readyState===WebSocket.OPEN)upstream.send(message);});
  });
@@ -93,4 +95,7 @@ try{
  await to.getByRole('textbox',{name:'Message Sender'}).waitFor();
  assert.equal((await api(sender,'/state')).friends.filter(friend=>friend.status==='accepted').length,2);
  console.log('PASS Friends in full-screen Messages, missing and duplicate usernames, live request badge and acceptance, and opening the new chat on both accounts.');
-}finally{await browser.close();}
+}finally{
+ for(const socket of upstreamSockets)socket.close();
+ await browser.close();
+}
