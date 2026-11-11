@@ -24,7 +24,7 @@ function dock(anchor,label,items){
 }
 export function openAppDock(anchor,{uid,open,settings}){return dock(anchor,'Your apps',[...appFeatures.filter(([id])=>['music','fortnite'].includes(id)&&featureEnabled(uid,id)).map(([id,ico,name])=>[name,ico,()=>open(id)]),['Customize','settings',settings]]);}
 export function openShareDock(anchor,a){return dock(anchor,'Add to message',[
- ['File','attach',a.file],['Camera','camera',a.photo],['Screenshot','image',a.screenshot],
+ ['File','attach',a.file],['Video','film',a.video],['Camera','camera',a.photo],['Screenshot','image',a.screenshot],
  ...(a.enabled('music')?[['Music','music',a.music]]:[]),['GIF','film',a.gif],['Sticker','sticker',a.sticker],
  ...(a.enabled('voice')?[['Voice note','mic',a.voice]]:[]),...(a.enabled('drawing')?[['Drawing','edit',a.draw]]:[]),['Schedule','schedule',a.schedule]
  ]);}
