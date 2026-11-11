@@ -174,7 +174,11 @@ async function api(req,env,ctx){
    let expressionAttachment=null;if(b.asset){const a=await expressionAccess(env,uid,b.asset,helpers);expressionAttachment={kind:a.kind,expressionId:a.id,name:a.name,type:a.type,size:a.size};}if(b.gif){const g=await gifById(env,b.gif);expressionAttachment={kind:'gif',name:g.name,url:g.url,type:'image/gif'};}for(const expressionId of new Set(customEmojiIds(text)))await expressionAccess(env,uid,expressionId,helpers);
    if(!text&&!att&&!expressionAttachment)fail('Write a message or attach a file.');if(b.replyTo&&!await row(env,'SELECT 1 FROM messages WHERE id=? AND conversation=?',b.replyTo,cid))fail('Reply not found.');
 
-   const attachment=expressionAttachment?JSON.stringify(expressionAttachment):attachments.length?JSON.stringify(attachments.length===1?{id:att.id,name:att.name,type:att.type,size:att.size}:{kind:'files',files:attachments.map(f=>({id:f.id,name:f.name,type:f.type,size:f.size}))}):null,now=Date.now();
+   // Store only small JPEG previews for videos actually owned by the sender and attached to this message.
+   const posterById=new Map();let posterBytes=0;
+   for(const file of attachments){const value=b.posters?.[file.id];if(file.type.startsWith('video/')&&typeof value==='string'&&value.length<=20000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]{100,20000}$/.test(value)&&posterBytes+value.length<=100000){posterById.set(file.id,value);posterBytes+=value.length;}}
+   const fileAttachment=f=>({id:f.id,name:f.name,type:f.type,size:f.size,...(posterById.has(f.id)?{poster:posterById.get(f.id)}:{})});
+   const attachment=expressionAttachment?JSON.stringify(expressionAttachment):attachments.length?JSON.stringify(attachments.length===1?fileAttachment(att):{kind:'files',files:attachments.map(fileAttachment)}):null,now=Date.now();
    await env.DB.batch([env.DB.prepare('INSERT INTO messages(id,conversation,sender,text,attachment,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,cid,uid,text,attachment,b.replyTo||null,now),env.DB.prepare('UPDATE conversations SET updated=? WHERE id=?').bind(now,cid),...attachments.map(f=>env.DB.prepare('UPDATE uploads SET conversation=? WHERE id=?').bind(cid,f.id))]);
    const message={id,conversation:cid,sender:uid,text,attachment:attachment?JSON.parse(attachment):null,reply_to:b.replyTo||null,created:now,edited:null,deleted:0,pinned:0,reactions:[]};ctx.waitUntil(publish(env,cid,{type:'message',id,sender:uid,message}).catch(error=>console.error('message-publish',id,error.message)));return json({id,message});
   }
