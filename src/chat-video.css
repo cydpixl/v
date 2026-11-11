@@ -76,3 +76,9 @@ body.vela-video-open{overflow:hidden}
  @keyframes vela-video-enter{from{opacity:.65;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 }
 @media(prefers-reduced-motion:reduce){.vela-video-play,.vela-video-center{transition:none}}
+
+/* Desktop shell video rules have stronger specificity; keep preview frames full bleed. */
+.message .vela-video-thumb,
+.shared-media-thumbnail .vela-video-thumb{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}
+.shared-media-thumbnail .vela-video-card{width:100%;margin:0}
+.shared-media-thumbnail .vela-video-launch{min-height:0}
