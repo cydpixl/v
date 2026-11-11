@@ -149,13 +149,61 @@ function readStored(key,fallback){try{const value=JSON.parse(localStorage.getIte
 function prefs(){const version='vela.desktop.reset.'+S.user.uid;if(!localStorage.getItem(version)){localStorage.removeItem('pixl.settings.'+S.user.uid);localStorage.removeItem('vela.sidebar.width');localStorage.removeItem('vela.features.'+S.user.uid);localStorage.removeItem('vela.theme');localStorage.removeItem('vela.theme.chosen');localStorage.setItem(version,'1');}S.prefs={...defaults,...readStored('pixl.settings.'+S.user.uid,{})};S.prefs.theme=normalizeTheme(localStorage.getItem('vela.theme')||S.prefs.theme);applyPrefs();}
 function applyPrefs(){applyTheme(S.prefs.theme);document.documentElement.dataset.density=S.prefs.density;document.documentElement.dataset.motion=S.prefs.reduced?'reduced':'full';document.documentElement.style.setProperty('--chat-font',S.prefs.textSize+'px');}
 function savePrefs(){S.prefs.theme=normalizeTheme(S.prefs.theme);localStorage.setItem('vela.theme',S.prefs.theme);localStorage.setItem('pixl.settings.'+S.user.uid,JSON.stringify(S.prefs));applyPrefs();if(engine){engine.settings=S.prefs;engine.muted=S.prefs.pushToTalk?true:S.prefs.muted;engine.mic?.getAudioTracks().forEach(t=>t.enabled=!engine.muted);}updateDock();updateCall();}
-function authScreen(){if(beforeAccountSetup(root,authScreen))return;
+let pendingSignup;
+function authScreen(){delete root.dataset.startupFailed;if(beforeAccountSetup(root,authScreen))return;
  root.innerHTML=`<main class="auth-screen"><a class="wordmark" href="${assetURL('')}">${icon('chat',30)}<strong>Messages</strong></a><form class="auth-card" id="auth-form"><h1>${authMode==='signup'?'Create your account':'Sign in to your desktop'}</h1><p>${authMode==='signup'?'Choose your username to get started.':'Sign in with your existing account.'}</p>${authMode==='signup'?'<label>DISPLAY NAME<input name="name" autocomplete="name" maxlength="48" required></label>':''}<label>${authMode==='signup'?'USERNAME':'USERNAME OR EMAIL'}<input id="login-handle" name="handle" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required></label><label>PASSWORD<input name="password" type="password" autocomplete="${authMode==='signup'?'new-password':'current-password'}" minlength="6" required></label><p class="form-error" role="alert"></p><button class="primary wide" type="submit">${authMode==='signup'?'Create Account':'Log In'}</button><p class="auth-switch">${authMode==='signup'?'Already have an account?':'Need an account?'} <button type="button" data-action="auth-toggle">${authMode==='signup'?'Log in':'Register'}</button></p><button class="text-button" type="button" data-action="password-reset">Forgot your password?</button></form></main>`;
- $('#auth-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,b=new FormData(form),handle=String(b.get('handle')).trim().toLowerCase();const email=handle.includes('@')?handle:handle+'@users.connections.invalid';if(authMode==='signup'&&!/^[a-z0-9_]{3,20}$/.test(handle)){form.querySelector('.form-error').textContent='Use 3–20 letters, numbers or underscores.';return;}form.querySelector('[type=submit]').disabled=true;try{sessionStorage.setItem('pixl.signup',JSON.stringify({name:b.get('name')||handle,handle:handle.split('@')[0]}));await (authMode==='signup'?createUserWithEmailAndPassword:signInWithEmailAndPassword)(auth,email,String(b.get('password')));}catch(error){form.querySelector('.form-error').textContent=({'auth/invalid-credential':'That username or password is incorrect.','auth/email-already-in-use':'That username already exists. Sign in instead.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/network-request-failed':'Cannot reach sign-in. Check your connection.'})[error.code]||error.message;form.querySelector('[type=submit]').disabled=false;}};
+ $('#auth-form').onsubmit=async event=>{
+  event.preventDefault();
+  const form=event.currentTarget,fields=new FormData(form),handle=String(fields.get('handle')).trim().toLowerCase();
+  const signup=authMode==='signup',email=handle.includes('@')?handle:handle+'@users.connections.invalid';
+  const name=String(fields.get('name')||'').trim(),errorText=form.querySelector('.form-error');
+  if(signup&&(!name||!/^[a-z0-9_]{3,20}$/.test(handle))){errorText.textContent='Enter a display name and a username with 3–20 letters, numbers or underscores.';return;}
+  const buttons=form.querySelectorAll('button');
+  buttons.forEach(button=>button.disabled=true);
+  errorText.textContent='';
+  pendingSignup=signup?{email,name,handle}:undefined;
+  try{await (signup?createUserWithEmailAndPassword:signInWithEmailAndPassword)(auth,email,String(fields.get('password')));}
+  catch(error){
+   pendingSignup=undefined;
+   errorText.textContent=({'auth/invalid-credential':'That username or password is incorrect.','auth/email-already-in-use':'That username already exists. Sign in instead.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/network-request-failed':'Cannot reach sign-in. Check your connection.'})[error.code]||error.message;
+   buttons.forEach(button=>button.disabled=false);
+  }
+ };
 }
-async function startup(){
+function profileSetup(firebaseUser,{name='',handle=''}={},error=''){
+ root.innerHTML=`<main class="auth-screen"><form class="auth-card" id="profile-setup-form"><h1>Finish setting up your account</h1><p>Choose a display name and username for your Vela profile.</p><label>DISPLAY NAME<input name="name" value="${e(name)}" autocomplete="name" maxlength="48" required></label><label>USERNAME<input name="handle" value="${e(handle)}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required></label><p class="form-error" role="alert">${e(error)}</p><button class="primary wide" type="submit">Save profile</button><p class="auth-switch"><button type="button" data-action="profile-setup-signout">Use another account</button></p></form></main>`;
+ $('#profile-setup-form').onsubmit=async event=>{
+  event.preventDefault();
+  const form=event.currentTarget,submit=form.querySelector('[type=submit]');
+  if(submit.disabled||auth.currentUser?.uid!==firebaseUser.uid)return;
+  const fields=new FormData(form),name=String(fields.get('name')).trim(),handle=String(fields.get('handle')).trim().toLowerCase();
+  if(!name||!/^[a-z0-9_]{3,20}$/.test(handle)){form.querySelector('.form-error').textContent='Enter a display name and a username with 3–20 letters, numbers or underscores.';return;}
+  form.querySelectorAll('input,button').forEach(control=>control.disabled=true);
+  form.setAttribute('aria-busy','true');
+  await startup(firebaseUser,{name,handle});
+ };
+ if(error)$('#profile-setup-form [name=handle]').focus();
+}
+async function startup(firebaseUser,profile){
  delete root.dataset.startupFailed;
- try{if(!navigator.onLine)throw Error('Reconnect to load your conversations.');const data=await api('/me');S.user=data.user;if(!S.user){const saved=JSON.parse(sessionStorage.getItem('pixl.signup')||'{}');S.user=(await api('/me',{method:'PUT',body:{name:saved.name||auth.currentUser.email.split('@')[0],handle:saved.handle||auth.currentUser.email.split('@')[0]}})).user;}await loadAppBranding(api).catch(()=>{});rememberAccount(S.user).catch(()=>{});recoverLiveMusicShares().catch(()=>{});prefs();S.outbox=readStored('pixl.outbox.'+S.user.uid,[]);shell();hub??=createHub({api,mountCinema:async (target,appId='cinema')=>{const {createCinemaApp}=await import('./cinema/cinema-app.js');return createCinemaApp({api,appId,self:()=>S.user,conversations:()=>S.conversations.map(c=>({...c,name:title(c)})),toast,openDesktop:()=>hub.home()}).mount(target)},onWindowChange:updateCall,mountMusic:target=>{const page=createMusicPage({api,self:()=>S.user?.uid,destinations:()=>S.conversations.map(c=>({id:c.id,name:title(c)})),activeConversation:()=>S.active,send:sendSongToConversation,toast,tracker:listeningTracker});page.render(target);return ()=>page.dispose()},mountFortnite:target=>{shop.mount(target);return ()=>shop.unmount()},owner:()=>S.user?.uid||'device',modal,toast,openFeature:id=>{if(id==='fortnite')shop.show();else if(id==='music')hub.open('music')},openChat:()=>{if(S.active)act(()=>openChat(S.active));updateCall()},settings:page=>settings(page)});hub.refresh();showOpeningTheme();engine=new CallEngine({api,user:S.user,settings:S.prefs});engine.addEventListener('change',updateCall);engine.addEventListener('speaking',()=>updateSpeaking($('#call-stage'),engine));engine.addEventListener('stats',()=>{if($('#diagnostics-content'))renderDiagnostics();});engine.addEventListener('error',ev=>toast(ev.detail));engine.addEventListener('soundboard',ev=>{sound(ev.detail.sound);toast(user(ev.detail.uid).name+' played a sound.')});await api('/session',{method:'POST'});await refresh();const first=S.conversations.find(c=>c.kind==='direct');if(first)await openChat(first.id);await connections.load();await completeDesktopSetup(S.user);await enterDesktop({user:S.user,onDone:()=>hub.home()});if(new URLSearchParams(location.search).has('welcome'))showWelcome({uid:S.user.uid,force:true,theme:openThemes,onDone:()=>hub.home()});social.ready();connectLive();refreshTimer=setInterval(()=>refresh().catch(()=>{}),30000);flushOutbox();}catch(error){root.dataset.startupFailed='true';root.innerHTML=`<main class="auth-screen"><div class="auth-card"><h1>${navigator.onLine?'Connection interrupted':'You’re offline'}</h1><p>${navigator.onLine?e(error.message):'Reconnect to load your conversations. Your drafts and paused uploads stay on this device.'}</p><button class="primary" data-action="reload">Try again</button></div></main>`;}
+ const isCurrent=()=>auth.currentUser?.uid===firebaseUser.uid;
+ try{
+  if(!navigator.onLine)throw Error('Reconnect to load your conversations.');
+  const data=await api('/me');
+  if(!isCurrent())return;
+  S.user=data.user;
+  if(!S.user){
+   if(!profile){profileSetup(firebaseUser);return;}
+   try{
+    const result=await api('/me',{method:'PUT',body:profile});
+    if(!isCurrent())return;
+    S.user=result.user;
+   }catch(error){
+    if(isCurrent())profileSetup(firebaseUser,profile,error.message);
+    return;
+   }
+  }
+  await loadAppBranding(api).catch(()=>{});rememberAccount(S.user).catch(()=>{});recoverLiveMusicShares().catch(()=>{});prefs();S.outbox=readStored('pixl.outbox.'+S.user.uid,[]);shell();hub??=createHub({api,mountCinema:async (target,appId='cinema')=>{const {createCinemaApp}=await import('./cinema/cinema-app.js');return createCinemaApp({api,appId,self:()=>S.user,conversations:()=>S.conversations.map(c=>({...c,name:title(c)})),toast,openDesktop:()=>hub.home()}).mount(target)},onWindowChange:updateCall,mountMusic:target=>{const page=createMusicPage({api,self:()=>S.user?.uid,destinations:()=>S.conversations.map(c=>({id:c.id,name:title(c)})),activeConversation:()=>S.active,send:sendSongToConversation,toast,tracker:listeningTracker});page.render(target);return ()=>page.dispose()},mountFortnite:target=>{shop.mount(target);return ()=>shop.unmount()},owner:()=>S.user?.uid||'device',modal,toast,openFeature:id=>{if(id==='fortnite')shop.show();else if(id==='music')hub.open('music')},openChat:()=>{if(S.active)act(()=>openChat(S.active));updateCall()},settings:page=>settings(page)});hub.refresh();showOpeningTheme();engine=new CallEngine({api,user:S.user,settings:S.prefs});engine.addEventListener('change',updateCall);engine.addEventListener('speaking',()=>updateSpeaking($('#call-stage'),engine));engine.addEventListener('stats',()=>{if($('#diagnostics-content'))renderDiagnostics();});engine.addEventListener('error',ev=>toast(ev.detail));engine.addEventListener('soundboard',ev=>{sound(ev.detail.sound);toast(user(ev.detail.uid).name+' played a sound.')});await api('/session',{method:'POST'});await refresh();const first=S.conversations.find(c=>c.kind==='direct');if(first)await openChat(first.id);await connections.load();await completeDesktopSetup(S.user);await enterDesktop({user:S.user,onDone:()=>hub.home()});if(new URLSearchParams(location.search).has('welcome'))showWelcome({uid:S.user.uid,force:true,theme:openThemes,onDone:()=>hub.home()});social.ready();connectLive();refreshTimer=setInterval(()=>refresh().catch(()=>{}),30000);flushOutbox();}catch(error){if(!isCurrent())return;if(profile&&!S.user){profileSetup(firebaseUser,profile,error.message);return;}root.dataset.startupFailed='true';root.innerHTML=`<main class="auth-screen"><div class="auth-card"><h1>${navigator.onLine?'Connection interrupted':'You’re offline'}</h1><p>${navigator.onLine?e(error.message):'Reconnect to load your conversations. Your drafts and paused uploads stay on this device.'}</p><button class="primary" data-action="reload">Try again</button><p class="auth-switch"><button type="button" data-action="profile-setup-signout">Use another account</button></p></div></main>`;}
 }
 function syncNavigation(){
  const compact=false,open=document.body.classList.contains('nav-open');
@@ -517,6 +565,7 @@ document.addEventListener('click',event=>{
   case'password-reset':{const value=$('#login-handle').value.trim();if(!value.includes('@'))return toast('This username account has no recovery email. Email accounts can request a reset by entering their email address.');await sendPasswordResetEmail(auth,value);toast('Password reset email sent.');break;}
   case'choose-theme':openThemes();break;
   case'reload':location.reload();break;
+  case'profile-setup-signout':authMode='login';await signOut(auth);break;
   case'retry-upload':case'upload-manager':connections.queue.open();break;
   case'dismiss-upload-error':uploadFailure=null;renderUpload();break;
   case'app-dock':openAppDock(trigger,{uid:S.user.uid,open:id=>{if(id==='fortnite')shop.show();else if(id==='music'){S.view='music';render()}else settings('features')},settings:()=>settings('features')});break;
@@ -592,11 +641,14 @@ document.addEventListener('vela-share-film',event=>act(async()=>{const item=even
 document.addEventListener('contextmenu',event=>{const message=event.target.closest('[data-message]');if(message){event.preventDefault();messageMenu(message.dataset.message,event.target);}});
 document.addEventListener('keydown',ev=>{if(ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==='m'){ev.preventDefault();document.querySelector('[data-action=mute]')?.click();}});
 document.addEventListener('keydown',ev=>{if(ev.repeat||ev.key.toLowerCase()!=='v'||!S.prefs.pushToTalk||document.activeElement?.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))return;ev.preventDefault();engine?.setPushToTalk(true)});document.addEventListener('keyup',ev=>{if(ev.key.toLowerCase()==='v'&&S.prefs.pushToTalk)engine?.setPushToTalk(false)});window.addEventListener('blur',()=>{if(S.prefs.pushToTalk)engine?.setPushToTalk(false)});
-window.addEventListener('online',()=>{if(root.dataset.startupFailed){location.reload();return;}if(auth.currentUser&&!S.user){startup();return;}if(!S.user)return;connectLive();flushOutbox();refresh().catch(()=>{});});window.addEventListener('offline',connectionStatus);
+window.addEventListener('online',()=>{if(root.dataset.startupFailed){location.reload();return;}if(!S.user)return;connectLive();flushOutbox();refresh().catch(()=>{});});window.addEventListener('offline',connectionStatus);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.user){flushOutbox();refresh().catch(()=>{});if(!live||live.readyState>1)connectLive();if(S.active){loadMessages().catch(()=>{});api('/conversations/'+encodeURIComponent(S.active)+'/read',{method:'POST'}).catch(()=>{});}}});
 window.addEventListener('pagehide',()=>{live?.close();engine?.leave({keepalive:true}).catch(()=>{});});
 let observedAuthUid;
-onAuthStateChanged(auth,async firebaseUser=>{const nextUid=firebaseUser?.uid||null;if(observedAuthUid===nextUid)return;observedAuthUid=nextUid;shop.unmount();S.session++;musicSharing.reset();listeningTracker.reset();creative.resetSession();if(firebaseUser){root.querySelector('#auth-form')?.setAttribute('aria-busy','true');await startup();}else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];layers.innerHTML='';if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
+onAuthStateChanged(auth,async firebaseUser=>{const nextUid=firebaseUser?.uid||null;if(observedAuthUid===nextUid)return;observedAuthUid=nextUid;shop.unmount();S.session++;musicSharing.reset();listeningTracker.reset();creative.resetSession();if(firebaseUser){root.querySelector('#auth-form')?.setAttribute('aria-busy','true');const signup=pendingSignup;
+ pendingSignup=undefined;
+ await startup(firebaseUser,signup?.email===firebaseUser.email?{name:signup.name,handle:signup.handle}:undefined);
+ }else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];layers.innerHTML='';if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
 // Runtime is intentionally small and useful for local end-to-end verification.
 if(import.meta.env.DEV)window.__pixl={get state(){return S},get call(){return engine},api};
 
