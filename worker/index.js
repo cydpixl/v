@@ -27,7 +27,7 @@ import {customEmojiIds} from '../src/emoji-size.js';
 import {messagePreview} from '../src/message-preview.js';
 import {commandAPI} from './commands.js';
 import {VELA_BOT_UID} from '../src/commands.mjs';
-import {storageSQL,STORAGE_CAP} from './storage.js';
+import {storageSQL,MESSAGE_STORAGE_CAP} from './storage.js';
 import {movieUploadAPI,cleanupMovieUploads} from './movie-uploads.js';
 import {featureAPI} from './features.js';
 import {expressionAPI,expressionAccess,gifById} from './expressions.js';
@@ -231,7 +231,7 @@ async function api(req,env,ctx){
   if(!Number.isSafeInteger(size)||size<1||size>95*1024*1024)fail('Files can be up to 95 MB.',413);if(!/^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime|x-m4v)|audio\/(mpeg|mp4|ogg|webm|wav)|application\/(pdf|zip|octet-stream)|text\/plain)$/.test(type))fail('That file type is not supported.');
 
   const total=await row(env,'SELECT coalesce(sum(size),0) AS n FROM uploads WHERE owner=? AND created>?',uid,Date.now()-86400000);if(total.n+size>1024*1024*1024)fail('Daily upload allowance reached.',429);
-  const id=uuid(),reserved=await row(env,'INSERT INTO uploads(id,owner,name,type,size,created) SELECT ?,?,?,?,?,? WHERE ('+storageSQL+')+?<=? RETURNING id',id,uid,name,type,size,Date.now(),Date.now(),size,STORAGE_CAP);if(!reserved)fail('Storage allowance reached.',507);try{await env.FILES.put(id,req.body,{httpMetadata:{contentType:type},customMetadata:{name,owner:uid}})}catch(error){await run(env,'DELETE FROM uploads WHERE id=?',id);throw error}return json({upload:{id,name,type,size}});
+  const id=uuid(),reserved=await row(env,'INSERT INTO uploads(id,owner,name,type,size,created) SELECT ?,?,?,?,?,? WHERE ('+storageSQL+')+?<=? RETURNING id',id,uid,name,type,size,Date.now(),Date.now(),size,MESSAGE_STORAGE_CAP);if(!reserved)fail('Storage allowance reached.',507);try{await env.FILES.put(id,req.body,{httpMetadata:{contentType:type},customMetadata:{name,owner:uid}})}catch(error){await run(env,'DELETE FROM uploads WHERE id=?',id);throw error}return json({upload:{id,name,type,size}});
  }
  if(p.startsWith('/api/files/')&&method==='GET'){
   const id=p.slice(11),u=await row(env,'SELECT * FROM uploads WHERE id=?',id);if(!u)fail('File not found.',404);if(u.owner!==uid){if(!u.conversation)fail('Not found.',404);await access(env,uid,u.conversation);}
