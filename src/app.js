@@ -51,7 +51,8 @@ import {createProfiles} from './profiles.js';
 import {editAvatar} from './avatar-editor.js';
 import {accountPopover} from './account-popover.js';
 import {rememberAccount,savedAccounts,switchAccount,addAccount,forgetAccount} from './accounts.js';
-import {apiURL,assetURL,socketURL,API_ORIGIN} from './config.js';
+import {apiURL,assetURL,socketURL,API_ORIGIN,API_DIRECT_ORIGIN} from './config.js';
+import {requestApiWithRecovery} from './api-transport.mjs';
 import './style.css';
 import './repairs.css';
 import './vela-cinejoy.css';
@@ -63,7 +64,7 @@ import './expression-picker.css';
 import {fullscreenCall,pictureInPicture,closeCallPip} from './call-presentation.js';
 import {setCallView} from './call-view.js';
 import {configureImmersiveCall,closeImmersiveCall} from './immersive-call.js';
-import {auth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut} from './auth.js';
+import {auth,persistAuthSession,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut} from './auth.js';
 import {icon,button} from './icons.js';
 import {escape as e,avatar,time,date,bytes,online,messageHTML,mediaError,renderEmoji,setExpressionLinks,expressionURL} from './util.js';
 import {CallEngine,QUALITY} from './call.js';
@@ -140,7 +141,7 @@ const defaults={muted:false,volume:100,input:'',output:'',camera:'',noise:true,e
 function openThemes(){themeChooser({current:S.user?S.prefs.theme:localStorage.getItem('vela.theme'),onChoose:theme=>{if(S.user){S.prefs.theme=theme;savePrefs();}}});}
 function toast(text){const el=document.createElement('div');el.className='toast';el.textContent=text;$('#toasts').append(el);setTimeout(()=>el.remove(),5500);}
 function sound(name,loop=false){if(!S.prefs.sounds)return;const audio=new Audio();audio.preload='none';audio.loop=loop;let stopped=false;const pause=audio.pause.bind(audio);audio.pause=()=>{stopped=true;pause()};registerAppMedia(audio,'system',.35);soundData(name).then(source=>{if(stopped||!S.prefs.sounds)return;audio.src=source;audio.play().catch(()=>{})}).catch(()=>{});return audio;}
-async function api(path,{method='GET',...options}={}){const token=await auth.currentUser?.getIdToken();const headers={...options.headers,...(token?{Authorization:'Bearer '+token}:{})};let body=options.body;if(body&&typeof body==='object'&&typeof body.text==='string'&&(/^\/conversations\/[^/]+\/messages$/.test(path)||/^\/messages\//.test(path)||path==='/scheduled-messages'))body={...body,text:kindMessage(body.text)};if(body&&!(body instanceof Blob)&&typeof body!=='string'){headers['Content-Type']='application/json';body=JSON.stringify(body)}const requestStarted=Date.now(),res=await (body instanceof Blob&&options.onUploadProgress?sendUploadRequest(apiURL(path),{...options,method,body,headers}):fetch(apiURL(path),{...options,method,body,headers}));const responseTime=Date.parse(res.headers.get('Date'));if(Number.isFinite(responseTime))serverClockOffset=responseTime+500-(requestStarted+Date.now())/2;const data=await res.json().catch(()=>({}));if(data.code==='DATABASE_QUOTA_EXCEEDED'&&Number.isFinite(data.resetAt))data.error='VELA reached its daily database allowance. Try again after '+new Date(data.resetAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',timeZoneName:'short'})+'. Your account and messages have not been deleted.';if(!res.ok)throw Object.assign(new Error(data.error||'Request failed. Retry shortly.'),{status:res.status});return data;}
+async function api(path,{method='GET',...options}={}){const token=await auth.currentUser?.getIdToken();const headers={...options.headers,...(token?{Authorization:'Bearer '+token}:{})};let body=options.body;if(body&&typeof body==='object'&&typeof body.text==='string'&&(/^\/conversations\/[^/]+\/messages$/.test(path)||/^\/messages\//.test(path)||path==='/scheduled-messages'))body={...body,text:kindMessage(body.text)};if(body&&!(body instanceof Blob)&&typeof body!=='string'){headers['Content-Type']='application/json';body=JSON.stringify(body)}const requestStarted=Date.now(),res=await (body instanceof Blob&&options.onUploadProgress?sendUploadRequest(apiURL(path),{...options,method,body,headers}):requestApiWithRecovery(path,{...options,method,body,headers},{primaryOrigin:API_ORIGIN,fallbackOrigin:API_DIRECT_ORIGIN}));const responseTime=Date.parse(res.headers.get('Date'));if(Number.isFinite(responseTime))serverClockOffset=responseTime+500-(requestStarted+Date.now())/2;const data=await res.json().catch(()=>({}));if(data.code==='DATABASE_QUOTA_EXCEEDED'&&Number.isFinite(data.resetAt))data.error='VELA reached its daily database allowance. Try again after '+new Date(data.resetAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',timeZoneName:'short'})+'. Your account and messages have not been deleted.';if(!res.ok)throw Object.assign(new Error(data.error||'Request failed. Retry shortly.'),{status:res.status});return data;}
 const act=fn=>Promise.resolve().then(fn).catch(error=>toast(error.message));
 const active=()=>S.conversations.find(c=>c.id===S.active);
 const user=uid=>uid===VELA_BOT_UID?{uid:VELA_BOT_UID,name:'VELA',handle:'vela',status:'bot'}:S.user?.uid===uid?S.user:S.conversations.flatMap(c=>c.members).find(m=>m.uid===uid)||S.friends.find(f=>f.uid===uid)||S.blocks.find(b=>b.target===uid)||{uid,name:'User',handle:''};
@@ -164,7 +165,7 @@ function authScreen(){delete root.dataset.startupFailed;if(beforeAccountSetup(ro
   buttons.forEach(button=>button.disabled=true);
   errorText.textContent='';
   pendingSignup=signup?{email,name,handle}:undefined;
-  try{await (signup?createUserWithEmailAndPassword:signInWithEmailAndPassword)(auth,email,String(fields.get('password')));}
+  try{await persistAuthSession();await (signup?createUserWithEmailAndPassword:signInWithEmailAndPassword)(auth,email,String(fields.get('password')));}
   catch(error){
    pendingSignup=undefined;
    errorText.textContent=({'auth/invalid-credential':'That username or password is incorrect.','auth/email-already-in-use':'That username already exists. Sign in instead.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/network-request-failed':'Cannot reach sign-in. Check your connection.'})[error.code]||error.message;
