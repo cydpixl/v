@@ -48,13 +48,14 @@ export function mountDateApp(root,{api,owner,toast}){
   if(!alive||!record||!pending||saving||blocked)return;
   saving=true;
   const snapshot=clean(pending);pending=null;
-  const payload={title:TITLE,text:JSON.stringify(snapshot),revision:record.revision};
+  const editing=record;
+  const payload={title:TITLE,text:JSON.stringify(snapshot),revision:editing.revision};
   post('status',{status:'Saving…'});
   try{
-   const result=await api('/shared-notes/'+record.id,{method:'PUT',body:payload});
+   const result=await api('/shared-notes/'+editing.id,{method:'PUT',body:payload});
    if(!alive)return;
-   record.revision=result.revision;
-   record.text=payload.text;retryCount=0;
+   if(record?.id===editing.id){record.revision=result.revision;record.text=payload.text;}
+   retryCount=0;
    post('status',{status:'Synced'});
   }catch(e){
    if(!alive)return;
@@ -91,6 +92,8 @@ export function mountDateApp(root,{api,owner,toast}){
  }
  async function selectStory(requestId,noteId){
   if(typeof noteId!=='string')return post('story-selected',{requestId,error:'Invalid story'});
+  if(saving)for(let i=0;i<30&&saving;i++)await new Promise(r=>setTimeout(r,100));
+  if(saving)return post('story-selected',{requestId,error:'Finish saving before switching stories.'});
   if(pending&&!blocked){clearTimeout(timer);await save();}
   try{await load(noteId);post('story-selected',{requestId,ok:true})}
   catch(error){post('story-selected',{requestId,error:error.message||'Unable to open story'})}
