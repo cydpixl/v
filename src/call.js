@@ -10,8 +10,8 @@ export class CallEngine extends EventTarget{
   if(this.info?.id===info.id&&!this.closed)return;
   if(!this.closed)await this.leave();const generation=this.generation=(this.generation||0)+1,current=()=>!this.closed&&this.generation===generation;this.closed=false;this.cameraWanted=false;this.cameraRecoveryAttempts=0;this.device=crypto.randomUUID();this.info={...info};this.members=members;this.status='Connecting';this.started=Date.now();this.bindLifecycle();this.change();
   try{
-   const reserved=await this.api('/calls/'+info.id+'/join',{method:'POST',body:{device:this.device}});if(!current())return;this.info={...reserved.call};
-   const config=this.iceConfiguration?.expiresAt>Date.now()+60000?this.iceConfiguration:await this.api('/ice');if(!current())return;this.iceConfiguration=config;this.ice=config.iceServers;this.relayAvailable=config.relay;const raw=await navigator.mediaDevices.getUserMedia({audio:this.audioConstraints(),video:false});if(!current()){raw.getTracks().forEach(t=>t.stop());return}const mic=await this.processMic(raw,generation);if(!current()||!mic)return;this.mic=mic;this.mic.getAudioTracks().forEach(t=>t.enabled=!this.muted);
+   const reserved=await this.request('/calls/'+info.id+'/join',{method:'POST',body:{device:this.device}});if(!current())return;this.info={...reserved.call};
+   const config=this.iceConfiguration?.expiresAt>Date.now()+60000?this.iceConfiguration:await this.request('/ice');if(!current())return;this.iceConfiguration=config;this.ice=config.iceServers;this.relayAvailable=config.relay;const raw=await navigator.mediaDevices.getUserMedia({audio:this.audioConstraints(),video:false});if(!current()){raw.getTracks().forEach(t=>t.stop());return}const mic=await this.processMic(raw,generation);if(!current()||!mic)return;this.mic=mic;this.mic.getAudioTracks().forEach(t=>t.enabled=!this.muted);
    if(info.kind==='video')try{await this.enableCamera(true)}catch(error){this.error(mediaError(error));}
    if(!current())return;await this.connect(this.device);if(!current())return;this.statsTimer=setInterval(()=>this.collectStats(),2500);this.wake();this.change();
   }catch(error){if(!current())return;this.error(mediaError(error));await this.leave();throw error;}
@@ -156,6 +156,7 @@ class Peer{
   this.engine=engine;this.uid=uid;this.device=engine.remote.get(uid)?.device;this.polite=engine.user.uid>uid;this.epoch=this.polite?null:crypto.randomUUID();this.makingOffer=false;this.ignoreOffer=false;this.pending=[];this.restarts=0;this.pc=new RTCPeerConnection({iceServers:engine.ice,bundlePolicy:'max-bundle'});
   this.transceivers={};if(engine.user.uid<uid)for(const [key,kind,track]of [['mic','audio',engine.mic?.getAudioTracks()[0]],['camera','video',engine.camera?.getVideoTracks()[0]],['screen','video',engine.screen?.getVideoTracks()[0]],['screenAudio','audio',engine.screen?.getAudioTracks()[0]]])this.transceivers[key]=this.pc.addTransceiver(track||kind,{direction:'sendrecv'});
   this.pc.onicecandidate=e=>{if(e.candidate)this.signal({type:'candidate',candidate:e.candidate.toJSON()})};
+   this.pc.oniceconnectionstatechange=()=>{if(this.pc.iceConnectionState==='failed')this.recover();};
   this.pc.ontrack=e=>{let peer=engine.remote.get(uid);if(!peer){peer={uid,state:{},streams:{}};engine.remote.set(uid,peer);}const key=Object.keys(this.transceivers).find(key=>this.transceivers[key]===e.transceiver)||this.mediaKey(e.transceiver);if(key){peer.streams[key]=new MediaStream([e.track]);if(key==='mic')engine.monitorSpeech(uid,peer.streams[key]);e.track.onunmute=()=>engine.change();e.track.onmute=()=>engine.change();}engine.change();};
   // Four permanent media slots avoid adding transceivers during track changes.
   this.pc.onnegotiationneeded=()=>{if(this.ready&&this.negotiationPending)this.offer().catch(error=>this.engine.error(error.message));};this.pc.onsignalingstatechange=()=>{if(this.pc.signalingState==='stable'&&this.negotiationPending)this.offer().catch(error=>this.engine.error(error.message));};
@@ -166,6 +167,22 @@ class Peer{
    engine.change();
   };
   for(const tx of Object.values(this.transceivers)){try{if('jitterBufferTarget'in tx.receiver)tx.receiver.jitterBufferTarget=50}catch{}}
+   // ICE may remain "connecting" indefinitely without emitting a failure event.
+   // Retry unanswered offers and stalled candidate checks while signaling is live.
+   this.connectWatchdog=setInterval(()=>{
+    if(engine.closed||engine.links.get(uid)!==this||this.pc.signalingState==='closed'){clearInterval(this.connectWatchdog);return;}
+    if(this.pc.connectionState==='connected'){this.unconnectedSince=0;this.reportedStall=false;return;}
+    if(engine.socket?.readyState!==1)return;
+    const now=Date.now();this.unconnectedSince||=now;
+    if(now-this.unconnectedSince<12000||now-(this.lastRecovery||0)<8000)return;
+    if(now-this.unconnectedSince>30000&&!this.reportedStall){
+     this.reportedStall=true;
+     engine.status=engine.relayAvailable?'Reconnecting':'Connection blocked — relay unavailable';
+     engine.error(engine.relayAvailable?'The call is having trouble connecting. Retrying…':'The call cannot establish media on this network. A TURN relay may be required.');
+     engine.change();
+    }
+    this.recover();
+   },3000);
  }
  signal(data){if(!this.engine.closed&&this.engine.links.get(this.uid)===this)this.engine.send({...data,to:this.uid,toDevice:this.device,epoch:this.epoch});}
  async offer(){this.negotiationPending=true;if(this.pc.signalingState!=='stable'||this.makingOffer)return;this.negotiationPending=false;this.ready=true;try{this.makingOffer=true;await this.pc.setLocalDescription();this.signal({type:'description',description:this.pc.localDescription.toJSON()});}finally{this.makingOffer=false;if(this.negotiationPending&&this.pc.signalingState==='stable')queueMicrotask(()=>this.offer().catch(error=>this.engine.error(error.message)));}}
@@ -200,5 +217,5 @@ class Peer{
   }})().finally(()=>{this.tuning=null;});return this.tuning;
  }
 
- close(){clearTimeout(this.disconnectTimer);this.tuneAgain=false;this.pc.onsignalingstatechange=null;this.pc.onconnectionstatechange=null;this.pc.onnegotiationneeded=null;this.pc.onicecandidate=null;this.pc.ontrack=null;this.pc.close();}
+ close(){clearTimeout(this.disconnectTimer);clearInterval(this.connectWatchdog);this.tuneAgain=false;this.pc.onsignalingstatechange=null;this.pc.onconnectionstatechange=null;this.pc.onnegotiationneeded=null;this.pc.onicecandidate=null;this.pc.ontrack=null;this.pc.close();}
 }
