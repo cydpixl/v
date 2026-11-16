@@ -1,0 +1,326 @@
+/* date. — private, browser-local journal.
+   GitHub Pages serves static files; uploaded media lives in IndexedDB on this device. */
+(() => {
+"use strict";
+const $ = (s,root=document) => root.querySelector(s);
+const $$ = (s,root=document) => [...root.querySelectorAll(s)];
+const KEY = "date.story.v1";
+const insideVela = window.parent !== window;
+let velaOwner = "", velaReady = false, remoteLinks = {};
+const cloudPending = new Map();
+const broadcast = (type,payload={}) => {if(insideVela)window.parent.postMessage({source:"vela-date",type,...payload},location.origin)};
+const cloudRequest = (type,payload={}) => new Promise((resolve,reject)=>{
+ const requestId=uid(),timeout=setTimeout(()=>{cloudPending.delete(requestId);reject(Error("Request timed out"))},125000);
+ cloudPending.set(requestId,{resolve:v=>{clearTimeout(timeout);resolve(v)},reject:e=>{clearTimeout(timeout);reject(e)}});
+ broadcast(type,{...payload,requestId});
+});
+const localKey=()=>insideVela ? "date.story.v1.vela."+velaOwner : KEY;
+const NAME_LIMIT = 36;
+const MAX_BATCH = 50;
+const MAX_SIZE = insideVela ? 95 * 1024 * 1024 : 5 * 1024 * 1024 * 1024;
+const el = id => document.getElementById(id);
+const icon = name => '<svg class="ic" aria-hidden="true"><use href="#i-'+name+'"/></svg>';
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2));
+const readStore = () => {if(insideVela)return {};try {return JSON.parse(localStorage.getItem(localKey())) || {}} catch{return {}}};
+const base = {name:"",story:"",when:"",place:"",address:"",media:[],places:[]};
+let state = {...base,...readStore()};
+if (!Array.isArray(state.media)) state.media=[];
+if (!Array.isArray(state.places)) state.places=[];
+let saveTimer, toastTimer, dbPromise, recognition, audioRecorder=null, audioStream=null, recordingParts=[];
+let tourStep=0, tourActive=false, closeCurrentModal=()=>{};
+const memories = new Map();
+const escapeHtml = v => String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const validUrl = v => {try {const u=new URL(v);return ["https:","http:"].includes(u.protocol)?u.href:null}catch{return null}};
+const cap = s => (s||"").charAt(0).toUpperCase();
+const fileSize = n => n>=1e9?(n/1e9).toFixed(2)+" GB":n>=1e6?(n/1e6).toFixed(1)+" MB":n>=1e3?(n/1e3).toFixed(0)+" KB":n+" B";
+const notify=(msg)=>{const t=el("toast"); t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),3400)};
+function persist(){
+ try{
+  if(!insideVela||velaReady)localStorage.setItem(localKey(),JSON.stringify({...state,story:state.story.slice(0,120000)}));
+  if(insideVela){
+   if(velaReady){broadcast("update",{snapshot:state});el("saveState").classList.add("busy");el("saveState").querySelector("span:last-child").textContent="Syncing…";}
+  }else{
+   el("saveState").classList.remove("busy");el("saveState").querySelector("span:last-child").textContent="Saved here";
+  }
+ }catch(e){console.warn("Could not cache date story",e);notify("Browser storage is full. Export a backup.")}
+}
+function scheduleSave(){el("saveState").classList.add("busy");el("saveState").querySelector("span:last-child").textContent="Saving…";clearTimeout(saveTimer);saveTimer=setTimeout(persist,400)}
+function db(){if(!dbPromise){dbPromise=new Promise((res,rej)=>{if(!window.indexedDB){rej(new Error("Browser storage unavailable"));return}const req=indexedDB.open("date.media.v1",1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files")};req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)})}return dbPromise}
+async function mediaStore(type,id,blob){const d=await db();return new Promise((res,rej)=>{const t=d.transaction("files",type==="get"?"readonly":"readwrite");const s=t.objectStore("files");let q;if(type==="put")q=s.put(blob,id);else if(type==="delete")q=s.delete(id);else q=s.get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);t.onabort=()=>rej(t.error||new Error("Storage failed"))})}
+function restoreForm(){el("userLabel").textContent=state.name||"Your name";el("userInitial").textContent=cap(state.name)||"?";el("byline").textContent=state.name?"by "+state.name:"by you";el("storyInput").value=state.story||"";el("dateInput").value=state.when||"";el("placeInput").value=state.place||"";el("addressInput").value=state.address||"";updateWordCount()}
+function updateWordCount(){const words=(el("storyInput").value.trim().match(/\S+/g)||[]).length;el("wordCount").textContent=words+" "+(words===1?"word":"words")}
+function closeModal(){try{closeCurrentModal()}catch{};closeCurrentModal=()=>{};el("modalRoot").replaceChildren();document.body.style.overflow=""}
+function showModal(title,html,{wide=false,onClose=()=>{}}={}){closeModal();closeCurrentModal=onClose;document.body.style.overflow="hidden";const root=el("modalRoot");root.innerHTML='<div class="modal-backdrop"><section class="modal '+(wide?"wide":"")+'" role="dialog" aria-modal="true"><div class="modal-heading"><h2>'+escapeHtml(title)+'</h2><button class="modal-close" aria-label="Close">'+icon("x")+'</button></div><div class="modal-content">'+html+'</div></section></div>';$(".modal-close",root).onclick=closeModal;$(".modal-backdrop",root).addEventListener("click",e=>{if(e.target.classList.contains("modal-backdrop"))closeModal()});return $(".modal-content",root)}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$(".modal-backdrop"))closeModal();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveNow()}});
+function saveNow(){clearTimeout(saveTimer);state.story=el("storyInput").value;persist();notify(insideVela?"Syncing with Vela…":"Story saved on this device")}
+function setName(name){const n=name.trim().replace(/\s+/g," ").slice(0,NAME_LIMIT);if(!n)return;state.name=n;persist();restoreForm();el("onboarding").hidden=true}
+function openIdentity(){const body=showModal("Your name",'<label class="form-label" for="changeName">Name</label><input id="changeName" maxlength="36" autocomplete="nickname"><div class="modal-actions"><button class="plain" id="cancelName">Cancel</button><button class="primary" id="saveName">Save</button></div>');$("#changeName",body).value=state.name;$("#saveName",body).onclick=()=>{const v=$("#changeName",body).value;if(!v.trim())return notify("Enter a name");setName(v);closeModal()};$("#cancelName",body).onclick=closeModal;$("#changeName",body).onkeydown=e=>{if(e.key==="Enter")$("#saveName",body).click()};$("#changeName",body).focus()}
+function openLink(){const b=showModal("Add a link",'<label class="form-label" for="linkUrl">Link</label><input id="linkUrl" type="url" placeholder="https://…" inputmode="url"><label class="form-label" for="linkLabel">Name <span style="font-weight:400;color:#a5aaa2">(optional)</span></label><input id="linkLabel" placeholder="A song, a place, a video…"><div class="modal-actions"><button class="plain" id="cancelLink">Cancel</button><button class="primary" id="addLink">Add link</button></div>');$("#cancelLink",b).onclick=closeModal;$("#addLink",b).onclick=()=>{const url=validUrl($("#linkUrl",b).value.trim());if(!url)return notify("Enter a valid http or https link");const title=$("#linkLabel",b).value.trim().slice(0,150)||new URL(url).hostname;state.media.push({id:uid(),kind:"link",url,name:title,created:Date.now()});scheduleSave();renderMedia();closeModal();notify("Link added")};$("#linkUrl",b).focus()}
+function embedUrl(raw){const url=validUrl(raw);if(!url)return null;const u=new URL(url);let m;
+if(["youtube.com","www.youtube.com","m.youtube.com","youtube-nocookie.com","www.youtube-nocookie.com"].includes(u.hostname)){m=u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed)\/([\w-]{11})/)?.[1];if(m&&/^[\w-]{11}$/.test(m))return "https://www.youtube-nocookie.com/embed/"+m}
+if(u.hostname==="youtu.be"){m=u.pathname.slice(1);if(/^[\w-]{11}$/.test(m))return "https://www.youtube-nocookie.com/embed/"+m}
+if(["vimeo.com","www.vimeo.com"].includes(u.hostname)){m=u.pathname.match(/^\/(\d+)/)?.[1];if(m)return "https://player.vimeo.com/video/"+m}
+if(["open.spotify.com"].includes(u.hostname)){m=u.pathname.match(/^\/(track|album|playlist|episode)\/([A-Za-z0-9]+)/);if(m)return "https://open.spotify.com/embed/"+m[1]+"/"+m[2]}
+return null}
+function makeCard(item){const card=document.createElement("article");card.className="media-card";const remove=document.createElement("button");remove.className="remove-media";remove.setAttribute("aria-label","Remove "+item.name);remove.innerHTML=icon("x");remove.onclick=()=>removeMedia(item.id);card.append(remove);let content=null;
+if(item.kind==="link"){const embed=embedUrl(item.url);if(embed){const wrap=document.createElement("div");wrap.className="embed-wrap";const frame=document.createElement("iframe");frame.src=embed;frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";frame.allowFullscreen=true;frame.loading="lazy";frame.title=item.name;wrap.append(frame);content=wrap}else{const a=document.createElement("a");a.className="link-block";a.href=item.url;a.target="_blank";a.rel="noopener noreferrer";a.innerHTML=icon("link")+"<strong>"+escapeHtml(item.name)+"</strong><small>"+escapeHtml(new URL(item.url).hostname)+"</small>";content=a}}
+else if(item.kind==="gif"){const img=document.createElement("img");img.loading="lazy";img.src=item.url;img.alt=item.name||"GIF";content=img}
+else{const holder=document.createElement("div");holder.className="file-block";holder.innerHTML=icon("photo")+"<span>Loading…</span>";content=holder}
+card.append(content);const info=document.createElement("div");info.className="media-info";info.innerHTML='<div style="min-width:0"><div class="media-title">'+escapeHtml(item.name)+'</div><div class="media-type">'+escapeHtml(item.kind==="link"?"LINK":item.kind==="gif"?"GIF":item.size?fileSize(item.size):"FILE")+'</div></div>';card.append(info);
+if(item.kind==="file"){
+ const showFile=(url,mime,local=false)=>{
+  let node;
+  if(mime.startsWith("image/")){node=document.createElement("img");node.alt=item.name;node.loading="lazy";node.src=url}
+  else if(mime.startsWith("video/")){node=document.createElement("video");node.src=url;node.controls=true;node.playsInline=true;node.preload="metadata"}
+  else if(mime.startsWith("audio/")){node=document.createElement("div");node.className="audio-block";const audio=document.createElement("audio");audio.controls=true;audio.src=url;node.append(audio)}
+  else{node=document.createElement("a");node.className="file-block";node.href=url;node.target="_blank";node.rel="noopener noreferrer";node.download=item.name;node.innerHTML=icon("download")+"<span>"+escapeHtml(item.name)+"</span>"}
+  if(local)memories.set(item.id,url);
+  if(card.isConnected&&content.isConnected)card.replaceChild(node,content);
+ };
+ if(item.remote){
+  const url=remoteLinks[item.remote];
+  if(url)showFile(url,item.mime||"application/octet-stream");
+  else holderMissing(card,content);
+ }else{
+  mediaStore("get",item.id).then(blob=>{if(!blob){holderMissing(card,content);return}showFile(URL.createObjectURL(blob),blob.type||item.mime||"application/octet-stream",true)}).catch(()=>holderMissing(card,content));
+ }
+}
+return card}
+function holderMissing(card,content){if(card.isConnected){content.innerHTML=icon("photo")+"<span>File unavailable</span>"}}
+function renderMedia(){for(const url of memories.values())URL.revokeObjectURL(url);memories.clear();const grid=el("mediaGrid");grid.replaceChildren();const list=state.media||[];el("attachments").hidden=!list.length;el("attachmentCount").textContent=list.length;for(const item of list)if(item&&item.id&&["file","link","gif"].includes(item.kind))grid.append(makeCard(item))}
+async function removeMedia(id){if(!confirm("Remove this attachment?"))return;state.media=state.media.filter(m=>m.id!==id);try{await mediaStore("delete",id)}catch{}scheduleSave();renderMedia();notify("Removed")}
+async function addFiles(fileList){const files=Array.from(fileList||[]);if(!files.length)return;if(files.length>MAX_BATCH){notify("Select up to 50 files at a time");return}
+if(insideVela){
+ if(!velaReady)return notify("Vela is still connecting. Try again.");
+ const filtered=files.filter(f=>f.size<=MAX_SIZE&&f.size>0);
+ if(filtered.length!==files.length)notify("Vela cloud files must be under 95 MB each.");
+ if(!filtered.length)return;
+ const prog=el("uploadProgress");prog.hidden=false;let saved=0,errors=[];
+ for(let i=0;i<filtered.length;i++){
+  const f=filtered[i];el("progressName").textContent="Uploading "+f.name;el("progressCount").textContent=(i+1)+" / "+filtered.length;el("progressFill").style.width=Math.round(i/filtered.length*100)+"%";
+  try{
+   const res=await cloudRequest("upload",{file:f});
+   if(!res.remote)throw Error("Missing upload");
+   remoteLinks[res.remote]=res.url;
+   state.media.push({id:uid(),remote:res.remote,kind:"file",name:f.name.slice(0,220),size:f.size,mime:f.type||"application/octet-stream",created:Date.now()});
+   saved++;persist();renderMedia();
+  }catch(e){errors.push(f.name+": "+e.message);if(/allowance|quota|storage|daily/i.test(e.message))break}
+ }
+ prog.hidden=true;
+ notify(saved+" uploaded"+(errors.length?"; "+errors[0]:""));
+ return;
+}
+const accepted=files.filter(f=>f.size<=MAX_SIZE);if(accepted.length!==files.length)notify("Files larger than 5 GB were skipped");if(!accepted.length)return;try{await navigator.storage?.persist?.()}catch{}
+const prog=el("uploadProgress");prog.hidden=false;let saved=0,failed=0;for(let i=0;i<accepted.length;i++){const f=accepted[i];el("progressName").textContent="Saving "+f.name;el("progressCount").textContent=(i+1)+" / "+accepted.length;el("progressFill").style.width=Math.round(i/accepted.length*100)+"%";const id=uid();try{await mediaStore("put",id,f);state.media.push({id,kind:"file",name:f.name.slice(0,220),size:f.size,mime:f.type,created:Date.now()});saved++;persist()}catch(e){console.warn("Storage limit",e);failed++}}
+el("progressFill").style.width="100%";renderMedia();setTimeout(()=>prog.hidden=true,1100);notify(saved+" saved"+(failed?"; "+failed+" couldn't fit in browser storage":""))}
+function triggerUpload(){el("filePicker").click()}
+function switchRecordingButton(active){el("recordBtn").classList.toggle("recording",active);el("recordBtn").querySelector("span:last-child").textContent=active?"Stop note":"Voice note"}
+async function toggleVoiceNote(){if(audioRecorder&&audioRecorder.state==="recording"){audioRecorder.stop();switchRecordingButton(false);return}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){notify("Voice recording is not supported here");return}try{audioStream=await navigator.mediaDevices.getUserMedia({audio:true});const types=["audio/mp4","audio/webm;codecs=opus","audio/webm"];const mime=types.find(x=>MediaRecorder.isTypeSupported(x))||"";audioRecorder=new MediaRecorder(audioStream,mime?{mimeType:mime}:undefined);recordingParts=[];audioRecorder.ondataavailable=e=>{if(e.data.size)recordingParts.push(e.data)};audioRecorder.onstop=async()=>{const t=audioRecorder.mimeType||"audio/webm";const blob=new Blob(recordingParts,{type:t});audioStream?.getTracks().forEach(t=>t.stop());audioStream=null;audioRecorder=null;switchRecordingButton(false);if(blob.size){const ext=t.includes("mp4")?"m4a":"webm";await addFiles([new File([blob],"Voice note "+new Date().toLocaleString().replaceAll("/","-")+"."+ext,{type:t})])}};audioRecorder.start();switchRecordingButton(true);notify("Recording voice note")}catch(e){notify("Microphone access was not available");switchRecordingButton(false)}}
+function toggleDictation(){if(recognition){recognition.stop();recognition=null;el("micBtn").classList.remove("active");return}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){notify("Use your keyboard's microphone for dictation in this browser");return}try{const r=new SR();r.continuous=true;r.interimResults=false;r.lang=navigator.language||"en-US";r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const text=e.results[i][0].transcript.trim();if(!text)continue;const field=el("storyInput");const separator=field.value.trim()?" ":"";field.value+=separator+text;state.story=field.value;updateWordCount();scheduleSave()}}};r.onend=()=>{recognition=null;el("micBtn").classList.remove("active")};r.onerror=()=>notify("Dictation stopped");recognition=r;r.start();el("micBtn").classList.add("active");notify("Speak to add words to your story")}catch{notify("Dictation could not start")}}
+function toggleListen(){if(!("speechSynthesis" in window)){notify("Read aloud is not supported here");return}if(speechSynthesis.speaking){speechSynthesis.cancel();speaking=false;el("listenBtn").innerHTML=icon("play")+"<span>Listen</span>";return}const text=el("storyInput").value.trim();if(!text){notify("Write your story first");return}const utter=new SpeechSynthesisUtterance(text);utter.rate=.95;utter.onend=utter.onerror=()=>{speaking=false;el("listenBtn").innerHTML=icon("play")+"<span>Listen</span>"};speaking=true;el("listenBtn").innerHTML=icon("stop")+"<span>Stop</span>";speechSynthesis.speak(utter)}
+async function searchCommons(term,b){const status=$("#gifStatus",b);const grid=$("#gifResults",b);status.textContent="Searching…";grid.innerHTML='<div class="busy-spinner"></div>';try{const p=new URLSearchParams({action:"query",generator:"search",gsrsearch:term+" filetype:gif",gsrnamespace:"6",gsrlimit:"30",prop:"imageinfo",iiprop:"url|mime|size",iiurlwidth:"340",format:"json",origin:"*"});const res=await fetch("https://commons.wikimedia.org/w/api.php?"+p.toString());if(!res.ok)throw Error("Search failed");const j=await res.json();const pages=Object.values(j.query?.pages||{});const gifs=pages.map(p=>({name:p.title?.replace(/^File:/,"")||"GIF",url:p.imageinfo?.[0]?.url,preview:p.imageinfo?.[0]?.thumburl||p.imageinfo?.[0]?.url})).filter(p=>p.url&&/\.gif(?:\?|$)/i.test(p.url)).slice(0,24);paintGifs(gifs,b);status.textContent=gifs.length?gifs.length+" GIFs · Wikimedia Commons":"No GIFs found"}catch{grid.innerHTML='<p class="empty">Could not load GIFs. You can paste a GIF link below.</p>';status.textContent=""}}
+async function searchGiphy(term,key,b){const status=$("#gifStatus",b);const grid=$("#gifResults",b);status.textContent="Searching GIPHY…";grid.innerHTML='<div class="busy-spinner"></div>';try{const p=new URLSearchParams({api_key:key,q:term,limit:"24",rating:"pg"});const res=await fetch("https://api.giphy.com/v1/gifs/search?"+p);if(!res.ok)throw Error("GIPHY unavailable");const j=await res.json();const gifs=(j.data||[]).map(x=>({name:x.title||"GIF",url:x.images?.original?.url,preview:x.images?.fixed_width?.url||x.images?.original?.url})).filter(x=>x.url);paintGifs(gifs,b);status.textContent=gifs.length+" GIFs · Powered by GIPHY"}catch{grid.innerHTML='<p class="empty">GIPHY search failed. Check your key or use Wikimedia search.</p>';status.textContent=""}}
+function paintGifs(gifs,b){const grid=$("#gifResults",b);grid.replaceChildren();if(!gifs.length){grid.innerHTML='<p class="empty">No GIFs found. Try another search.</p>';return}gifs.forEach(g=>{const btn=document.createElement("button");btn.className="gif-choice";btn.type="button";btn.title=g.name;const img=document.createElement("img");img.src=g.preview;img.alt=g.name;img.loading="lazy";btn.append(img);btn.onclick=()=>{state.media.push({id:uid(),kind:"gif",url:g.url,name:g.name.slice(0,110),created:Date.now()});scheduleSave();renderMedia();closeModal();notify("GIF added")};grid.append(btn)})}
+function openGifs(){const key=localStorage.getItem("date.giphy.key")||"";const b=showModal("Find a GIF",'<form class="gif-search" id="gifForm"><input id="gifQuery" placeholder="Search GIFs" value="love"><button class="primary">Search</button></form><div class="gif-grid" id="gifResults"></div><p id="gifStatus" class="gif-credit">GIFs from Wikimedia Commons</p><label class="form-label" for="gifUrl">Or paste a GIF URL</label><div class="gif-search"><input id="gifUrl" type="url" placeholder="https://example.com/animated.gif"><button class="plain" id="insertGif">Add</button></div><details style="margin-top:18px;font-size:12px;color:#7c857a"><summary style="cursor:pointer">Use GIPHY instead</summary><p class="modal-note">Enter your own GIPHY web API key. It stays in this browser.</p><input id="giphyKey" placeholder="GIPHY API key" autocomplete="off"><button class="plain" id="saveGifKey">Save key</button></details>',{wide:true});$("#giphyKey",b).value=key;if(insideVela){$("details",b)?.remove();$("#gifStatus",b).textContent="Powered by GIPHY";}const search=async()=>{const q=$("#gifQuery",b).value.trim();if(!q)return;
+ if(insideVela){const grid=$("#gifResults",b);grid.innerHTML='<div class="busy-spinner"></div>';$("#gifStatus",b).textContent="Searching GIPHY…";
+   try{const result=await cloudRequest("gif-search",{term:q});if(!b.isConnected)return;paintGifs((result.items||[]).map(x=>({name:x.name,url:x.url,preview:x.preview||x.url})),b);$("#gifStatus",b).textContent=(result.items||[]).length+" GIFs · Powered by GIPHY";}
+   catch(e){if(b.isConnected){grid.innerHTML='<p class="empty">GIF search is unavailable.</p>';$("#gifStatus",b).textContent=e.message}}return;}
+ const savedKey=localStorage.getItem("date.giphy.key");return savedKey?searchGiphy(q,savedKey,b):searchCommons(q,b)};$("#gifForm",b).onsubmit=e=>{e.preventDefault();search()};$("#insertGif",b).onclick=()=>{const u=validUrl($("#gifUrl",b).value.trim());if(!u)return notify("Enter a valid GIF URL");state.media.push({id:uid(),kind:"gif",url:u,name:"GIF",created:Date.now()});scheduleSave();renderMedia();closeModal()};$("#saveGifKey",b).onclick=()=>{const k=$("#giphyKey",b).value.trim();if(k)localStorage.setItem("date.giphy.key",k);else localStorage.removeItem("date.giphy.key");notify(k?"GIPHY key saved":"Using Wikimedia GIF search");search()};search()}
+function openDraw(){const b=showModal("A little drawing",'<div class="drawing-wrap"><canvas id="drawCanvas" aria-label="Drawing canvas"></canvas></div><div class="draw-tools"><div id="drawColors" style="display:flex;gap:9px"></div><div style="display:flex;gap:8px;align-items:center"><input id="brushSize" aria-label="Brush thickness" type="range" min="2" max="28" value="4"><button class="plain" id="undoDraw">Undo</button><button class="plain" id="clearDraw">Clear</button></div></div><div class="modal-actions"><button class="plain" id="cancelDraw">Cancel</button><button class="primary" id="attachDraw">Add drawing</button></div>',{wide:true});const canvas=$("#drawCanvas",b),ctx=canvas.getContext("2d");const ratio=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(canvas.getBoundingClientRect().width*ratio);canvas.height=Math.round(canvas.getBoundingClientRect().height*ratio);ctx.scale(ratio,ratio);ctx.fillStyle="#fffefa";ctx.fillRect(0,0,canvas.width,canvas.height);let color="#343f37",brush=4,isDown=false,history=[];const colors=["#343f37","#bf7f6e","#6d8f80","#7c87b1","#dfb95d","#c65b58"];colors.forEach(c=>{const s=document.createElement("button");s.className="draw-swatch"+(color===c?" selected":"");s.style.background=c;s.title=c;s.setAttribute("aria-label","Color "+c);s.onclick=()=>{color=c;$$(".draw-swatch",b).forEach(x=>x.classList.toggle("selected",x===s))};$("#drawColors",b).append(s)});const point=e=>{const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};canvas.onpointerdown=e=>{e.preventDefault();if(history.length>=15)history.shift();history.push(ctx.getImageData(0,0,canvas.width,canvas.height));canvas.setPointerCapture(e.pointerId);isDown=true;const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.01,p.y+.01);ctx.strokeStyle=color;ctx.lineWidth=brush;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke()};canvas.onpointermove=e=>{if(!isDown)return;const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke()};canvas.onpointerup=canvas.onpointercancel=()=>{isDown=false;ctx.closePath()};$("#brushSize",b).oninput=e=>brush=Number(e.target.value);$("#undoDraw",b).onclick=()=>{const prev=history.pop();if(prev)ctx.putImageData(prev,0,0)};$("#clearDraw",b).onclick=()=>{history.push(ctx.getImageData(0,0,canvas.width,canvas.height));ctx.fillStyle="#fffefa";ctx.fillRect(0,0,canvas.width,canvas.height)};$("#cancelDraw",b).onclick=closeModal;$("#attachDraw",b).onclick=()=>canvas.toBlob(async blob=>{if(blob){closeModal();await addFiles([new File([blob],"Drawing "+Date.now()+".png",{type:"image/png"})])}},"image/png")}
+function openCamera(){if(!navigator.mediaDevices?.getUserMedia){notify("Camera is not available in this browser");return}let stream=null,mode="photo",facing="environment",deviceId="",recorder=null,chunks=[],busy=false,stopped=false;const b=showModal("Camera",'<div class="camera-box" id="cameraBox"><p>Opening camera…</p></div><div class="camera-switches"><div class="segment"><button id="photoMode" class="selected">Photo</button><button id="videoMode">Video</button></div><select id="cameraDevice" aria-label="Choose camera"><option>Finding cameras…</option></select></div><div class="camera-actions"><button id="flipCamera" title="Flip camera">'+icon("flip")+' Flip</button><button id="shutter" class="shutter" aria-label="Capture"></button><span id="cameraTime" style="min-width:67px;font-size:11px;color:#8a9187;text-align:center">Photo</span></div><p class="modal-note">Available iPhone cameras depend on what Safari exposes. Switch front/back or choose a detected lens.</p>',{wide:true,onClose:()=>{stopped=true;stopCamera();if(recorder?.state==="recording")recorder.stop()}});const box=$("#cameraBox",b);const stopCamera=()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}};const switchCam=async()=>{if(stopped)return;stopCamera();box.innerHTML="<p>Opening camera…</p>";try{let video= deviceId?{deviceId:{ideal:deviceId},width:{ideal:1920},height:{ideal:1080}}:{facingMode:{ideal:facing},width:{ideal:1920},height:{ideal:1080}};try{stream=await navigator.mediaDevices.getUserMedia({video,audio:mode==="video"})}catch(e){if(mode==="video")stream=await navigator.mediaDevices.getUserMedia({video,audio:false});else throw e}if(stopped){stopCamera();return}box.replaceChildren();const player=document.createElement("video");player.autoplay=true;player.muted=true;player.playsInline=true;player.setAttribute("playsinline","");player.srcObject=stream;if(!deviceId&&facing==="user")player.style.transform="scaleX(-1)";box.append(player);player.play().catch(()=>{});const devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="videoinput");const select=$("#cameraDevice",b);const active=stream.getVideoTracks()[0]?.getSettings()?.deviceId;select.replaceChildren();if(!devices.length)select.add(new Option("Default camera",""));devices.forEach((d,i)=>select.add(new Option(d.label||"Camera "+(i+1),d.deviceId)));if(active&&devices.some(d=>d.deviceId===active))select.value=active;else if(deviceId)select.value=deviceId;$("#cameraTime",b).textContent=mode==="photo"?"Photo":"Video"}catch(err){box.innerHTML='<p>Camera access is unavailable.<br>Check browser permissions or use Add files.</p>';notify("Camera could not start")}};$("#photoMode",b).onclick=()=>{if(recorder?.state==="recording")return;mode="photo";$("#photoMode",b).classList.add("selected");$("#videoMode",b).classList.remove("selected");deviceId="";switchCam()};$("#videoMode",b).onclick=()=>{if(recorder?.state==="recording")return;mode="video";$("#videoMode",b).classList.add("selected");$("#photoMode",b).classList.remove("selected");deviceId="";switchCam()};$("#cameraDevice",b).onchange=e=>{deviceId=e.target.value;switchCam()};$("#flipCamera",b).onclick=()=>{if(recorder?.state==="recording")return;facing=facing==="user"?"environment":"user";deviceId="";switchCam()};
+$("#shutter",b).onclick=async()=>{if(!stream||busy)return;const video=$("video",box);if(!video)return;if(mode==="photo"){if(!video.videoWidth)return notify("Camera is still starting");const canvas=document.createElement("canvas");canvas.width=video.videoWidth;canvas.height=video.videoHeight;const cx=canvas.getContext("2d");if(video.style.transform.includes("-1")){cx.translate(canvas.width,0);cx.scale(-1,1)}cx.drawImage(video,0,0);canvas.toBlob(async blob=>{if(blob){closeModal();await addFiles([new File([blob],"Photo "+Date.now()+".jpg",{type:"image/jpeg"})])}},"image/jpeg",.94)}else{if(recorder?.state==="recording"){recorder.stop();$("#shutter",b).classList.remove("recording");$("#cameraTime",b).textContent="Saving…";return}if(!window.MediaRecorder)return notify("Video recording is not supported");const mime=["video/mp4","video/webm;codecs=vp8,opus","video/webm"].find(m=>MediaRecorder.isTypeSupported(m))||"";try{recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined)}catch{return notify("Video recording is not supported on this camera")};chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=async()=>{const type=recorder.mimeType||"video/webm";const blob=new Blob(chunks,{type});if(blob.size){const f=new File([blob],"Video "+Date.now()+(type.includes("mp4")?".mp4":".webm"),{type});closeModal();await addFiles([f])}else notify("Nothing was recorded")};recorder.start(1000);$("#shutter",b).classList.add("recording");$("#cameraTime",b).textContent="Recording";notify("Recording video")}};switchCam()}
+async function exportStory(){const out={version:1,exportedAt:new Date().toISOString(),data:JSON.parse(JSON.stringify(state)),blobs:{}};let skipped=0,total=0;for(const item of state.media.filter(m=>m.kind==="file")){if(item.size>8*1024*1024||total+item.size>30*1024*1024){skipped++;continue}try{const blob=await mediaStore("get",item.id);if(!blob){skipped++;continue}const dataUri=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(blob)});out.blobs[item.id]=dataUri;total+=blob.size}catch{skipped++}}out.data.media=out.data.media.filter(m=>m.kind!=="file"||out.blobs[m.id]);const link=document.createElement("a");const url=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:"application/json"}));link.href=url;link.download="date-"+new Date().toISOString().slice(0,10)+".date";link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);notify(skipped?"Text and smaller attachments exported; "+skipped+" large file(s) excluded":"Story backup downloaded")}
+async function importStory(file){if(!file)return;try{const input=JSON.parse(await file.text());if(input.version!==1||typeof input.data?.story!=="string"||!Array.isArray(input.data.media))throw Error("Invalid backup");if(!confirm("Replace the current story with this backup?"))return;const next={...base,...input.data};next.media=next.media.filter(m=>m?.id&&["link","gif","file"].includes(m.kind));for(const m of next.media.filter(m=>m.kind==="file")){const raw=input.blobs?.[m.id];if(!raw)continue;const blob=await(await fetch(raw)).blob();await mediaStore("put",m.id,blob)}state=next;persist();restoreForm();renderMedia();notify("Story imported")}catch(e){console.warn(e);notify("Could not import this backup")}}
+async function clearStory(){if(!confirm("Clear your story and attachments from this browser? This cannot be undone."))return;for(const m of state.media.filter(m=>m.kind==="file"))try{await mediaStore("delete",m.id)}catch{}const name=state.name;state={...base,name};persist();restoreForm();renderMedia();notify("Story cleared")}
+const steps=[
+{selector:".page-top h1",title:"Your space",text:"One page for everything about your first date. Nothing complicated."},
+{selector:"#detailsArea",title:"The when and where",text:"Set the date and a location separately from your story."},
+{selector:"#storyArea",title:"Write it all",text:"Write as much as you want. Nothing gets cut off."},
+{selector:"#toolsArea",title:"Add the moments",text:"Photos, videos, GIFs, links, drawings and voice notes. You can paste images or drop files here too."},
+{selector:"#mentionBtn",title:"Link a location",text:"Type @location inside your story to search for a real place. Pick it to create a clickable mention."},
+{selector:"#cameraBtn",title:"Your camera",text:"Take a photo or record a video. Flip cameras and select any lens your browser makes available."},
+{selector:"#saveBtn",title:"Keep it",text:"Your story saves automatically on this device. Tap Save any time. Export a backup from the bottom of the page."}
+];
+function rectStyles(elm,{top,left,width,height}){Object.assign(elm.style,{top:top+"px",left:left+"px",width:Math.max(0,width)+"px",height:Math.max(0,height)+"px"})}
+function updateTour(){if(!tourActive)return;const step=steps[tourStep],target=$(step.selector);if(!target)return;const r=target.getBoundingClientRect(),pad=6;const top=Math.max(0,r.top-pad),left=Math.max(0,r.left-pad),right=Math.min(innerWidth,r.right+pad),bottom=Math.min(innerHeight,r.bottom+pad);rectStyles(el("shadeTop"),{top:0,left:0,width:innerWidth,height:top});rectStyles(el("shadeBottom"),{top:bottom,left:0,width:innerWidth,height:innerHeight-bottom});rectStyles(el("shadeLeft"),{top,left:0,width:left,height:bottom-top});rectStyles(el("shadeRight"),{top,left:right,width:innerWidth-right,height:bottom-top});rectStyles(el("tourRing"),{top,left,width:right-left,height:bottom-top});el("tourIndex").textContent=String(tourStep+1).padStart(2,"0")+" / "+String(steps.length).padStart(2,"0");el("tourTitle").textContent=step.title;el("tourText").textContent=step.text;el("tourBack").style.visibility=tourStep===0?"hidden":"visible";el("tourNext").innerHTML=(tourStep===steps.length-1?"Finish":"Next")+" "+icon("arrow");const card=el("tourCard");card.style.top="";card.style.bottom="32px";card.style.transform="translateX(-50%)";if(bottom>innerHeight-300&&top<300&&innerWidth>680){card.style.top="105px";card.style.bottom="auto"}}
+function goTour(i){tourStep=Math.max(0,Math.min(steps.length-1,i));const target=$(steps[tourStep].selector);target?.scrollIntoView({behavior:"smooth",block:innerWidth<650?"center":"nearest"});updateTour();setTimeout(updateTour,350)}
+function stopTour(){tourActive=false;el("tour").hidden=true;localStorage.setItem("date.tour.seen","1")}
+function startTour(){if(el("onboarding").hidden===false)return;tourActive=true;el("tour").hidden=false;goTour(0)}
+
+/* Vela's signed-in bridge uses its existing note, upload and GIPHY APIs. */
+function onVelaMessage(e){
+ if(e.origin!==location.origin||e.source!==window.parent||e.data?.source!=="vela-date")return;
+ const m=e.data;
+ if(m.type==="load"){
+  velaOwner=String(m.owner||"");
+  let saved={};try{saved=JSON.parse(localStorage.getItem(localKey())||"{}")}catch{}
+  state={...base,...(m.snapshot||{})};
+  if(!Array.isArray(state.places))state.places=[];
+  if(!Array.isArray(state.media))state.media=[];
+  if(!state.name)state.name=String(m.accountName||"You").slice(0,36);
+  remoteLinks=m.links||{};
+  velaReady=true;
+  el("storyInput").disabled=false;
+  el("storyInput").placeholder="Write about your first date…";
+  el("onboarding").hidden=true;
+  restoreForm();renderMedia();renderPlaces();persist();
+  if(!localStorage.getItem("date.tour.seen"))setTimeout(startTour,320);
+  el("shareBtn").hidden=false;
+  return;
+ }
+ if(m.type==="status"){
+  el("saveState").classList.toggle("busy",m.status==="Saving…"||m.status==="Syncing…");
+  el("saveState").querySelector("span:last-child").textContent=m.status||"Not synced";
+  if(m.message)notify(m.message);
+  return;
+ }
+ if(m.requestId&&cloudPending.has(m.requestId)){
+  if(m.type==="upload-progress")return;
+  const done=cloudPending.get(m.requestId);cloudPending.delete(m.requestId);
+  if(m.error)done.reject(Error(m.error));else done.resolve(m);
+ }
+}
+async function openShare(){
+ if(!insideVela||!velaReady)return;
+ const b=showModal("Share your story",'<p class="modal-note">Choose Vela friends who can read and edit this story.</p><div class="share-friends" id="shareFriends"><div class="busy-spinner"></div></div><div class="modal-actions"><button class="plain" id="shareCancel">Cancel</button><button class="primary" id="shareSave">Save sharing</button></div>');
+ $("#shareCancel",b).onclick=closeModal;
+ try{
+  const data=await cloudRequest("share");if(!b.isConnected)return;
+  if(!data.isOwner){$("#shareFriends",b).textContent="Only the owner can change who has access.";$("#shareSave",b).disabled=true;return;}
+  $("#shareFriends",b).replaceChildren();
+  if(!data.items?.length)$("#shareFriends",b).innerHTML='<p class="modal-note">Add a friend in Vela Messages to share this story.</p>';
+  for(const item of data.items||[]){
+   const label=document.createElement("label");const cb=document.createElement("input");cb.type="checkbox";cb.value=item.uid;cb.checked=data.selected?.includes(item.uid);label.append(cb,document.createTextNode(item.name));$("#shareFriends",b).append(label);
+  }
+  $("#shareSave",b).onclick=async()=>{const members=Array.from($$('input:checked',$("#shareFriends",b))).map(x=>x.value);$("#shareSave",b).disabled=true;try{await cloudRequest("share-save",{members});closeModal();notify("Sharing updated")}catch(e){notify(e.message);$("#shareSave",b).disabled=false}};
+ }catch(e){if(b.isConnected)$("#shareFriends",b).textContent=e.message}
+}
+
+/* Inline @location mentions. Search only after pressing Search; no autocomplete. */
+const geocache=new Map();let lastGeo=0,readMode=false,locationPicking=false;
+function openLocation(){
+ if(locationPicking)return;
+ locationPicking=true;
+ const editor=el("storyInput"),original=editor.value,caret=editor.selectionStart;
+ const match=original.slice(0,caret).match(/@location$/i),start=match?caret-match[0].length:caret,end=caret;
+ const b=showModal("Link a location",
+ '<p class="modal-note">Search for a specific restaurant, landmark or address.</p><form id="placeSearch" class="gif-search"><input id="placeQuery" placeholder="McDonald\'s, Cincinnati, Ohio" autocomplete="off"><button type="submit" class="primary">Search</button></form><div id="placeResults" class="place-results"></div><p class="gif-credit">© OpenStreetMap contributors</p><label class="form-label" for="manualPlace">Or add a place by name</label><div class="gif-search"><input id="manualPlace" placeholder="Place name"><button class="plain" id="manualPlaceAdd" type="button">Add</button></div>',
+ {onClose:()=>locationPicking=false});
+ const results=$("#placeResults",b);
+ const put=place=>{
+  const label=String(place.name||"Place").slice(0,110).replace(/^@/,""),token="@"+label;
+  const replacement=(match?"":" ")+token+" ";
+  editor.focus();
+  editor.setRangeText(replacement,start,end,"end");
+  state.story=editor.value;
+  if(!Array.isArray(state.places))state.places=[];
+  if(place.lat!==null&&place.lon!==null){
+   const exists=state.places.some(p=>p.name===label&&Math.abs(p.lat-place.lat)<.000001&&Math.abs(p.lon-place.lon)<.000001);
+   if(!exists)state.places.push({id:uid(),name:label,label,lat:+place.lat,lon:+place.lon,address:String(place.address||"").slice(0,400),website:validUrl(place.website)||""});
+  }else{
+   state.places.push({id:uid(),name:label,label,lat:null,lon:null,address:String(place.address||"").slice(0,400),website:""});
+  }
+  updateWordCount();renderPlaces();scheduleSave();closeModal();
+ };
+ $("#manualPlaceAdd",b).onclick=()=>{const name=$("#manualPlace",b).value.trim();if(!name)return notify("Enter a place name");put({name,lat:null,lon:null,address:""})};
+ $("#placeSearch",b).onsubmit=async e=>{
+  e.preventDefault();
+  const q=$("#placeQuery",b).value.trim();if(q.length<3)return notify("Enter a place and city or address");
+  results.innerHTML='<div class="busy-spinner"></div>';
+  try{
+   let locations=geocache.get(q.toLowerCase());
+   if(!locations){
+    const delay=1300-(Date.now()-lastGeo);
+    if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));
+    lastGeo=Date.now();
+    const params=new URLSearchParams({q,format:"jsonv2",limit:"8",addressdetails:"1",extratags:"1",namedetails:"1"});
+    const response=await fetch("https://nominatim.openstreetmap.org/search?"+params.toString(),{headers:{Accept:"application/json"},signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw Error("Location lookup unavailable");
+    locations=await response.json();
+    geocache.set(q.toLowerCase(),locations);
+   }
+   if(!b.isConnected)return;results.replaceChildren();
+   if(!locations.length){results.innerHTML='<p class="empty">No places found. Try a more specific address.</p>';return}
+   locations.forEach(p=>{
+    const name=(p.name||p.namedetails?.name||p.display_name?.split(",")[0]||"Place").slice(0,110);
+    const label=document.createElement("button");label.type="button";label.className="place-result";
+    const bold=document.createElement("strong");bold.textContent=name;
+    const small=document.createElement("small");small.textContent=p.display_name||"";
+    label.append(bold,small);
+    label.onclick=()=>put({name,lat:Number(p.lat),lon:Number(p.lon),address:p.display_name,website:p.extratags?.website||p.extratags?.["contact:website"]});
+    results.append(label);
+   });
+  }catch(error){if(b.isConnected)results.innerHTML='<p class="empty">Location search failed. You can still add a place by name.</p>'}
+ };
+ $("#placeQuery",b).focus();
+}
+function showLocation(item){
+ const hasPin=Number.isFinite(+item.lat)&&Number.isFinite(+item.lon)&&item.lat!==null&&item.lon!==null;
+ const lat=Number(item.lat),lon=Number(item.lon);
+ const search=encodeURIComponent(item.address||item.name);
+ const link=hasPin?"https://www.google.com/maps/search/?api=1&query="+lat+","+lon:"https://www.google.com/maps/search/?api=1&query="+search;
+ let html='<p class="modal-note">'+escapeHtml(item.address||"Saved location")+'</p>';
+ if(hasPin){
+  const bbox=[lon-.007,lat-.005,lon+.007,lat+.005].join(",");
+  const url="https://www.openstreetmap.org/export/embed.html?"+new URLSearchParams({bbox,layer:"mapnik",marker:lat+","+lon});
+  html+='<iframe class="place-modal-map" loading="lazy" title="Location map" src="'+escapeHtml(url)+'"></iframe><div class="gif-credit">© OpenStreetMap contributors</div>';
+ }
+ html+='<div class="place-actions"><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(link)+'">Open in Maps</a>';
+ if(item.website&&validUrl(item.website))html+='<a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(item.website)+'">Website</a>';
+ html+='</div>';
+ showModal(item.name||item.label||"Location",html,{wide:true});
+}
+function renderPlaces(){
+ const container=el("mentionedPlaces");container.replaceChildren();
+ const places=(state.places||[]).filter(p=>p?.label&&state.story.includes("@"+p.label));
+ container.hidden=!places.length;
+ for(const p of places){
+  const btn=document.createElement("button");btn.className="place-tag";btn.innerHTML=icon("pin");
+  btn.append(document.createTextNode(p.label));btn.onclick=()=>showLocation(p);container.append(btn);
+ }
+ if(readMode)renderRead();
+}
+function renderRead(){
+ const area=el("storyRead");area.replaceChildren();
+ const text=state.story||"",places=(state.places||[]).filter(p=>p?.label&&text.includes("@"+p.label));
+ const sorted=[...places].sort((a,b)=>b.label.length-a.label.length);
+ if(!sorted.length){area.textContent=text||"Nothing written yet.";return}
+ let i=0;
+ while(i<text.length){
+  let found=null,pos=text.length;
+  for(const p of sorted){const k=text.indexOf("@"+p.label,i);if(k>=0&&k<pos){found=p;pos=k}}
+  if(!found){area.append(document.createTextNode(text.slice(i)));break}
+  if(pos>i)area.append(document.createTextNode(text.slice(i,pos)));
+  const btn=document.createElement("button");btn.className="inline-place";btn.textContent="@"+found.label;btn.onclick=()=>showLocation(found);area.append(btn);
+  i=pos+found.label.length+1;
+ }
+}
+function toggleRead(){
+ readMode=!readMode;
+ el("storyInput").hidden=readMode;
+ el("storyRead").hidden=!readMode;
+ el("readToggle").textContent=readMode?"Write":"Read";
+ if(readMode)renderRead();else el("storyInput").focus();
+}
+
+function bind(){el("storyInput").addEventListener("input",e=>{state.story=e.target.value;updateWordCount();renderPlaces();scheduleSave();if(!$(".modal-backdrop")&&/@location$/i.test(e.target.value.slice(0,e.target.selectionStart)))openLocation()});[["dateInput","when"],["placeInput","place"],["addressInput","address"]].forEach(([id,key])=>el(id).addEventListener("input",e=>{state[key]=e.target.value;scheduleSave()}));el("saveBtn").onclick=saveNow;el("uploadBtn").onclick=triggerUpload;el("filePicker").onchange=e=>{addFiles(e.target.files);e.target.value=""};el("cameraBtn").onclick=openCamera;el("gifBtn").onclick=openGifs;el("drawBtn").onclick=openDraw;el("linkBtn").onclick=openLink;el("mentionBtn").onclick=()=>openLocation();el("readToggle").onclick=toggleRead;el("shareBtn").onclick=openShare;el("micBtn").onclick=toggleDictation;el("recordBtn").onclick=toggleVoiceNote;el("identityBtn").onclick=openIdentity;el("helpBtn").onclick=startTour;el("nameForm").onsubmit=e=>{e.preventDefault();setName(el("nameInput").value);if(!localStorage.getItem("date.tour.seen"))setTimeout(startTour,220)};el("tourNext").onclick=()=>{if(tourStep===steps.length-1)stopTour();else goTour(tourStep+1)};el("tourBack").onclick=()=>goTour(tourStep-1);el("skipTour").onclick=stopTour;window.addEventListener("resize",updateTour);window.addEventListener("scroll",updateTour,{passive:true});el("exportBtn").onclick=exportStory;el("importBtn").onclick=()=>el("importPicker").click();el("importPicker").onchange=e=>{importStory(e.target.files?.[0]);e.target.value=""};el("resetBtn").onclick=clearStory;
+document.addEventListener("paste",e=>{if(!el("onboarding").hidden||$(".modal-backdrop"))return;const fs=[...(e.clipboardData?.items||[])].filter(x=>x.kind==="file").map(x=>x.getAsFile()).filter(Boolean);if(fs.length){e.preventDefault();addFiles(fs)}});
+const drop=el("writingSection");drop.addEventListener("dragover",e=>{if(e.dataTransfer?.types.includes("Files")){e.preventDefault();drop.style.outline="2px dashed #b88372"}});drop.addEventListener("dragleave",()=>drop.style.outline="");drop.addEventListener("drop",e=>{drop.style.outline="";if(e.dataTransfer?.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
+window.addEventListener("beforeunload",()=>{clearTimeout(saveTimer);persist();recognition?.stop();})}
+restoreForm();bind();renderMedia();renderPlaces();
+if(insideVela){
+ el("onboarding").hidden=true;
+ el("saveState").querySelector("span:last-child").textContent="Connecting…";
+ const intro=el("storyInput");intro.disabled=true;intro.placeholder="Connecting to Vela…";
+ window.addEventListener("message",onVelaMessage);
+ broadcast("ready");
+}else{
+const initialDraft=state.story;
+mediaStore("get","__story__").then(full=>{
+  if(typeof full==="string" && el("storyInput").value===initialDraft){
+    state.story=full;el("storyInput").value=full;updateWordCount()
+  }
+}).catch(()=>{});
+if(!state.name){el("onboarding").hidden=false;setTimeout(()=>el("nameInput").focus(),320)}else if(!localStorage.getItem("date.tour.seen"))setTimeout(startTour,300);
+}
+})();
