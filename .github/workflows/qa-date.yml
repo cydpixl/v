@@ -1,0 +1,28 @@
+name: QA date.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'public/date/**'
+      - 'src/date-app.*'
+      - 'src/hub.js'
+      - 'src/desktop-catalog.js'
+      - 'scripts/qa-date.mjs'
+      - '.github/workflows/qa-date.yml'
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node --check public/date/app.js && node --check src/date-app.mjs
+      - run: node scripts/qa-date.mjs
