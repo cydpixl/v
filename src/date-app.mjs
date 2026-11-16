@@ -82,9 +82,15 @@ export function mountDateApp(root,{api,owner,toast}){
    const upload=await api('/uploads',{method:'POST',body:file,headers:{'Content-Type':mime,'X-File-Name':encodeURIComponent(file.name||'Attachment')},onUploadProgress:bytes=>post('upload-progress',{requestId,bytes,total:file.size})});
    if(!alive)return;
    const id=upload.upload?.id;if(!id)throw Error('Upload completed without a file ID');
-   const links=(await api('/file-links',{method:'POST',body:{ids:[id]}})).links||{};
-   post('upload-result',{requestId,remote:id,url:links[id]||null});
+   post('upload-result',{requestId,remote:id});
   }catch(e){if(alive)post('upload-result',{requestId,error:e.message||'Upload failed. Try again.'})}
+ }
+ async function resolveLinks(requestId,ids){
+  try{
+   if(!Array.isArray(ids)||ids.length>50||ids.some(x=>typeof x!=='string'))throw Error('Choose up to 50 uploaded files.');
+   const {links={}}=await api('/file-links',{method:'POST',body:{ids}});
+   post('file-links',{requestId,links});
+  }catch(error){post('file-links',{requestId,error:error.message||'Media preview links unavailable'})}
  }
  async function gifs(term,requestId){
   try{const data=await api('/gifs?'+new URLSearchParams({q:String(term||'').slice(0,100),offset:'0'}));post('gif-results',{requestId,items:data.items||[]})}
@@ -127,6 +133,7 @@ export function mountDateApp(root,{api,owner,toast}){
     break;
    case 'upload':upload(msg.file,msg.requestId);break;
    case 'gif-search':gifs(msg.term,msg.requestId);break;
+   case 'file-links':resolveLinks(msg.requestId,msg.ids);break;
    case 'share':share(msg.requestId);break;
    case 'story-select':selectStory(msg.requestId,msg.noteId);break;
    case 'share-save':shareSave(msg.requestId,msg.members);break;
