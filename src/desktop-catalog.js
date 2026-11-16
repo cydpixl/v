@@ -3,8 +3,9 @@ import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id)];
+export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id)];
 export const DESKTOP_APPS=[
+ {id:'date',name:'date.',icon:'file',category:'Lifestyle',description:'Write about your first date. Keep the photos, places and little moments together.'},
  {id:'youtube',name:'YouTube',icon:'play',category:'Entertainment',description:'Your videos, your community. Upload, watch, search, and share videos with Vela.'},
  {id:'graphing',name:'Desmos',icon:'calculator',category:'Education',description:'The real Desmos graphing calculator. Save graphs, explore sliders, and export images.'},
  {id:'assistant',name:'ChatGPT',icon:'chat',category:'Productivity',description:'Your private AI workspace. Write, learn, and code with Groq-powered models and saved conversations.'},
@@ -25,6 +26,7 @@ export const DESKTOP_APPS=[
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
 export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
 export function defaultDesktopAppIcon(id){
+ if(id==='date')return `<img class="generated-app-icon" src="${assetURL('app-icons/date.svg')}" alt="">`;
  if(id==='assistant')return `<img class="generated-app-icon" src="${assetURL('app-icons/chatgpt.svg')}" alt="">`;
  if(id==='youtube')return `<img class="generated-app-icon" src="${assetURL('app-icons/youtube.png')}" alt="">`;
  if(GENERATED_APP_ICONS[id])return `<img class="generated-app-icon" src="${assetURL(GENERATED_APP_ICONS[id])}" alt="">`;
