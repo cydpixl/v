@@ -33,7 +33,8 @@ export function mountDateApp(root,{api,owner,toast}){
   const note=await api('/shared-notes/'+id);if(!alive)return;
   record=note;
   let data=blank();try{data=clean(JSON.parse(note.text))}catch{data={...data,story:note.text}}
-  post('load',{snapshot:data,links:await fileLinks(data.media),noteId:id,revision:note.revision});
+  const account=await api('/me').catch(()=>({user:null}));
+  post('load',{owner:uid,accountName:account.user?.name||account.user?.handle||'You',snapshot:data,links:await fileLinks(data.media),noteId:id,revision:note.revision});
   initializing=false;
  }
  async function save(){
@@ -100,7 +101,7 @@ export function mountDateApp(root,{api,owner,toast}){
   if(!alive||e.origin!==location.origin||e.source!==frame.contentWindow||e.data?.source!==SOURCE)return;
   const msg=e.data;
   switch(msg.type){
-   case 'ready':load().catch(fail);break;
+   case 'ready':load().catch(error=>{post('load',{owner:uid,accountName:'You',snapshot:blank(),links:{},offline:true});fail(error);});break;
    case 'update':
     if(initializing)return;
     pending=msg.snapshot;clearTimeout(timer);timer=setTimeout(save,700);break;
@@ -115,7 +116,8 @@ export function mountDateApp(root,{api,owner,toast}){
  return ()=>{
   alive=false;clearTimeout(timer);
   window.removeEventListener('message',onMessage);
-  if(pending&&record&&!saving)api('/shared-notes/'+record.id,{method:'PUT',body:{title:TITLE,text:JSON.stringify(clean(pending)),revision:record.revision}}).catch(()=>{});
+  // Pending edits are already saved in the iframe's local draft. Closing a window
+  // must not launch a detached write that could race a collaborator's changes.
   frame.src='about:blank';root.replaceChildren();
  };
 }
