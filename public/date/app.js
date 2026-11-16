@@ -249,7 +249,7 @@ function openLocation(){
   if(!Array.isArray(state.places))state.places=[];
   if(place.lat!==null&&place.lon!==null){
    const exists=state.places.some(p=>p.name===label&&Math.abs(p.lat-place.lat)<.000001&&Math.abs(p.lon-place.lon)<.000001);
-   if(!exists)state.places.push({id:uid(),name:label,label,lat:+place.lat,lon:+place.lon,address:String(place.address||"").slice(0,400),website:validUrl(place.website)||""});
+   if(!exists)state.places.push({id:uid(),name:label,label,lat:+place.lat,lon:+place.lon,address:String(place.address||"").slice(0,400),website:validUrl(place.website)||"",phone:String(place.phone||"").slice(0,100),hours:String(place.hours||"").slice(0,200),osmType:String(place.osmType||""),osmId:String(place.osmId||"")});
   }else{
    state.places.push({id:uid(),name:label,label,lat:null,lon:null,address:String(place.address||"").slice(0,400),website:""});
   }
@@ -280,7 +280,7 @@ function openLocation(){
     const bold=document.createElement("strong");bold.textContent=name;
     const small=document.createElement("small");small.textContent=p.display_name||"";
     label.append(bold,small);
-    label.onclick=()=>put({name,lat:Number(p.lat),lon:Number(p.lon),address:p.display_name,website:p.extratags?.website||p.extratags?.["contact:website"]});
+    label.onclick=()=>put({name,lat:Number(p.lat),lon:Number(p.lon),address:p.display_name,website:p.extratags?.website||p.extratags?.["contact:website"],phone:p.extratags?.phone||p.extratags?.["contact:phone"],hours:p.extratags?.opening_hours,osmType:p.osm_type,osmId:p.osm_id});
     results.append(label);
    });
   }catch(error){if(b.isConnected)results.innerHTML='<p class="empty">Location search failed. You can still add a place by name.</p>'}
@@ -293,6 +293,8 @@ function showLocation(item){
  const search=encodeURIComponent(item.address||item.name);
  const link=hasPin?"https://www.google.com/maps/search/?api=1&query="+lat+","+lon:"https://www.google.com/maps/search/?api=1&query="+search;
  let html='<p class="modal-note">'+escapeHtml(item.address||"Saved location")+'</p>';
+ if(item.hours)html+='<p class="modal-note"><strong>Hours:</strong> '+escapeHtml(item.hours)+'</p>';
+ if(item.phone)html+='<p class="modal-note"><strong>Phone:</strong> '+escapeHtml(item.phone)+'</p>';
  if(hasPin){
   const bbox=[lon-.007,lat-.005,lon+.007,lat+.005].join(",");
   const url="https://www.openstreetmap.org/export/embed.html?"+new URLSearchParams({bbox,layer:"mapnik",marker:lat+","+lon});
@@ -300,6 +302,7 @@ function showLocation(item){
  }
  html+='<div class="place-actions"><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(link)+'">Open in Maps</a>';
  if(item.website&&validUrl(item.website))html+='<a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(item.website)+'">Website</a>';
+ if(['node','way','relation'].includes(item.osmType)&&/^\\d+$/.test(String(item.osmId||'')))html+='<a target="_blank" rel="noopener noreferrer" href="https://www.openstreetmap.org/'+item.osmType+'/'+item.osmId+'">Place details</a>';
  html+='</div>';
  showModal(item.name||item.label||"Location",html,{wide:true});
 }
