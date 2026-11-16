@@ -6,7 +6,7 @@ const $ = (s,root=document) => root.querySelector(s);
 const $$ = (s,root=document) => [...root.querySelectorAll(s)];
 const KEY = "date.story.v1";
 const insideVela = window.parent !== window;
-let velaOwner = "", velaReady = false, remoteLinks = {};
+let velaOwner = "", velaNoteId = "", velaStories = [], velaReady = false, remoteLinks = {};
 const cloudPending = new Map();
 const broadcast = (type,payload={}) => {if(insideVela)window.parent.postMessage({source:"vela-date",type,...payload},location.origin)};
 const cloudRequest = (type,payload={}) => new Promise((resolve,reject)=>{
@@ -14,7 +14,7 @@ const cloudRequest = (type,payload={}) => new Promise((resolve,reject)=>{
  cloudPending.set(requestId,{resolve:v=>{clearTimeout(timeout);resolve(v)},reject:e=>{clearTimeout(timeout);reject(e)}});
  broadcast(type,{...payload,requestId});
 });
-const localKey=()=>insideVela ? "date.story.v1.vela."+velaOwner : KEY;
+const localKey=()=>insideVela ? "date.story.v1.vela."+velaOwner+"."+(velaNoteId||"offline") : KEY;
 const NAME_LIMIT = 36;
 const MAX_BATCH = 50;
 const MAX_SIZE = insideVela ? 95 * 1024 * 1024 : 5 * 1024 * 1024 * 1024;
@@ -153,6 +153,9 @@ function onVelaMessage(e){
  const m=e.data;
  if(m.type==="load"){
   velaOwner=String(m.owner||"");
+  velaNoteId=String(m.noteId||"offline");
+  velaStories=Array.isArray(m.stories)?m.stories:[];
+  el("storiesBtn").hidden=velaStories.length<2;
   let saved={};try{saved=JSON.parse(localStorage.getItem(localKey())||"{}")}catch{}
   state={...base,...(m.offline&&saved?.story?saved:(m.snapshot||{}))};
   if(!Array.isArray(state.places))state.places=[];
@@ -185,6 +188,25 @@ function onVelaMessage(e){
   if(m.type==="upload-progress")return;
   const done=cloudPending.get(m.requestId);cloudPending.delete(m.requestId);
   if(m.error)done.reject(Error(m.error));else done.resolve(m);
+ }
+}
+function openStories(){
+ if(!insideVela||!velaReady)return;
+ const b=showModal("Your stories",'<div class="story-choices" id="storyChoices"></div>');
+ const list=$("#storyChoices",b);
+ for(const story of velaStories){
+  const btn=document.createElement("button");btn.className="story-choice"+(story.id===velaNoteId?" selected":"");
+  const title=document.createElement("strong");title.textContent=story.label||"Story";
+  const detail=document.createElement("small");detail.textContent=story.updated?new Date(story.updated).toLocaleDateString():"Date journal";
+  btn.append(title,detail);
+  if(story.id===velaNoteId){const mark=document.createElement("span");mark.textContent="Current";btn.append(mark)}
+  btn.onclick=async()=>{
+   if(story.id===velaNoteId)return closeModal();
+   for(const option of $$(".story-choice",b))option.disabled=true;
+   try{await cloudRequest("story-select",{noteId:story.id});closeModal();notify("Story opened")}
+   catch(error){for(const option of $$(".story-choice",b))option.disabled=false;notify(error.message)}
+  };
+  list.append(btn);
  }
 }
 async function openShare(){
@@ -310,7 +332,7 @@ function toggleRead(){
  if(readMode)renderRead();else el("storyInput").focus();
 }
 
-function bind(){el("storyInput").addEventListener("input",e=>{state.story=e.target.value;updateWordCount();renderPlaces();scheduleSave();if(!$(".modal-backdrop")&&/@location$/i.test(e.target.value.slice(0,e.target.selectionStart)))openLocation()});[["dateInput","when"],["placeInput","place"],["addressInput","address"]].forEach(([id,key])=>el(id).addEventListener("input",e=>{state[key]=e.target.value;scheduleSave()}));el("saveBtn").onclick=saveNow;el("uploadBtn").onclick=triggerUpload;el("filePicker").onchange=e=>{addFiles(e.target.files);e.target.value=""};el("cameraBtn").onclick=openCamera;el("gifBtn").onclick=openGifs;el("drawBtn").onclick=openDraw;el("linkBtn").onclick=openLink;el("mentionBtn").onclick=()=>openLocation();el("readToggle").onclick=toggleRead;el("shareBtn").onclick=openShare;el("micBtn").onclick=toggleDictation;el("recordBtn").onclick=toggleVoiceNote;el("identityBtn").onclick=openIdentity;el("helpBtn").onclick=startTour;el("nameForm").onsubmit=e=>{e.preventDefault();setName(el("nameInput").value);if(!localStorage.getItem("date.tour.seen"))setTimeout(startTour,220)};el("tourNext").onclick=()=>{if(tourStep===steps.length-1)stopTour();else goTour(tourStep+1)};el("tourBack").onclick=()=>goTour(tourStep-1);el("skipTour").onclick=stopTour;window.addEventListener("resize",updateTour);window.addEventListener("scroll",updateTour,{passive:true});el("exportBtn").onclick=exportStory;el("importBtn").onclick=()=>el("importPicker").click();el("importPicker").onchange=e=>{importStory(e.target.files?.[0]);e.target.value=""};el("resetBtn").onclick=clearStory;
+function bind(){el("storyInput").addEventListener("input",e=>{state.story=e.target.value;updateWordCount();renderPlaces();scheduleSave();if(!$(".modal-backdrop")&&/@location$/i.test(e.target.value.slice(0,e.target.selectionStart)))openLocation()});[["dateInput","when"],["placeInput","place"],["addressInput","address"]].forEach(([id,key])=>el(id).addEventListener("input",e=>{state[key]=e.target.value;scheduleSave()}));el("saveBtn").onclick=saveNow;el("uploadBtn").onclick=triggerUpload;el("filePicker").onchange=e=>{addFiles(e.target.files);e.target.value=""};el("cameraBtn").onclick=openCamera;el("gifBtn").onclick=openGifs;el("drawBtn").onclick=openDraw;el("linkBtn").onclick=openLink;el("mentionBtn").onclick=()=>openLocation();el("readToggle").onclick=toggleRead;el("shareBtn").onclick=openShare;el("storiesBtn").onclick=openStories;el("micBtn").onclick=toggleDictation;el("recordBtn").onclick=toggleVoiceNote;el("identityBtn").onclick=openIdentity;el("helpBtn").onclick=startTour;el("nameForm").onsubmit=e=>{e.preventDefault();setName(el("nameInput").value);if(!localStorage.getItem("date.tour.seen"))setTimeout(startTour,220)};el("tourNext").onclick=()=>{if(tourStep===steps.length-1)stopTour();else goTour(tourStep+1)};el("tourBack").onclick=()=>goTour(tourStep-1);el("skipTour").onclick=stopTour;window.addEventListener("resize",updateTour);window.addEventListener("scroll",updateTour,{passive:true});el("exportBtn").onclick=exportStory;el("importBtn").onclick=()=>el("importPicker").click();el("importPicker").onchange=e=>{importStory(e.target.files?.[0]);e.target.value=""};el("resetBtn").onclick=clearStory;
 document.addEventListener("paste",e=>{if(!el("onboarding").hidden||$(".modal-backdrop"))return;const fs=[...(e.clipboardData?.items||[])].filter(x=>x.kind==="file").map(x=>x.getAsFile()).filter(Boolean);if(fs.length){e.preventDefault();addFiles(fs)}});
 const drop=el("writingSection");drop.addEventListener("dragover",e=>{if(e.dataTransfer?.types.includes("Files")){e.preventDefault();drop.style.outline="2px dashed #b88372"}});drop.addEventListener("dragleave",()=>drop.style.outline="");drop.addEventListener("drop",e=>{drop.style.outline="";if(e.dataTransfer?.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
 window.addEventListener("beforeunload",()=>{clearTimeout(saveTimer);persist();recognition?.stop();})}
