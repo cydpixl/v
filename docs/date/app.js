@@ -9,9 +9,9 @@ const insideVela = window.parent !== window;
 let velaOwner = "", velaNoteId = "", velaStories = [], velaReady = false, remoteLinks = {};
 const cloudPending = new Map();
 const broadcast = (type,payload={}) => {if(insideVela)window.parent.postMessage({source:"vela-date",type,...payload},location.origin)};
-const cloudRequest = (type,payload={}) => new Promise((resolve,reject)=>{
+const cloudRequest = (type,payload={},options={}) => new Promise((resolve,reject)=>{
  const requestId=uid(),timeout=setTimeout(()=>{cloudPending.delete(requestId);reject(Error("Request timed out"))},125000);
- cloudPending.set(requestId,{resolve:v=>{clearTimeout(timeout);resolve(v)},reject:e=>{clearTimeout(timeout);reject(e)}});
+ cloudPending.set(requestId,{resolve:v=>{clearTimeout(timeout);resolve(v)},reject:e=>{clearTimeout(timeout);reject(e)},onProgress:options.onProgress});
  broadcast(type,{...payload,requestId});
 });
 const localKey=()=>insideVela ? "date.story.v1.vela."+velaOwner+"."+(velaNoteId||"offline") : KEY;
@@ -95,18 +95,22 @@ if(insideVela){
  const filtered=files.filter(f=>f.size<=MAX_SIZE&&f.size>0);
  if(filtered.length!==files.length)notify("Vela cloud files must be under 95 MB each.");
  if(!filtered.length)return;
- const prog=el("uploadProgress");prog.hidden=false;let saved=0,errors=[];
+ const prog=el("uploadProgress");prog.hidden=false;let saved=0,errors=[],uploadedIds=[];
  for(let i=0;i<filtered.length;i++){
   const f=filtered[i];el("progressName").textContent="Uploading "+f.name;el("progressCount").textContent=(i+1)+" / "+filtered.length;el("progressFill").style.width=Math.round(i/filtered.length*100)+"%";
   try{
-   const res=await cloudRequest("upload",{file:f});
+   const res=await cloudRequest("upload",{file:f},{onProgress:p=>{el("progressFill").style.width=(((i+Math.min(1,p.bytes/Math.max(1,p.total)))/filtered.length)*100).toFixed(1)+"%"}});
    if(!res.remote)throw Error("Missing upload");
-   remoteLinks[res.remote]=res.url;
+   uploadedIds.push(res.remote);
    state.media.push({id:uid(),remote:res.remote,kind:"file",name:f.name.slice(0,220),size:f.size,mime:f.type||"application/octet-stream",created:Date.now()});
-   saved++;persist();renderMedia();
+   saved++;if(saved%10===0)persist();
   }catch(e){errors.push(f.name+": "+e.message);if(/allowance|quota|storage|daily/i.test(e.message))break}
  }
- prog.hidden=true;
+ if(uploadedIds.length){
+  try{const reply=await cloudRequest("file-links",{ids:uploadedIds});Object.assign(remoteLinks,reply.links||{})}
+  catch(e){errors.push("Previews unavailable until you reopen the app")}
+ }
+ persist();renderMedia();el("progressFill").style.width="100%";prog.hidden=true;
  notify(saved+" uploaded"+(errors.length?"; "+errors[0]:""));
  return;
 }
@@ -185,7 +189,7 @@ function onVelaMessage(e){
   return;
  }
  if(m.requestId&&cloudPending.has(m.requestId)){
-  if(m.type==="upload-progress")return;
+  if(m.type==="upload-progress"){done.onProgress?.(m);return;}
   const done=cloudPending.get(m.requestId);cloudPending.delete(m.requestId);
   if(m.error)done.reject(Error(m.error));else done.resolve(m);
  }
