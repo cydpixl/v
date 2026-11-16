@@ -14,12 +14,14 @@ const say=(type,data={})=>target.contentWindow.postMessage({source:'vela-date',t
 window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.source!==target.contentWindow||event.data?.source!=='vela-date')return;
  const m=event.data;
- if(m.type==='ready')say('load',{owner:'qa-user',accountName:'QA user',snapshot:{name:'QA user',story:'',when:'',place:'',address:'',media:[],places:[]},links:{}});
+ if(m.type==='ready')say('load',{owner:'qa-user',noteId:'own',stories:[{id:'own',label:'My story',owner:'qa-user',updated:Date.now()},{id:'shared',label:'Shared with me',owner:'friend-1',updated:Date.now()}],accountName:'QA user',snapshot:{name:'QA user',story:'',when:'',place:'',address:'',media:[],places:[]},links:{}});
  if(m.type==='update'){window.dateChanges.push(m.snapshot);say('status',{status:'Synced'});}
  if(m.type==='gif-search')say('gif-results',{requestId:m.requestId,items:[{id:'qaGif',name:'Test GIF',url:'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',preview:'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='}]});
  if(m.type==='upload')say('upload-result',{requestId:m.requestId,remote:'qa-media-id',url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/NwAAAABJRU5ErkJggg=='});
  if(m.type==='share')say('share-data',{requestId:m.requestId,items:[{uid:'friend-1',name:'Friend'}],selected:[],isOwner:true});
  if(m.type==='share-save')say('share-done',{requestId:m.requestId,ok:true});
+ if(m.type==='file-links')say('file-links',{requestId:m.requestId,links:{'qa-media-id':'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/NwAAAABJRU5ErkJggg=='}});
+ if(m.type==='story-select'){say('load',{owner:'qa-user',noteId:m.noteId,stories:[{id:'own',label:'My story',owner:'qa-user'},{id:'shared',label:'Shared with me',owner:'friend-1'}],accountName:'QA user',snapshot:{name:'Friend',story:'We went for a walk.',media:[],places:[],when:'',address:'',place:''},links:{}});say('story-selected',{requestId:m.requestId,ok:true});}
 });
 </script>`;}
 (async()=>{
@@ -76,7 +78,11 @@ window.addEventListener('message',event=>{
  await frame.locator('#readToggle').click();
  await frame.locator('#storyRead .inline-place').click();
  assert.match(await frame.locator('.place-actions a').first().getAttribute('href'),/google.com\/maps/);
- console.log('PASS: embedded Vela bridge, signed-in GIPHY routing, linked places, file uploads and sharing');
+ await frame.locator('.modal-close').click();
+ await frame.locator('#storiesBtn').click();
+ await frame.locator('.story-choice').nth(1).click();
+ await cloudPage.waitForFunction(()=>document.querySelector('#frame').contentDocument.querySelector('#storyInput').value.includes('went for a walk'));
+ console.log('PASS: embedded Vela bridge, GIPHY, places, 50-file batching, uploads, sharing and story switching');
  await cloudContext.close();
  console.log('date. QA COMPLETE');
 })().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{await browser?.close().catch(()=>{});server.kill('SIGTERM')});
