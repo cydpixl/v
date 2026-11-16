@@ -8,7 +8,7 @@ const allowed=/^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm|quicktime|x-m4v)|au
 const blank=()=>({version:3,name:'',story:'',when:'',place:'',address:'',media:[],places:[]});
 const clean=m=>({version:3,name:String(m?.name||'').slice(0,36),story:typeof m?.story==='string'?m.story:'',when:typeof m?.when==='string'?m.when:'',place:String(m?.place||'').slice(0,240),address:String(m?.address||'').slice(0,320),media:Array.isArray(m?.media)?m.media.filter(x=>x?.id&&['file','gif','link'].includes(x.kind)).slice(0,500):[],places:Array.isArray(m?.places)?m.places.filter(x=>x?.id&&Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)).slice(0,300):[]});
 export function mountDateApp(root,{api,owner,toast}){
- let alive=true,frame,uid=owner,record=null,saving=false,pending=null,timer,requested=0,initializing=true;
+ let alive=true,frame,uid=owner,record=null,saving=false,pending=null,timer,requested=0,initializing=true,retryCount=0,blocked=false;
  const post=(type,payload={})=>{if(alive&&frame?.contentWindow)frame.contentWindow.postMessage({source:SOURCE,type,...payload},location.origin)};
  const fail=e=>{post('status',{status:'Not synced',message:e.message||String(e)});};
  root.innerHTML='<section class="vela-date-app"><iframe class="vela-date-frame" title="date. — Our first date" allow="camera; microphone; clipboard-read; clipboard-write" loading="eager"></iframe></section>';
@@ -38,7 +38,7 @@ export function mountDateApp(root,{api,owner,toast}){
   initializing=false;
  }
  async function save(){
-  if(!alive||!record||!pending||saving)return;
+  if(!alive||!record||!pending||saving||blocked)return;
   saving=true;
   const snapshot=clean(pending);pending=null;
   const payload={title:TITLE,text:JSON.stringify(snapshot),revision:record.revision};
@@ -47,20 +47,22 @@ export function mountDateApp(root,{api,owner,toast}){
    const result=await api('/shared-notes/'+record.id,{method:'PUT',body:payload});
    if(!alive)return;
    record.revision=result.revision;
-   record.text=payload.text;
+   record.text=payload.text;retryCount=0;
    post('status',{status:'Synced'});
   }catch(e){
    if(!alive)return;
    pending=pending||snapshot;
    if(e.status===409){
+    blocked=true;
     // Never automatically overwrite a collaborator's version.
     post('status',{status:'Conflict',message:'The story changed elsewhere. Your local draft is untouched. Reopen the app to review.'});
     return;
    }
+   retryCount++;
    fail(e);
   }finally{
    saving=false;
-   if(pending&&alive)clearTimeout(timer),timer=setTimeout(save,1500);
+   if(pending&&alive&&!blocked&&retryCount<4)clearTimeout(timer),timer=setTimeout(save,Math.min(30000,1500*2**retryCount));
   }
  }
  async function upload(file,requestId){
@@ -104,7 +106,9 @@ export function mountDateApp(root,{api,owner,toast}){
    case 'ready':load().catch(error=>{post('load',{owner:uid,accountName:'You',snapshot:blank(),links:{},offline:true});fail(error);});break;
    case 'update':
     if(initializing)return;
-    pending=msg.snapshot;clearTimeout(timer);timer=setTimeout(save,700);break;
+    pending=msg.snapshot;
+    if(!blocked){clearTimeout(timer);timer=setTimeout(save,700);}
+    break;
    case 'upload':upload(msg.file,msg.requestId);break;
    case 'gif-search':gifs(msg.term,msg.requestId);break;
    case 'share':share(msg.requestId);break;
