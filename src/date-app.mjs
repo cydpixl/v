@@ -22,19 +22,26 @@ export function mountDateApp(root,{api,owner,toast}){
   }
   return links;
  }
- async function load(){
+ async function load(requestedId=null){
   const list=await api('/shared-notes');
-  const found=(list.items||[]).find(n=>n.title===TITLE&&n.owner===uid)||(list.items||[]).find(n=>n.title===TITLE);
-  let id=found?.id;
-  if(!id){
-   const note=await api('/shared-notes',{method:'POST',body:{title:TITLE,text:JSON.stringify(blank()),members:[]}});
-   id=note.id;
+  let journals=(list.items||[]).filter(n=>n.title===TITLE);
+  if(!journals.length){
+   const created=await api('/shared-notes',{method:'POST',body:{title:TITLE,text:JSON.stringify(blank()),members:[]}});
+   journals=[{id:created.id,owner:uid,title:TITLE,updated:Date.now()}];
   }
+  const savedId=localStorage.getItem('vela.date.selected.'+uid);
+  const found=journals.find(n=>n.id===requestedId)||journals.find(n=>n.id===savedId)||journals.find(n=>n.owner===uid)||journals[0];
+  const id=found.id;
   const note=await api('/shared-notes/'+id);if(!alive)return;
   record=note;
+  localStorage.setItem('vela.date.selected.'+uid,id);
   let data=blank();try{data=clean(JSON.parse(note.text))}catch{data={...data,story:note.text}}
   const account=await api('/me').catch(()=>({user:null}));
-  post('load',{owner:uid,accountName:account.user?.name||account.user?.handle||'You',snapshot:data,links:await fileLinks(data.media),noteId:id,revision:note.revision});
+  post('load',{
+   owner:uid,accountName:account.user?.name||account.user?.handle||'You',
+   snapshot:data,links:await fileLinks(data.media),noteId:id,revision:note.revision,
+   stories:journals.map(n=>({id:n.id,owner:n.owner,label:n.owner===uid?'My story':'Shared with me',updated:n.updated||0}))
+  });
   initializing=false;
  }
  async function save(){
@@ -82,6 +89,12 @@ export function mountDateApp(root,{api,owner,toast}){
   try{const data=await api('/gifs?'+new URLSearchParams({q:String(term||'').slice(0,100),offset:'0'}));post('gif-results',{requestId,items:data.items||[]})}
   catch(e){post('gif-results',{requestId,error:e.message||'GIFs unavailable',items:[]})}
  }
+ async function selectStory(requestId,noteId){
+  if(typeof noteId!=='string')return post('story-selected',{requestId,error:'Invalid story'});
+  if(pending&&!blocked){clearTimeout(timer);await save();}
+  try{await load(noteId);post('story-selected',{requestId,ok:true})}
+  catch(error){post('story-selected',{requestId,error:error.message||'Unable to open story'})}
+ }
  async function share(requestId){
   try{
    const me=await api('/state');
@@ -112,6 +125,7 @@ export function mountDateApp(root,{api,owner,toast}){
    case 'upload':upload(msg.file,msg.requestId);break;
    case 'gif-search':gifs(msg.term,msg.requestId);break;
    case 'share':share(msg.requestId);break;
+   case 'story-select':selectStory(msg.requestId,msg.noteId);break;
    case 'share-save':shareSave(msg.requestId,msg.members);break;
    case 'toast':toast(String(msg.message||''));break;
   }
