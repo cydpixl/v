@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="color-scheme" content="dark"><title>Vela Play</title><link rel="stylesheet" href="./style.css"></head>
+<body>
+<main class="shell">
+<header class="top"><div class="identity"><div class="mark">V</div><div><small>VELA PLAY</small><h1 id="name">Game</h1></div></div><div class="right"><div class="stat"><small>SCORE</small><strong id="score">0</strong></div><div class="stat"><small>BEST</small><strong id="best">0</strong></div><div class="stat"><small>TIME</small><strong id="time">0:00</strong></div><button class="control" id="pause" type="button" aria-label="Pause game" disabled>Pause</button><button class="control" id="restart" type="button">Restart</button></div></header>
+<section class="stage" id="stage" aria-label="Game playing field"><div id="arena" class="arena"></div><div class="overlay" id="overlay"><div class="intro"><div id="emblem" class="emblem"></div><p id="eyebrow">VELA ORIGINAL</p><h2 id="headline">Ready to play?</h2><p id="message">Play directly on your desktop.</p><button id="start" type="button" class="primary">Play now <span aria-hidden="true">→</span></button></div></div></section>
+<footer class="bottom"><span id="instructions"></span><span id="hint" role="status" aria-live="polite">Keyboard · Mouse · Touch</span></footer>
+</main>
+<script type="module" src="./engine.js"></script>
+</body></html>
