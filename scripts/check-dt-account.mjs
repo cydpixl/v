@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 
-const bundle = await fs.readFile('docs/daily-thoughts/assets/dt-updated.js', 'utf8');
+const bundle = await fs.readFile('public/daily-thoughts/assets/dt-updated.js', 'utf8');
 const key = bundle.match(/sb_publishable_[a-zA-Z0-9_-]+/)?.[0];
 if (!key) throw new Error('Published Supabase client key is missing');
 if (!bundle.includes('le.functions.invoke("dt-account"')) throw new Error('Username-only login was not published');

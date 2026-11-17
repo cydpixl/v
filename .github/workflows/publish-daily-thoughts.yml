@@ -1,42 +1,34 @@
-name: Publish Daily Thoughts to GitHub Pages
-
+name: Verify Daily Thoughts in Vela
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'scripts/sync-daily-thoughts.mjs'
+      - 'public/daily-thoughts/**'
+      - 'public/app-icons/daily-thoughts.svg'
+      - 'src/daily-thoughts-app.*'
+      - 'src/desktop-catalog.js'
+      - 'src/hub.js'
+      - 'scripts/check-dt-account.mjs'
+      - 'scripts/verify-daily-thoughts.mjs'
       - '.github/workflows/publish-daily-thoughts.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: daily-thoughts-pages
-  cancel-in-progress: false
+  group: daily-thoughts-vela-verify
+  cancel-in-progress: true
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Mirror existing production app
-        run: node scripts/sync-daily-thoughts.mjs
-      - name: Check username-only authentication
+      - name: Verify the bundled Daily Thoughts app
+        run: node scripts/verify-daily-thoughts.mjs
+      - name: Verify existing journal sign-in endpoint
         run: node scripts/check-dt-account.mjs
-      - name: Commit GitHub Pages files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/daily-thoughts docs/daily-thoughts
-          if git diff --cached --quiet; then
-            echo "Daily Thoughts assets are already current."
-            exit 0
-          fi
-          git commit -m "build(pages): publish Daily Thoughts [skip ci]"
-          git push origin HEAD:main
