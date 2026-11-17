@@ -1,9 +1,10 @@
+import {OPEN_GAMES,openGameDefinition} from './open-games.mjs';
 import {GENERATED_APP_ICONS} from './generated-app-icons.mjs';
 import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id)];
+export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id),...OPEN_GAMES.map(game=>game.id)];
 export const DESKTOP_APPS=[
  {id:'date',name:'date.',icon:'file',category:'Lifestyle',description:'Write about your first date. Keep the photos, places and little moments together.'},
  {id:'youtube',name:'YouTube',icon:'play',category:'Entertainment',description:'Your videos, your community. Upload, watch, search, and share videos with Vela.'},
@@ -11,6 +12,7 @@ export const DESKTOP_APPS=[
  {id:'assistant',name:'ChatGPT',icon:'chat',category:'Productivity',description:'Your private AI workspace. Write, learn, and code with Groq-powered models and saved conversations.'},
  {id:'app-studio',name:'App Studio',icon:'settings',category:'Developer tools',description:'Edit app names, descriptions, and logos across this desktop. Site administrators can publish changes.'},
  ...GAMES.map(game=>({...game,icon:'play',category:'Games',note:'VelaGames Studios'})),
+ ...OPEN_GAMES.map(game=>({...game,icon:'play'})),
  {id:'cinema',name:'Netflix',icon:'film',category:'Entertainment',description:'Movies, TV shows, and watching together.',note:'Your movies and TV shows, together in one app.'},
  {id:'apple-tv',name:'Apple TV',icon:'film',category:'Entertainment',description:'Your shows, movies, watchlist, and shared watch parties.',note:'Your desktop profile, your own library.'},
  {id:'chat',name:'Messages',icon:'chat',description:'Your conversation, calls, and shared moments.'},
@@ -33,6 +35,7 @@ export function defaultDesktopAppIcon(id){
  if(id==='graphing')return `<img class="generated-app-icon" src="${assetURL('app-icons/desmos.png')}" alt="">`;
  if(id==='cinema')return `<span class="official-netflix-icon"><svg viewBox="247 451 496 900" aria-hidden="true"><image href="${assetURL('app-icons/netflix-symbol.png')}" width="991" height="1801"/></svg></span>`;
  if(id==='apple-tv')return `<img src="${assetURL('app-icons/apple-tv.png')}" alt="">`;
+ const openGame=openGameDefinition(id);if(openGame)return `<span class="open-app-icon">${e(openGame.symbol)}</span>`;
  const game=gameDefinition(id);if(game)return `<span class="vela-game-icon" style="--game-icon-accent:${game.accent};--game-icon-ink:${game.ink}">${gameIcon(id)}</span>`;
  if(['music','notepad','files','calculator','store'].includes(id))return `<img class="downloaded-app-icon" src="${assetURL('app-icons/'+id+('.png'))}" alt="">`;
  if(id==='chat')return `<span class="messages-app-icon">${icon('chat',38)}</span>`;
