@@ -5,11 +5,12 @@ import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id),...OPEN_GAMES.map(game=>game.id),'spectrum','live-studio',...UTILITY_APPS.map(app=>app.id)];
+export const OPTIONAL_APPS=['date','daily-thoughts','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id),...OPEN_GAMES.map(game=>game.id),'spectrum','live-studio',...UTILITY_APPS.map(app=>app.id)];
 export const DESKTOP_APPS=[
  {id:'spectrum',name:'Spectrum',icon:'screen',category:'Utilities',description:'Explore fictional internet subscriptions with demo credits and simulated speeds.',note:'Interactive Spectrum-inspired demo. Not an official service or a real internet subscription.'},
  {id:'live-studio',name:'Live Studio',icon:'video',category:'Creativity',description:'Record your camera or screen and open a live Vela video call.',note:'Camera, screen preview and local video recording; public broadcasts are not yet available.'},
  {id:'date',name:'date.',icon:'file',category:'Lifestyle',description:'Write about your first date. Keep the photos, places and little moments together.'},
+ {id:'daily-thoughts',name:'Daily Thoughts',icon:'file',category:'Lifestyle',description:'One thought each day. Write, draw, and revisit entries from earlier days.',note:'Your existing Daily Thoughts account, entries and five-minute editing window are preserved.'},
  {id:'youtube',name:'YouTube',icon:'play',category:'Entertainment',description:'Your videos, your community. Upload, watch, search, and share videos with Vela.'},
  {id:'graphing',name:'Desmos',icon:'calculator',category:'Education',description:'The real Desmos graphing calculator. Save graphs, explore sliders, and export images.'},
  {id:'assistant',name:'ChatGPT',icon:'chat',category:'Productivity',description:'Your private AI workspace. Write, learn, and code with Groq-powered models and saved conversations.'},
@@ -35,6 +36,7 @@ export function defaultDesktopAppIcon(id){
  if(id==='spectrum')return '<span style="display:grid;position:relative;place-items:center;background:#063a64;border-radius:20%;width:100%;height:100%;font-weight:900;color:#fff;font-size:29px;letter-spacing:-.09em">S<span style="position:absolute;font-size:12px;color:#36c9f6;right:5px;bottom:6px">▶</span></span>';
  if(id==='live-studio')return '<span style="display:grid;place-items:center;background:#191f2d;border:2px solid #df5064;border-radius:21%;width:100%;height:100%;color:#ed5166;font-size:30px">●</span>';
  if(id==='date')return `<img class="generated-app-icon" src="${assetURL('app-icons/date.svg')}" alt="">`;
+ if(id==='daily-thoughts')return `<img class="generated-app-icon" src="${assetURL('app-icons/daily-thoughts.svg')}" alt="">`;
  if(id==='assistant')return `<img class="generated-app-icon" src="${assetURL('app-icons/chatgpt.svg')}" alt="">`;
  if(id==='youtube')return `<img class="generated-app-icon" src="${assetURL('app-icons/youtube.png')}" alt="">`;
  if(GENERATED_APP_ICONS[id])return `<img class="generated-app-icon" src="${assetURL(GENERATED_APP_ICONS[id])}" alt="">`;

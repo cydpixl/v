@@ -87,7 +87,7 @@ while (queue.length) {
   count++;
 }
 
-html = rebase(html).replace(/<head(\s[^>]*)?>/i, (match) => match + '<base href="' + base + '">');
+html = rebase(html).replaceAll(base + 'assets/', './assets/').replace(/<head(\s[^>]*)?>/i, (match) => match + '<base href="./">');
 await fs.writeFile(path.join(publicDir, 'index.html'), html);
 await fs.writeFile(path.join(publicDir, '.nojekyll'), '');
 await fs.rm(pagesDir, { recursive: true, force: true });
