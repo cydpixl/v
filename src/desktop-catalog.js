@@ -32,7 +32,7 @@ export const DESKTOP_APPS=[
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
 export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
 export function defaultDesktopAppIcon(id){
- if(id==='spectrum')return '<span style="display:grid;place-items:center;background:#063a64;border-radius:20%;width:100%;height:100%;font-weight:900;color:#fff;font-size:29px;letter-spacing:-.09em">S<span style="position:absolute;font-size:12px;color:#36c9f6;transform:translate(16px,3px)">▶</span></span>';
+ if(id==='spectrum')return '<span style="display:grid;position:relative;place-items:center;background:#063a64;border-radius:20%;width:100%;height:100%;font-weight:900;color:#fff;font-size:29px;letter-spacing:-.09em">S<span style="position:absolute;font-size:12px;color:#36c9f6;right:5px;bottom:6px">▶</span></span>';
  if(id==='live-studio')return '<span style="display:grid;place-items:center;background:#191f2d;border:2px solid #df5064;border-radius:21%;width:100%;height:100%;color:#ed5166;font-size:30px">●</span>';
  if(id==='date')return `<img class="generated-app-icon" src="${assetURL('app-icons/date.svg')}" alt="">`;
  if(id==='assistant')return `<img class="generated-app-icon" src="${assetURL('app-icons/chatgpt.svg')}" alt="">`;
