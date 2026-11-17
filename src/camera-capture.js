@@ -39,7 +39,7 @@ export async function capturePhoto({modal,stream:callCamera,settings={},onSend,o
    if(mic.checked)audio=await navigator.mediaDevices.getUserMedia({video:false,audio:true});
    if(closed){stopTracks(audio);return;}
    recordingStream=new MediaStream([...stream.getVideoTracks().map(t=>t.clone()),...(audio?.getAudioTracks()||[])]);
-   const mimeType=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
+   const mimeType=['video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));
    recorder=new MediaRecorder(recordingStream,mimeType?{mimeType}:undefined);const chunks=[];let bytes=0,failed=false;
    recorder.ondataavailable=event=>{if(event.data.size){chunks.push(event.data);bytes+=event.data.size;if(bytes>=90*1024**2&&recorder.state==='recording')recorder.stop();}};
    recorder.onerror=event=>{failed=true;clearInterval(recordTimer);stopTracks(recordingStream);dialog.querySelector('.camera-recording').hidden=true;fail(event.error||Error('Video recording failed. Try again.'));};

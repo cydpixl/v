@@ -12,11 +12,15 @@ self.onmessage = async ({data}) => {
   if(data.type !== 'convert')return;
   let input, directory, output, writer;
   try {
-    directory = await (await navigator.storage.getDirectory()).getDirectoryHandle('connections-upload-files', {create:true});
-    const handle = await directory.getFileHandle(data.key, {create:true});
     input = new Input({source:new BlobSource(data.file), formats:ALL_FORMATS});
     const video = await input.getPrimaryVideoTrack(), audio = await input.getPrimaryAudioTrack();
     if(!video)throw Error('This video has no readable video track.');
+    if(data.chat&&data.file.type==='video/mp4'&&(await video.getCodec())==='avc'&&(!audio||(await audio.getCodec())==='aac')){
+      self.postMessage({type:'original'});
+      return;
+    }
+    directory = await (await navigator.storage.getDirectory()).getDirectoryHandle('connections-upload-files', {create:true});
+    const handle = await directory.getFileHandle(data.key, {create:true});
     writer = await handle.createWritable();
     output = new Output({format:new Mp4OutputFormat({fastStart:data.fastStart==='reserve'?'reserve':'fragmented'}), target:new StreamTarget(new WritableStream({
       write: chunk => writer.write({type:'write',position:chunk.position,data:chunk.data}),

@@ -46,7 +46,7 @@ import {capturePhoto} from './camera-capture.js';
 import {bindCallResizer} from './call-resizer.js';
 import './call-workspace.css';
 import './call-presence.css';
-import {needsMovieConversion,convertMovie,releaseConvertedFile} from './movie-conversion.mjs';
+import {needsMovieConversion,prepareChatVideo,releaseConvertedFile} from './movie-conversion.mjs';
 import {createProfiles} from './profiles.js';
 import {editAvatar} from './avatar-editor.js';
 import {accountPopover} from './account-popover.js';
@@ -420,7 +420,29 @@ function sendExpression(media,preview,cid){
 }
 function scheduleMessage(){const input=$('#composer'),text=kindMessage(input?.value.trim());if(!text)return toast('Write a message before scheduling it.');const minimum=new Date(Date.now()+60000),local=new Date(minimum.getTime()-minimum.getTimezoneOffset()*60000).toISOString().slice(0,16);const dialog=modal('Schedule message',`<p class="schedule-preview">${messageHTML(text)}</p><label>SEND DATE AND TIME<input id="schedule-time" type="datetime-local" min="${local}" value="${local}"></label><p class="muted">Vela will send this from the server even when your devices are offline.</p><footer><button class="text-button" data-cancel>Cancel</button><button class="primary" data-confirm-schedule>Schedule message</button></footer>`);dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();dialog.querySelector('[data-confirm-schedule]').onclick=()=>act(async()=>{const deliverAt=new Date(dialog.querySelector('#schedule-time').value).getTime();await api('/scheduled-messages',{method:'POST',body:{id:crypto.randomUUID(),conversation:S.active,text,replyTo:S.reply?.id,deliverAt}});input.value='';input.style.height='auto';localStorage.removeItem('pixl.draft.'+S.user.uid+'.'+S.active);S.reply=null;renderReply();dialog.close();toast('Message scheduled for '+new Date(deliverAt).toLocaleString()+'.');});}
 async function scheduledMessages(){const {items}=await api('/scheduled-messages');const dialog=modal('Scheduled messages',items.length?`<div class="scheduled-list">${items.map(item=>`<article><div><strong>${e(title(S.conversations.find(c=>c.id===item.conversation)))}</strong><p>${messageHTML(item.text)}</p><time>${e(new Date(item.deliver_at).toLocaleString())}</time></div><button class="icon-button" data-cancel-scheduled="${e(item.id)}" aria-label="Cancel scheduled message">${icon('trash')}</button></article>`).join('')}</div>`:empty('schedule','Nothing scheduled','Use the clock beside Send to choose a delivery time.'));dialog.querySelectorAll('[data-cancel-scheduled]').forEach(button=>button.onclick=()=>act(async()=>{await api('/scheduled-messages/'+encodeURIComponent(button.dataset.cancelScheduled),{method:'DELETE'});button.closest('article').remove();toast('Scheduled message canceled.');}));}
-async function takeChatPhoto(){const cid=S.active,uid=S.user?.uid,session=S.session;if(!cid||!uid)return;await capturePhoto({modal,stream:engine?.camera,settings:S.prefs,onDeviceChange:()=>savePrefs(),onSend:async file=>{const checkSession=()=>{if(S.session!==session||S.user?.uid!==uid)throw Error('Your account changed. Reopen the camera before sending.');};checkSession();const result=await api('/uploads',{method:'POST',headers:{'Content-Type':file.type,'X-File-Name':encodeURIComponent(file.name)},body:file});checkSession();await hydrateFiles([{attachment:result.upload}]);checkSession();const message={id:crypto.randomUUID(),conversation:cid,sender:uid,text:'',upload:result.upload.id,attachment:result.upload,created:Date.now(),pending:true};S.outbox.push(message);persistOutbox();if(S.active===cid)renderMessages();await flushOutbox();if(S.outbox.some(m=>m.id===message.id))toast((file.type.startsWith('video/')?'Video':'Photo')+' queued. It will retry when the connection returns.')}})}
+async function takeChatPhoto(){
+ const cid=S.active,uid=S.user?.uid,session=S.session;if(!cid||!uid)return;
+ await capturePhoto({modal,stream:engine?.camera,settings:S.prefs,onDeviceChange:()=>savePrefs(),onSend:async original=>{
+  const checkSession=()=>{if(S.session!==session||S.user?.uid!==uid)throw Error('Your account changed. Reopen the camera before sending.');};
+  checkSession();
+  const video=original.type.startsWith('video/');
+  const prepared=video?await prepareChatVideo(original,{onFallback:warnVideoCompatibility}):original;
+  try{
+   checkSession();
+   const file=prepared.size<=95*1024**2?prepared:original;
+   const preview=video?makeChatVideoPoster(file):Promise.resolve('');
+   const {upload}=await api('/uploads',{method:'POST',headers:{'Content-Type':file.type,'X-File-Name':encodeURIComponent(file.name)},body:file});
+   checkSession();
+   const poster=await preview;
+   if(poster)upload.poster=poster;
+   await hydrateFiles([{attachment:upload}]);checkSession();
+   const message={id:crypto.randomUUID(),conversation:cid,sender:uid,text:'',upload:upload.id,posters:poster?{[upload.id]:poster}:undefined,attachment:upload,created:Date.now(),pending:true};
+   S.outbox.push(message);persistOutbox();if(S.active===cid)renderMessages();await flushOutbox();
+   if(S.outbox.some(m=>m.id===message.id))toast((video?'Video':'Photo')+' queued. It will retry when the connection returns.');
+  }finally{await releaseConvertedFile(prepared);}
+ }});
+}
+function warnVideoCompatibility(){toast('This video may need to be opened in a browser that supports its format.');}
 const selectedUploads=()=>S.upload?.kind==='files'?S.upload.files:S.upload?[S.upload]:[];
 function setUploads(files){S.upload=files.length>1?{kind:'files',files,name:files.length+' files',type:'application/octet-stream',size:files.reduce((n,f)=>n+f.size,0)}:files[0]||null;}
 async function uploadFile(file){return uploadFiles([file]);}
@@ -438,9 +460,9 @@ async function uploadFiles(files){
    if(!current())break;
    let file=selected;
    try{
-    if(needsMovieConversion(file)){
+    if(file.type.startsWith('video/')||needsMovieConversion(file)){
      const controller=uploadPreparation=new AbortController();uploadStage='Preparing video';uploadName=file.name;uploadPercent=0;renderUpload();
-     file=await convertMovie(file,crypto.randomUUID(),{signal:controller.signal,onProgress:p=>{if(!current()){controller.abort();return;}uploadPercent=Math.round(p*100);renderUpload();}});
+     file=await prepareChatVideo(file,{signal:controller.signal,onFallback:warnVideoCompatibility,onProgress:p=>{if(!current()){controller.abort();return;}uploadPercent=Math.round(p*100);renderUpload();}});
      if(uploadPreparation===controller)uploadPreparation=null;
     }
     if(!current())break;
@@ -770,7 +792,7 @@ window.addEventListener('vela-desktop-lock',()=>{if(!S.user)return;document.quer
 window.addEventListener('vela-windows-changed',()=>{if(chatRenderPending&&!document.body.classList.contains('chat-app-hidden'))renderMessages()});
 
 installChatFullscreen();
-installChatVideoViewer();
+installChatVideoViewer({refreshSource:async(id,signal)=>(await api('/file-links',{method:'POST',body:{ids:[id]},signal})).links[id]});
 
 import './desktop-performance.css';
 import './desktop-experience.css';

@@ -42,7 +42,7 @@ export async function makeChatVideoPoster(file) {
 export function renderChatVideo(file,src) {
  const poster=typeof file.poster==='string'&&file.poster.startsWith('data:image/jpeg;base64,')?file.poster:'';
  const label=e(file.name||'Video');
- return '<div class="vela-video-card"><button type="button" class="vela-video-launch" aria-label="Play '+label+'">'+
+ return '<div class="vela-video-card"><button type="button" class="vela-video-launch" data-video-file="'+e(file.id||'')+'" aria-label="Play '+label+'">'+
  '<video class="vela-video-thumb" playsinline muted preload="'+(poster?'none':'metadata')+'" aria-hidden="true" tabindex="-1"'+
  (poster?' poster="'+e(poster)+'"':'')+' src="'+e(src)+'"></video>'+
  '<span class="vela-video-play" aria-hidden="true">'+icon('play',25)+'</span>'+
@@ -55,7 +55,7 @@ const timeLabel=seconds=>{
  const n=Math.floor(seconds);return Math.floor(n/3600)?Math.floor(n/3600)+':'+String(Math.floor(n%3600/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0'):Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
 };
 
-export function installChatVideoViewer() {
+export function installChatVideoViewer({refreshSource}={}) {
  if(document.getElementById('vela-video-viewer'))return;
  const dialog=document.createElement('dialog');dialog.id='vela-video-viewer';dialog.className='vela-video-viewer';
  dialog.setAttribute('aria-label','Video player');
@@ -65,7 +65,7 @@ export function installChatVideoViewer() {
  '<button type="button" data-vv-close aria-label="Close video">'+icon('close',22)+'</button></div></header>'+
  '<div class="vela-video-stage"><video playsinline webkit-playsinline preload="metadata" aria-label="Video playback"></video>'+
  '<button class="vela-video-center" type="button" data-vv-center aria-label="Play video">'+icon('play',34)+'</button>'+
- '<div class="vela-video-error" data-vv-error hidden>Unable to play this video on this device. Try Open video.</div></div>'+
+ '<div class="vela-video-error" data-vv-status role="status" hidden></div></div>'+
  '<div class="vela-video-bottom"><div class="vela-video-seekline">'+
  '<span data-vv-current>0:00</span><input data-vv-seek type="range" min="0" max="1000" value="0" step="1" aria-label="Seek video">'+
  '<span data-vv-total>0:00</span></div>'+
@@ -84,9 +84,14 @@ export function installChatVideoViewer() {
  const seek=dialog.querySelector('[data-vv-seek]');
  const current=dialog.querySelector('[data-vv-current]');
  const total=dialog.querySelector('[data-vv-total]');
- const error=dialog.querySelector('[data-vv-error]');
+ const status=dialog.querySelector('[data-vv-status]');
+ const openLink=dialog.querySelector('[data-vv-open]');
  const rate=dialog.querySelector('[data-vv-rate]');
- let lastTrigger=null;
+ let lastTrigger=null,playback=null;
+ function notice(message=''){
+  status.hidden=!message;
+  if(status.textContent!==message)status.textContent=message;
+ }
  const refresh=()=>{
   const paused=player.paused||player.ended;
   playButton.innerHTML=icon(paused?'play':'pause',24);
@@ -101,12 +106,35 @@ export function installChatVideoViewer() {
   current.textContent=timeLabel(player.currentTime);
   total.textContent=timeLabel(duration);
  };
- async function toggle(){
-  if(player.paused||player.ended){error.hidden=true;try{await player.play();}catch{error.hidden=false;}}
-  else player.pause();
+ async function play(){
+  const active=playback;
+  try{await player.play();}
+  catch(error){if(playback===active&&error.name==='NotAllowedError')notice('Press Play to start the video.');}
   refresh();
  }
+ function setSource(src){player.src=src;openLink.href=src;}
+ async function recover(){
+  const active=playback;
+  if(!active||active.refreshing)return;
+  if(active.id&&refreshSource&&!active.retried){
+   active.retried=active.refreshing=true;
+   notice('Reconnecting to the video…');
+   let src;
+   try{src=await refreshSource(active.id,active.controller.signal);}catch{}
+   if(playback!==active)return;
+   active.refreshing=false;
+   if(src){setSource(src);void play();return;}
+  }
+  notice('This video couldn’t play. Try opening it in your browser.');
+  refresh();
+ }
+ function toggle(){
+  if(playback?.refreshing)return;
+  if(player.error){if(playback)playback.retried=false;void recover();return;}
+  if(player.paused||player.ended)void play();else player.pause();
+ }
  const stop=()=>{
+  playback?.controller.abort();playback=null;
   player.pause();player.removeAttribute('src');player.removeAttribute('poster');player.load();
   dialog.classList.remove('vela-video-fallback-fullscreen');
   document.body.classList.remove('vela-video-open');
@@ -122,7 +150,10 @@ export function installChatVideoViewer() {
  player.addEventListener('play',refresh);player.addEventListener('pause',refresh);
  player.addEventListener('timeupdate',refresh);player.addEventListener('loadedmetadata',refresh);
  player.addEventListener('durationchange',refresh);player.addEventListener('ended',refresh);
- player.addEventListener('error',()=>{error.hidden=false;refresh();});
+ player.addEventListener('error',recover);
+ player.addEventListener('waiting',()=>{if(playback&&!player.error&&!playback.refreshing)notice('Loading video…');});
+ player.addEventListener('loadeddata',()=>notice());
+ player.addEventListener('playing',()=>notice());
  seek.addEventListener('input',()=>{
   if(Number.isFinite(player.duration)&&player.duration>0)player.currentTime=Number(seek.value)/1000*player.duration;
   refresh();
@@ -158,14 +189,15 @@ export function installChatVideoViewer() {
   if(!thumbnail)return;
   const src=thumbnail.currentSrc||thumbnail.getAttribute('src');
   if(!src)return;
-  player.pause();player.src=src;player.poster=thumbnail.getAttribute('poster')||'';
+  playback?.controller.abort();
+  playback={id:trigger.dataset.videoFile,controller:new AbortController(),retried:false,refreshing:false};
+  player.pause();setSource(src);player.poster=thumbnail.getAttribute('poster')||'';
   player.muted=false;player.playbackRate=1;rate.textContent='1×';
   dialog.querySelector('[data-vv-title]').textContent=trigger.querySelector('.vela-video-foot span')?.textContent||'Video';
-  dialog.querySelector('[data-vv-open]').href=src;
-  error.hidden=true;
+  notice('Loading video…');
   if(!dialog.open)dialog.showModal();
   document.body.classList.add('vela-video-open');
   refresh();
-  player.play().catch(()=>{refresh();});
+  void play();
  });
 }
