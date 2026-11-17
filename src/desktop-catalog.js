@@ -1,11 +1,14 @@
+import {UTILITY_APPS,utilityDefinition} from './utility-suite.mjs';
 import {OPEN_GAMES,openGameDefinition} from './open-games.mjs';
 import {GENERATED_APP_ICONS} from './generated-app-icons.mjs';
 import {GAMES,gameDefinition,gameIcon} from './games/catalog.mjs';
 import {icon} from './icons.js';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
-export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id),...OPEN_GAMES.map(game=>game.id)];
+export const OPTIONAL_APPS=['date','cinema','apple-tv','fortnite','music','arcade','app-studio','graphing','assistant','youtube',...GAMES.map(game=>game.id),...OPEN_GAMES.map(game=>game.id),'spectrum','live-studio',...UTILITY_APPS.map(app=>app.id)];
 export const DESKTOP_APPS=[
+ {id:'spectrum',name:'Spectrum',icon:'screen',category:'Utilities',description:'Explore fictional internet subscriptions with demo credits and simulated speeds.',note:'Interactive Spectrum-inspired demo. Not an official service or a real internet subscription.'},
+ {id:'live-studio',name:'Live Studio',icon:'video',category:'Creativity',description:'Record your camera or screen and open a live Vela video call.',note:'Camera, screen preview and local video recording; public broadcasts are not yet available.'},
  {id:'date',name:'date.',icon:'file',category:'Lifestyle',description:'Write about your first date. Keep the photos, places and little moments together.'},
  {id:'youtube',name:'YouTube',icon:'play',category:'Entertainment',description:'Your videos, your community. Upload, watch, search, and share videos with Vela.'},
  {id:'graphing',name:'Desmos',icon:'calculator',category:'Education',description:'The real Desmos graphing calculator. Save graphs, explore sliders, and export images.'},
@@ -13,6 +16,7 @@ export const DESKTOP_APPS=[
  {id:'app-studio',name:'App Studio',icon:'settings',category:'Developer tools',description:'Edit app names, descriptions, and logos across this desktop. Site administrators can publish changes.'},
  ...GAMES.map(game=>({...game,icon:'play',category:'Games',note:'VelaGames Studios'})),
  ...OPEN_GAMES.map(game=>({...game,icon:'play'})),
+ ...UTILITY_APPS,
  {id:'cinema',name:'Netflix',icon:'film',category:'Entertainment',description:'Movies, TV shows, and watching together.',note:'Your movies and TV shows, together in one app.'},
  {id:'apple-tv',name:'Apple TV',icon:'film',category:'Entertainment',description:'Your shows, movies, watchlist, and shared watch parties.',note:'Your desktop profile, your own library.'},
  {id:'chat',name:'Messages',icon:'chat',description:'Your conversation, calls, and shared moments.'},
@@ -28,6 +32,8 @@ export const DESKTOP_APPS=[
 export const appDefinition=id=>DESKTOP_APPS.find(app=>app.id===id);
 export function desktopAppIcon(id){const logo=appDefinition(id)?.logo;return logo?`<img class="custom-app-logo" src="${e(logo)}" alt="">`:defaultDesktopAppIcon(id)}
 export function defaultDesktopAppIcon(id){
+ if(id==='spectrum')return '<span style="display:grid;place-items:center;background:#063a64;border-radius:20%;width:100%;height:100%;font-weight:900;color:#fff;font-size:29px;letter-spacing:-.09em">S<span style="position:absolute;font-size:12px;color:#36c9f6;transform:translate(16px,3px)">▶</span></span>';
+ if(id==='live-studio')return '<span style="display:grid;place-items:center;background:#191f2d;border:2px solid #df5064;border-radius:21%;width:100%;height:100%;color:#ed5166;font-size:30px">●</span>';
  if(id==='date')return `<img class="generated-app-icon" src="${assetURL('app-icons/date.svg')}" alt="">`;
  if(id==='assistant')return `<img class="generated-app-icon" src="${assetURL('app-icons/chatgpt.svg')}" alt="">`;
  if(id==='youtube')return `<img class="generated-app-icon" src="${assetURL('app-icons/youtube.png')}" alt="">`;
@@ -35,6 +41,7 @@ export function defaultDesktopAppIcon(id){
  if(id==='graphing')return `<img class="generated-app-icon" src="${assetURL('app-icons/desmos.png')}" alt="">`;
  if(id==='cinema')return `<span class="official-netflix-icon"><svg viewBox="247 451 496 900" aria-hidden="true"><image href="${assetURL('app-icons/netflix-symbol.png')}" width="991" height="1801"/></svg></span>`;
  if(id==='apple-tv')return `<img src="${assetURL('app-icons/apple-tv.png')}" alt="">`;
+ const utility=utilityDefinition(id);if(utility)return `<span style="display:grid;place-items:center;background:#354e79;color:#fff;border-radius:22%;width:100%;height:100%;font-weight:800;font-size:28px">${e(utility.symbol)}</span>`;
  const openGame=openGameDefinition(id);if(openGame)return `<span class="open-app-icon">${e(openGame.symbol)}</span>`;
  const game=gameDefinition(id);if(game)return `<span class="vela-game-icon" style="--game-icon-accent:${game.accent};--game-icon-ink:${game.ink}">${gameIcon(id)}</span>`;
  if(['music','notepad','files','calculator','store'].includes(id))return `<img class="downloaded-app-icon" src="${assetURL('app-icons/'+id+('.png'))}" alt="">`;
