@@ -50,7 +50,8 @@
     "desktop": "node scripts/desktop-dev.mjs",
     "check:desktop": "node --check src/fullscreen-required.mjs && node --check src/nova-app.mjs && node --check src/desmos-app.mjs && node --check src/wallpaper-settings.js && node --check src/desktop-setup.mjs && node --check worker/desktop-integrations.js && node scripts/test-desktop-integrations.mjs && node scripts/test-music-playlists.mjs",
     "test:desktop-release": "node scripts/test-desktop-release.mjs",
-    "test:vela-collection": "node scripts/test-vela-collection.mjs"
+    "test:vela-collection": "node scripts/test-vela-collection.mjs",
+    "qa:vela-collection": "node scripts/qa-vela-collection.mjs"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
