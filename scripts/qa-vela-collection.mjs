@@ -41,7 +41,7 @@ try{
  }
  const page=await context.newPage();await page.goto(base+'/scripts/fixtures/vela-games.html');await page.waitForFunction(()=>Boolean(window.qaHub));await page.evaluate(()=>window.qaHub.open('store'));await page.locator('.ms-store').waitFor();
  await page.getByRole('searchbox',{name:'Search apps and games'}).fill('Meteor Dodge');assert.equal(await page.locator('.ms-app-card').count(),1);await page.getByRole('button',{name:'View Meteor Dodge'}).click();assert.ok(await page.getByText('How to play',{exact:true}).isVisible());await page.close();
- const mobile=await context.newPage();await mobile.setViewportSize({width:390,height:844});await mobile.goto(base+'/open-games/vela-collection/index.html?game=number-trail');await mobile.locator('#start').click();assert.ok(await mobile.getByRole('button',{name:'Number 1'}).isVisible());assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await mobile.close();
+ const mobile=await context.newPage();await mobile.setViewportSize({width:390,height:844});await mobile.goto(base+'/open-games/vela-collection/index.html?game=number-trail');await mobile.locator('#start').click();assert.ok(await mobile.getByRole('button',{name:'Number 1',exact:true}).isVisible());assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await mobile.close();
  assert.equal(failures,0,failures+' games failed browser tests');
  console.log('PASS all 24 live game UIs, controls, pause/resume, restart, store listing and mobile sizing.');
 }catch(error){console.error(error);process.exitCode=1;}
