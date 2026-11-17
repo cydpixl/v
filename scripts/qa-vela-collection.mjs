@@ -16,7 +16,7 @@ try{
    assert.equal(await page.locator('#overlay').isVisible(),false,slug+' overlay never closed');
    const canvas=await page.locator('#arena canvas').count();
    assert.ok(canvas||await page.locator('.board').count(),slug+' has no game UI');
-   if(canvas){await page.locator('canvas').click({position:{x:240,y:180}});await page.keyboard.press('Space');}
+   if(canvas){await page.locator('canvas').click({position:{x:240,y:180}});await page.locator('body').click({position:{x:10,y:10}});await page.keyboard.press('Space');}
    if(slug==='word-search'){const items=await page.locator('.word-grid button').allTextContents();assert.equal(items.length,64);}
    if(slug==='code-breaker'){await page.locator('.answer input').fill('1234');await page.locator('.answer button').click();assert.ok(await page.locator('.pills .pill').count()>0);}
    if(slug==='number-trail'){await page.getByRole('button',{name:'Number 1',exact:true}).click();assert.equal(await page.locator('#score').innerText(),'4');}
@@ -33,7 +33,7 @@ try{
    await page.locator('#start').click();
    assert.equal(await page.locator('#overlay').isVisible(),false,slug+' resume failed');
    await page.locator('#restart').click();
-   assert.ok(await page.locator('#arena').children().count()>0,slug+' restart failed');
+   assert.ok(await page.locator('#arena > *').count()>0,slug+' restart failed');
    assert.deepEqual(errors,[],slug+' page errors');
    logs.push({slug,pass:true});
   }catch(error){failures++;logs.push({slug,pass:false,error:String(error),pageErrors:errors});console.error('FAIL '+slug,String(error));}
