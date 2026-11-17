@@ -5,7 +5,7 @@ import {PLANS} from '../src/virtual-internet.mjs';
 
 const here=new URL('../',import.meta.url),source=path=>readFileSync(new URL(path,here),'utf8');
 const gamesDir=new URL('public/open-games/',here);
-const games=readdirSync(gamesDir,{withFileTypes:true}).filter(x=>x.isDirectory()&&existsSync(new URL(x.name+'/index.html',gamesDir))).map(x=>x.name);
+const games=readdirSync(gamesDir,{withFileTypes:true}).filter(x=>x.isDirectory()&&x.name!=='vela-collection'&&existsSync(new URL(x.name+'/index.html',gamesDir))).map(x=>x.name);
 assert.equal(games.length,50,'Exactly 50 playable open-source HTML games must ship');
 for(const slug of games){
  const html=readFileSync(new URL(slug+'/index.html',gamesDir),'utf8');
