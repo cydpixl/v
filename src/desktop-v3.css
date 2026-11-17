@@ -33,3 +33,6 @@
 .desktop-apps .hub-dock-app:hover,.desktop-apps .hub-dock-app:focus-visible{transform:none!important}.desktop-apps .hub-app-icon{transition:transform .15s ease}.desktop-apps .hub-dock-app:hover .hub-app-icon{transform:translateY(-2px) scale(1.025)}
 .hub-dock-app.cinema .hub-app-icon{position:relative;display:block!important;background:#000!important;overflow:hidden!important}.hub-dock-app.cinema .hub-app-icon>img{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:150%!important;height:150%!important;max-width:none!important;max-height:none!important;object-fit:contain!important;border-radius:0!important}
 @media(max-width:600px){.hub-dock.desktop-apps{left:6px!important;top:31px!important}}
+
+/* Video tiles should not lose the edges of portrait or ultrawide clips. */
+.shared-media-thumbnail video.media-attachment,.shared-media-thumbnail .vela-video-thumb{object-fit:contain!important;object-position:center;background:#000}
