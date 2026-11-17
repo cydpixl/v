@@ -49,8 +49,12 @@ export function createUploadQueue({api,self,modal,toast,onReady}){
     for(let offset=0,n=1;offset<job.size;offset+=partSize,n++){
      signal.throwIfAborted();if(!current(job))return;
      if(!job.parts.some(p=>p.partNumber===n)){
+      // WebKit can send a file-backed Blob slice from offset zero in XHR.
+      const chunk=job.file.slice(offset,offset+partSize);
+      const partBody=new Blob([await chunk.arrayBuffer()]);
+      signal.throwIfAborted();if(!current(job))return;
       let part;for(let attempt=0;;attempt++){
-       try{part=await api('/chat-uploads/'+job.server.id+'/part?n='+n,{method:'PUT',body:job.file.slice(offset,offset+partSize),signal,onUploadProgress:loaded=>progress((offset+loaded)/job.size*100)});break;}
+       try{part=await api('/chat-uploads/'+job.server.id+'/part?n='+n,{method:'PUT',body:partBody,signal,onUploadProgress:loaded=>progress((offset+loaded)/job.size*100)});break;}
        catch(error){if(signal.aborted||attempt===3||(error.status&&error.status<500&&![408,429].includes(error.status)))throw error;job.error='Connection interrupted. Retrying…';changed();await delay(error.status===429?30000:1000*2**attempt,signal);}
       }
       signal.throwIfAborted();if(!current(job))return;job.parts.push(part);await save(job);
