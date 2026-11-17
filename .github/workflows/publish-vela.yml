@@ -32,6 +32,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: Browser QA for Vela's original games
+        run: |
+          npm run dev -- --port 5218 > /tmp/vela-browser-qa.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:5218/open-games/vela-collection/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          npm run qa:vela-collection
       - name: Build and publish from newest main
         run: |
           git config user.name "github-actions[bot]"
