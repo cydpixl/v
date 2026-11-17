@@ -8,3 +8,9 @@
 .atv-player.atv-controls-hidden{cursor:none}.atv-controls-hidden .atv-player-titlebar,.atv-controls-hidden .atv-player-volume,.atv-controls-hidden .atv-player-transport,.atv-controls-hidden .atv-player-bottom{opacity:0;pointer-events:none}.atv-uncontrolled-source .atv-player-hitarea,.atv-uncontrolled-source .atv-player-transport,.atv-uncontrolled-source .atv-player-volume,.atv-uncontrolled-source .atv-player-bottom>input,.atv-uncontrolled-source .atv-player-times{display:none!important}
 .atv-player:has(.np-surface:fullscreen){width:100vw!important;height:100dvh!important}.atv-player .np-surface:fullscreen{position:fixed;inset:0}
 @media(max-width:600px){.atv-player-bottom{left:20px;right:20px;bottom:18px}.atv-player-bottom strong{font-size:17px}.atv-player-titlebar>strong{left:10px;right:132px;text-align:left;font-size:11px}.atv-player-transport{gap:15px}.atv-player-volume{left:20px;top:40px}}
+
+/* Keep Apple TV's source frame contained in its resizable window. */
+@media(min-width:701px){
+ .atv-player .np-video{display:grid;place-items:center;overflow:hidden}
+ .atv-player .np-video>iframe{position:relative;inset:auto;width:min(100%,177.77778dvh);height:min(100%,56.25vw);max-width:100%;max-height:100%;aspect-ratio:16/9;object-fit:contain;margin:auto}
+}
