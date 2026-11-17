@@ -111,7 +111,7 @@ export function arcadeGame(id,ctx){
    angle+=dir*(1.65+Math.min(t/50,.6))*dt;if(spawn<=0){objects.push({a:random(0,TAU),speed:random(-.85,.85),r:14,life:random(5,8)});spawn=random(1.5,2.2);}
    g.strokeStyle='#9ec8ef66';g.lineWidth=3;g.beginPath();g.arc(360,220,120,0,TAU);g.stroke();circle(g,360,220,32,'#326c89');circle(g,360,220,12,'#88dbef');
    const px=360+Math.cos(angle)*120,py=220+Math.sin(angle)*120;
-   for(let i=objects.length-1;i>=0;i--){const o=objects[i];o.a+=o.speed*dt;o.life-=dt;const ox=360+Math.cos(o.a)*120,oy=220+Math.sin(o.a)*120;circle(g,ox,oy,o.r,'#e49b9c');if(Math.hypot(ox-px,oy-py)<27)ctx.end('Orbit interrupted');if(o.life<0)objects.splice(i,1);}
+   for(let i=objects.length-1;i>=0;i--){const o=objects[i];o.a+=o.speed*dt;o.life-=dt;const ox=360+Math.cos(o.a)*120,oy=220+Math.sin(o.a)*120;circle(g,ox,oy,o.r,'#e49b9c');if(t>1.5&&Math.hypot(ox-px,oy-py)<27)ctx.end('Orbit interrupted');if(o.life<0)objects.splice(i,1);}
    circle(g,px,py,12,'#98f1e2');scoreTimer+=dt;if(scoreTimer>=1){scoreTimer-=1;ctx.add(1);}if(t>=35)ctx.end('Orbit complete');overlayText('AVOID THE ORBITING THREATS');
   }
   if(id==='laser-gates'){
