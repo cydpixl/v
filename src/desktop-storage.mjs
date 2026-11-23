@@ -8,7 +8,15 @@ export const listDesktopFiles=owner=>desktopTransaction('files','readonly',store
 export async function putDesktopFile({owner,blob,name,folder='root',type='file',source=null}){if(!owner)throw Error('Sign in before saving a file.');if(type==='file'&&!(blob instanceof Blob))throw Error('This file could not be saved.');const entry={id:crypto.randomUUID(),owner,name:String(name||'Untitled').slice(0,180),folder,type,blob:type==='file'?blob:null,mime:blob?.type||'',size:blob?.size||0,created:Date.now(),updated:Date.now(),source,deleted:false};await desktopTransaction('files','readwrite',store=>store.put(entry));window.dispatchEvent(new CustomEvent('vela-files-changed',{detail:owner}));return entry;}
 export async function updateDesktopFile(entry,changes){await desktopTransaction('files','readwrite',store=>store.put({...entry,...changes,updated:Date.now()}));window.dispatchEvent(new CustomEvent('vela-files-changed',{detail:entry.owner}));}
 let wallpaperURL;
-export async function setDesktopWallpaper(owner,blob,{presetId='',fit='cover'}={}){if(!blob?.type?.startsWith('image/')||blob.size>25*1024*1024)throw Error('Choose an image smaller than 25 MB.');const bitmap=await createImageBitmap(blob);if(bitmap.width<1||bitmap.height<1){bitmap.close();throw Error('This image could not be opened.');}bitmap.close();await desktopTransaction('wallpapers','readwrite',store=>store.put({owner,blob,presetId,fit:fit==='contain'?'contain':'cover',updated:Date.now()}));localStorage.setItem('vela.wallpaper.mode.'+owner,'image');await applyDesktopWallpaper(owner);window.dispatchEvent(new CustomEvent('vela-wallpaper-changed',{detail:owner}));}
+export async function setDesktopWallpaper(owner,blob,{presetId='',fit='cover'}={}){if(!blob?.type?.startsWith('image/')||blob.size>25*1024*1024)throw Error('Choose an image smaller than 25 MB.');const imageURL=URL.createObjectURL(blob);
+ try{
+  await new Promise((resolve,reject)=>{
+   const image=new Image();
+   image.onload=()=>image.naturalWidth>0&&image.naturalHeight>0?resolve():reject(Error('This image could not be opened.'));
+   image.onerror=()=>reject(Error('This image could not be opened.'));
+   image.src=imageURL;
+  });
+ }finally{URL.revokeObjectURL(imageURL);}await desktopTransaction('wallpapers','readwrite',store=>store.put({owner,blob,presetId,fit:fit==='contain'?'contain':'cover',updated:Date.now()}));localStorage.setItem('vela.wallpaper.mode.'+owner,'image');await applyDesktopWallpaper(owner);window.dispatchEvent(new CustomEvent('vela-wallpaper-changed',{detail:owner}));}
 export async function setPresetDesktopWallpaper(owner,presetId,{fit='cover'}={}){
  const wallpaper=WALLPAPERS.find(item=>item.id===presetId);
  if(!wallpaper)throw Error('Choose a valid wallpaper.');
