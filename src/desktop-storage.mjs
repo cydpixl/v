@@ -1,5 +1,5 @@
 import {assetURL} from './config.js';
-import {DEFAULT_WALLPAPER} from './wallpaper-catalog.mjs';
+import {WALLPAPERS,DEFAULT_WALLPAPER} from './wallpaper-catalog.mjs';
 import {OPTIONAL_APPS} from './desktop-catalog.js';
 let database;
 export function desktopDB(){if(database)return database;database=new Promise((resolve,reject)=>{const request=indexedDB.open('vela-desktop',2);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains('files')){const store=db.createObjectStore('files',{keyPath:'id'});store.createIndex('owner','owner');}if(!db.objectStoreNames.contains('wallpapers'))db.createObjectStore('wallpapers',{keyPath:'owner'});if(!db.objectStoreNames.contains('music')){const music=db.createObjectStore('music',{keyPath:'key'});music.createIndex('owner','owner');}};request.onsuccess=()=>{request.result.onversionchange=()=>{request.result.close();database=null};resolve(request.result)};request.onblocked=()=>{database=null;reject(Error('Close older VELA tabs, then reopen this app to update local storage.'))};request.onerror=()=>{database=null;reject(request.error)}});return database;}
@@ -9,7 +9,23 @@ export async function putDesktopFile({owner,blob,name,folder='root',type='file',
 export async function updateDesktopFile(entry,changes){await desktopTransaction('files','readwrite',store=>store.put({...entry,...changes,updated:Date.now()}));window.dispatchEvent(new CustomEvent('vela-files-changed',{detail:entry.owner}));}
 let wallpaperURL;
 export async function setDesktopWallpaper(owner,blob,{presetId='',fit='cover'}={}){if(!blob?.type?.startsWith('image/')||blob.size>25*1024*1024)throw Error('Choose an image smaller than 25 MB.');const bitmap=await createImageBitmap(blob);if(bitmap.width<1||bitmap.height<1){bitmap.close();throw Error('This image could not be opened.');}bitmap.close();await desktopTransaction('wallpapers','readwrite',store=>store.put({owner,blob,presetId,fit:fit==='contain'?'contain':'cover',updated:Date.now()}));localStorage.setItem('vela.wallpaper.mode.'+owner,'image');await applyDesktopWallpaper(owner);window.dispatchEvent(new CustomEvent('vela-wallpaper-changed',{detail:owner}));}
-export async function applyDesktopWallpaper(owner){if(wallpaperURL){URL.revokeObjectURL(wallpaperURL);wallpaperURL=null;}if(localStorage.getItem('vela.wallpaper.mode.'+owner)!=='image'){document.documentElement.style.setProperty('--custom-wallpaper',`url("${assetURL(DEFAULT_WALLPAPER.file)}")`);document.documentElement.style.setProperty('--desktop-wallpaper-fit','cover');return;}const saved=await desktopTransaction('wallpapers','readonly',store=>store.get(owner));if(!saved?.blob)return;document.documentElement.style.setProperty('--desktop-wallpaper-fit',saved.fit==='contain'?'contain':'cover');wallpaperURL=URL.createObjectURL(saved.blob);document.documentElement.style.setProperty('--custom-wallpaper',`url("${wallpaperURL}")`);}
+export async function setPresetDesktopWallpaper(owner,presetId,{fit='cover'}={}){
+ const wallpaper=WALLPAPERS.find(item=>item.id===presetId);
+ if(!wallpaper)throw Error('Choose a valid wallpaper.');
+ localStorage.setItem('vela.wallpaper.preset.'+owner,wallpaper.id);
+ localStorage.setItem('vela.wallpaper.fit.'+owner,fit==='contain'?'contain':'cover');
+ localStorage.setItem('vela.wallpaper.mode.'+owner,'preset');
+ await applyDesktopWallpaper(owner);
+ window.dispatchEvent(new CustomEvent('vela-wallpaper-changed',{detail:owner}));
+}
+export async function applyDesktopWallpaper(owner){if(wallpaperURL){URL.revokeObjectURL(wallpaperURL);wallpaperURL=null;}const mode=localStorage.getItem('vela.wallpaper.mode.'+owner);
+ if(mode==='preset'){
+  const wallpaper=WALLPAPERS.find(item=>item.id===localStorage.getItem('vela.wallpaper.preset.'+owner))||DEFAULT_WALLPAPER;
+  document.documentElement.style.setProperty('--custom-wallpaper',`url("${assetURL(wallpaper.file)}")`);
+  document.documentElement.style.setProperty('--desktop-wallpaper-fit',localStorage.getItem('vela.wallpaper.fit.'+owner)==='contain'?'contain':'cover');
+  return;
+ }
+ if(mode!=='image'){document.documentElement.style.setProperty('--custom-wallpaper',`url("${assetURL(DEFAULT_WALLPAPER.file)}")`);document.documentElement.style.setProperty('--desktop-wallpaper-fit','cover');return;}const saved=await desktopTransaction('wallpapers','readonly',store=>store.get(owner));if(!saved?.blob)return;document.documentElement.style.setProperty('--desktop-wallpaper-fit',saved.fit==='contain'?'contain':'cover');wallpaperURL=URL.createObjectURL(saved.blob);document.documentElement.style.setProperty('--custom-wallpaper',`url("${wallpaperURL}")`);}
 export async function resetDesktopWallpaper(owner){await desktopTransaction('wallpapers','readwrite',store=>store.delete(owner));localStorage.setItem('vela.wallpaper.mode.'+owner,'theme');await applyDesktopWallpaper(owner);window.dispatchEvent(new CustomEvent('vela-wallpaper-changed',{detail:owner}));}
 export function installedApps(owner){try{return JSON.parse(localStorage.getItem('vela.installed.'+owner)||'[]').filter(id=>OPTIONAL_APPS.includes(id))}catch{return []}}
 export const isAppInstalled=(owner,id)=>!OPTIONAL_APPS.includes(id)||installedApps(owner).includes(id);
