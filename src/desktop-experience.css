@@ -29,3 +29,72 @@
 .hub-app-icon>.generated-app-icon,.desktop-bar img.generated-app-icon,.ms-app-cover>img.generated-app-icon{width:100%;height:100%;object-fit:contain;border-radius:18%;background:none}.hub-app-icon:has(>.generated-app-icon){background:none!important;border-radius:18%;overflow:hidden}.am-sidebar .am-navigation{min-height:0;overflow:auto;flex:1}
 
 .hub-dock-app>small{text-shadow:0 1px 3px #000,0 1px 6px #0009}
+
+/* Keep the first-run wallpaper screen usable in a mobile browser, including
+   Safari's changing viewport and the bottom safe area. */
+@media (max-width:700px){
+ .win-first-setup.win-setup-dialog[open]{
+  display:block;
+  width:100%;
+  height:100dvh;
+  max-height:100dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:0;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-panel{
+  display:flex;
+  flex-direction:column;
+  min-height:100%;
+  height:auto;
+  width:100%;
+  max-width:none;
+  padding:calc(18px + env(safe-area-inset-top,0px)) 18px 18px;
+  margin:0;
+  box-shadow:none;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-main{
+  min-height:0;
+  flex:1;
+  padding:0;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-main h1{
+  font-size:clamp(22px,6vw,28px);
+  margin-bottom:12px;
+ }
+ .win-first-setup.win-setup-dialog .setup-profile{
+  margin:0 0 12px;
+ }
+ .win-first-setup.win-setup-dialog .win-wallpaper-preview{
+  height:clamp(105px,22dvh,160px);
+ }
+ .win-first-setup.win-setup-dialog .win-wallpaper-options{
+  margin:10px 0;
+  max-height:86px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+ }
+ .win-first-setup.win-setup-dialog .win-wallpaper-options button{
+  width:96px;
+  height:76px;
+  flex:none;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-main footer{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  margin-top:auto;
+  padding:14px 0 max(12px,env(safe-area-inset-bottom,0px));
+  background:#fff;
+  border-top:1px solid #e6e9ee;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-main footer button{
+  min-height:44px;
+  padding:10px 13px;
+ }
+ .win-first-setup.win-setup-dialog .win-setup-system{
+  display:none;
+ }
+}
