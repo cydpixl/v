@@ -3,7 +3,7 @@ import './wallpaper-settings.css';
 import {assetURL} from './config.js';
 import {escape as e} from './util.js';
 import {icon} from './icons.js';
-import {setDesktopWallpaper} from './desktop-storage.mjs';
+import {setDesktopWallpaper,setPresetDesktopWallpaper} from './desktop-storage.mjs';
 const key='desktop.device.setup.v3';
 function read(){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return {}}}
 function panel(title,description,kind='screen'){return `<section class="win-setup-panel"><aside><div class="win-setup-art">${icon(kind,130)}</div></aside><div class="win-setup-main"><header><h1>${title}</h1>${description?`<p>${description}</p>`:''}</header><div data-setup-content></div><p class="win-setup-error" role="alert"></p><footer data-setup-actions></footer></div><small class="win-setup-system">${e(new Date().toLocaleDateString())}</small></section>`}
@@ -25,6 +25,32 @@ export async function completeDesktopSetup(user){
  let selected=DEFAULT_WALLPAPER.id,uploaded=null;const content=dialog.querySelector('[data-setup-content]');content.innerHTML=`<div class="setup-profile">${user.avatar?`<img src="${e(user.avatar)}" alt="">`:icon('user',30)}<div><strong>${e(user.name||user.handle)}</strong><span>Your conversations and files stay with this account.</span></div></div><div class="win-wallpaper-preview" style="background-image:url('${assetURL(DEFAULT_WALLPAPER.file)}')"></div><div class="win-wallpaper-options">${WALLPAPERS.map(({id,name,thumbnail})=>`<button data-setup-wallpaper="${id}" aria-label="${name} wallpaper" aria-pressed="${id===selected}"><img src="${assetURL(thumbnail)}" alt="${name}"></button>`).join('')}</div><button data-setup-browse class="win-browse">Browse photos</button><input type="file" accept="image/*" hidden>`;
  const preview=content.querySelector('.win-wallpaper-preview');let previewURL;content.querySelectorAll('[data-setup-wallpaper]').forEach(button=>button.onclick=()=>{selected=button.dataset.setupWallpaper;uploaded=null;preview.style.backgroundImage=`url("${assetURL(WALLPAPERS.find(item=>item.id===selected).file)}")`;content.querySelectorAll('[data-setup-wallpaper]').forEach(node=>node.setAttribute('aria-pressed',String(node===button)))});
  const input=content.querySelector('input');content.querySelector('[data-setup-browse]').onclick=()=>input.click();input.onchange=()=>{const file=input.files[0];if(!file)return;if(!file.type.startsWith('image/')||file.size>25*1024*1024){dialog.querySelector('[role=alert]').textContent='Choose an image under 25 MB.';return;}uploaded=file;if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(file);preview.style.backgroundImage=`url("${previewURL}")`;};
- dialog.querySelector('[data-setup-actions]').innerHTML='<span></span><button class="win-next" data-open-desktop>Start using your desktop</button>';
- await new Promise(resolve=>{dialog.querySelector('[data-open-desktop]').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{let blob=uploaded;if(!blob){const response=await fetch(assetURL(WALLPAPERS.find(item=>item.id===selected).file));if(!response.ok)throw Error('This wallpaper could not load. Choose another.');blob=await response.blob();}await setDesktopWallpaper(user.uid,blob,{presetId:uploaded?'':selected});localStorage.setItem(userKey,'1');dialog.close();dialog.remove();if(previewURL)URL.revokeObjectURL(previewURL);resolve();}catch(error){dialog.querySelector('[role=alert]').textContent=error.message;button.disabled=false;}};});
+ dialog.querySelector('[data-setup-actions]').innerHTML='<button type="button" data-skip-desktop>Skip for now</button><button type="button" class="win-next" data-open-desktop>Start using your desktop</button>';
+ await new Promise(resolve=>{
+  let completed=false;
+  const finish=()=>{
+   if(completed)return;
+   completed=true;
+   localStorage.setItem(userKey,'1');
+   dialog.close();
+   dialog.remove();
+   if(previewURL)URL.revokeObjectURL(previewURL);
+   resolve();
+  };
+  dialog.querySelector('[data-skip-desktop]').onclick=finish;
+  dialog.querySelector('[data-open-desktop]').onclick=async event=>{
+   const button=event.currentTarget;
+   button.disabled=true;
+   dialog.querySelector('[role=alert]').textContent='';
+   try{
+    if(uploaded)await setDesktopWallpaper(user.uid,uploaded);
+    else await setPresetDesktopWallpaper(user.uid,selected);
+    finish();
+   }catch(error){
+    if(completed)return;
+    dialog.querySelector('[role=alert]').textContent=(error?.message||'Could not save your background.')+' You can skip this step and change your background in Settings.';
+    button.disabled=false;
+   }
+  };
+ });
 }
