@@ -1,6 +1,6 @@
 # Desktop development
 
-Run `npm ci`, then `npm run desktop -- --port 5194`. The desktop command connects to the existing Vela API; `VELA_DEV_API` can select a local Worker. Sign in with your existing account. The site requires a user click to enter browser fullscreen. Leaving fullscreen restores the gate without discarding open apps or drafts.
+Run `npm ci`, then `npm run desktop -- --port 5194`. The desktop command connects to the existing Vela API; `VELA_DEV_API` can select a local Worker. Sign in with your existing account. The first visit asks whether to open Simple Chat or Desktop. Opening preferences can be changed in Settings. Desktop can enter fullscreen on the first eligible user interaction when enabled. Simple Chat and installed VELA can run in a standalone window.
 
 ## Standalone apps
 
@@ -22,6 +22,6 @@ Desmos drafts autosave per account on the current device. Save writes a revision
 
 ## Validation and release
 
-Run `npm run check:desktop`, `npm run check`, and `npm run build`. Run `node scripts/qa-desktop-workspaces.mjs` against localhost with the existing private QA credentials. Tests cover actual Chrome fullscreen entry/exit, wallpaper apply, live Desmos rendering/save/export, live Groq replies and saved chat reopening, plus playlist navigation.
+Run `npm run check:desktop`, `npm run check`, and `npm run build`. Run `node scripts/qa-opening-mode.mjs` against localhost for the startup and messaging regression checks. Set `QA_MOBILE_WEBKIT=1` to run the phone workflow in WebKit.
 
 Deploy the desktop Worker with `npx wrangler deploy --config wrangler.production.json`. Preserve the legacy MAIN service and all existing secrets. GitHub Pages publishes `docs` through the existing workflow after source is pushed to main. Test the actual published URL; a successful build alone is not UI acceptance.

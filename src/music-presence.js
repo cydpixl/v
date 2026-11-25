@@ -9,7 +9,7 @@ export async function refreshListeningFriends(){
  if(friendRequest)return friendRequest;
  const request=runtime.api('/music-listening').then(({items})=>{
   if(runtime.self()!==owner||friendOwner!==owner)return [];
-  friendItems=items;const signature=JSON.stringify(listeningFriends().map(person=>[person.uid,person.name,person.avatar,person.music.title,person.music.artist,person.music.source,person.music.trackId]));
+  friendItems=Array.isArray(items)?items:[];const signature=JSON.stringify(listeningFriends().map(person=>[person.uid,person.name,person.avatar,person.music.title,person.music.artist,person.music.source,person.music.trackId]));
   if(signature!==friendSignature){friendSignature=signature;window.dispatchEvent(new Event('vela-listening-updated'))}
   return listeningFriends();
  }).finally(()=>{if(friendRequest===request)friendRequest=null});
