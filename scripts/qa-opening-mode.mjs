@@ -188,10 +188,22 @@ try {
   await wide.getByText('Preferences saved.',{exact:true}).waitFor();
   await wide.getByRole('button',{name:'Close Settings'}).click();
   await wide.waitForFunction(()=>document.fullscreenElement===document.documentElement);
-  await wide.evaluate(()=>document.exitFullscreen());
   await desktopSettings.click();
   await wide.getByRole('button',{name:'Opening preferences',exact:true}).click();
-  assert.equal(await wide.evaluate(()=>document.fullscreenElement),null);
+  await wide.getByRole('switch',{name:/Automatic fullscreen/}).uncheck();
+  await wide.waitForFunction(()=>!document.fullscreenElement && localStorage.getItem('vela.auto-fullscreen')==='off');
+  await wide.getByText('Automatic fullscreen is off.',{exact:true}).waitFor();
+  await wide.getByRole('button',{name:'Close Settings'}).click();
+  await desktopSettings.click();
+  await wide.getByRole('button',{name:'Opening preferences',exact:true}).click();
+  assert.equal(await wide.getByRole('switch',{name:/Automatic fullscreen/}).isChecked(),false);
+  await wide.locator('#composer').waitFor({state:'attached'});
+  await wide.evaluate(()=>{
+    document.documentElement.dataset.qaSwitch='same-page';
+    const editor=document.querySelector('#composer');
+    editor.value='Switching preserves this draft';
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+  });
   await wide.getByRole('radio',{name:/Simple Chat/}).check();
   await wide.getByRole('button',{name:'Save preferences'}).click();
   const wideDirect = wide.getByRole('button',{name:'Open Morgan'});
@@ -201,9 +213,16 @@ try {
   assert.equal(await wide.getByRole('button',{name:'Open Weekend Plans'}).isVisible(),true);
   assert.equal(await wide.locator('#vela-desktop').count(),0);
   assert.equal(await wide.evaluate(()=>document.fullscreenElement),null);
+  assert.equal(await wide.locator('html').getAttribute('data-qa-switch'),'same-page');
+  assert.equal(await wide.locator('#composer').evaluate(editor=>editor.value),'Switching preserves this draft');
   await shot(wide,'simple-chat-desktop');
 
+  await wide.reload();
+  await wideDirect.click();
+  assert.equal(await wide.locator('#composer').evaluate(editor=>editor.value),'Switching preserves this draft');
   await wide.getByRole('button',{name:'Opening preferences',exact:true}).click();
+  assert.equal(await wide.getByRole('radio',{name:/Simple Chat/}).isChecked(),true);
+  assert.equal(await wide.getByRole('switch',{name:/Automatic fullscreen/}).isChecked(),false);
   await wide.getByRole('radio',{name:/Desktop/}).check();
   await wide.getByRole('switch',{name:/Automatic fullscreen/}).uncheck();
   await wide.getByRole('button',{name:'Save preferences'}).click();

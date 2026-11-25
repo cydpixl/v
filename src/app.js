@@ -86,8 +86,8 @@ import {validateChatSelection} from './media-policy.mjs';
 import {makeChatVideoPoster,renderChatVideo,installChatVideoViewer} from './chat-video.mjs';
 import './chat-video.css';
 import {registerPWA} from './pwa.js';
-import {chooseOpeningMode, openingControls, openingMode, autoFullscreenEnabled, saveOpeningPreferences, installDesktopAutoFullscreen} from './opening-mode.mjs';
-const simpleChat=()=>openingMode()==='chat';
+import {chooseOpeningMode, openingControls, autoFullscreenEnabled, setAutoFullscreen, saveOpeningPreferences, installDesktopAutoFullscreen} from './opening-mode.mjs';
+const simpleChat=()=>document.body.classList.contains('simple-chat');
 const $=s=>document.querySelector(s),root=$('#app'),layers=$('#layers');
 
 const S={session:0,user:null,friends:[],conversations:[],blocks:[],blockedBy:[],active:null,view:'friends',tab:'online',messages:[],more:false,query:'',reply:null,upload:null,outbox:[],prefs:{},incoming:null};
@@ -209,9 +209,54 @@ async function startup(firebaseUser,profile){
     return;
    }
   }
-  await loadAppBranding(api).catch(()=>{});rememberAccount(S.user).catch(()=>{});recoverLiveMusicShares().catch(()=>{});prefs();S.outbox=readStored('pixl.outbox.'+S.user.uid,[]);shell();if(!simpleChat()){hub??=createHub({api,mountCinema:async (target,appId='cinema')=>{const {createCinemaApp}=await import('./cinema/cinema-app.js');return createCinemaApp({api,appId,self:()=>S.user,conversations:()=>S.conversations.map(c=>({...c,name:title(c)})),toast,openDesktop:()=>hub.home()}).mount(target)},onWindowChange:updateCall,mountMusic:target=>{const page=createMusicPage({api,self:()=>S.user?.uid,destinations:()=>S.conversations.map(c=>({id:c.id,name:title(c)})),activeConversation:()=>S.active,send:sendSongToConversation,toast,tracker:listeningTracker});page.render(target);return ()=>page.dispose()},mountFortnite:target=>{shop.mount(target);return ()=>shop.unmount()},owner:()=>S.user?.uid||'device',modal,toast,openFeature:id=>{if(id==='fortnite')shop.show();else if(id==='music')hub.open('music')},openChat:()=>{if(S.active)act(()=>openChat(S.active));updateCall()},settings:page=>settings(page)});hub.refresh();}showOpeningTheme();engine=new CallEngine({api,user:S.user,settings:S.prefs});engine.addEventListener('change',updateCall);engine.addEventListener('speaking',()=>updateSpeaking($('#call-stage'),engine));engine.addEventListener('stats',()=>{if($('#diagnostics-content'))renderDiagnostics();});engine.addEventListener('error',ev=>toast(ev.detail));engine.addEventListener('soundboard',ev=>{sound(ev.detail.sound);toast(user(ev.detail.uid).name+' played a sound.')});await api('/session',{method:'POST'});await refresh();if(!simpleChat()){const first=S.conversations.find(c=>c.kind==='direct');if(first)await openChat(first.id);}
+  await loadAppBranding(api).catch(()=>{});rememberAccount(S.user).catch(()=>{});recoverLiveMusicShares().catch(()=>{});prefs();S.outbox=readStored('pixl.outbox.'+S.user.uid,[]);shell();if(!simpleChat())mountDesktopHub();showOpeningTheme();engine=new CallEngine({api,user:S.user,settings:S.prefs});engine.addEventListener('change',updateCall);engine.addEventListener('speaking',()=>updateSpeaking($('#call-stage'),engine));engine.addEventListener('stats',()=>{if($('#diagnostics-content'))renderDiagnostics();});engine.addEventListener('error',ev=>toast(ev.detail));engine.addEventListener('soundboard',ev=>{sound(ev.detail.sound);toast(user(ev.detail.uid).name+' played a sound.')});await api('/session',{method:'POST'});await refresh();if(!simpleChat()){const first=S.conversations.find(c=>c.kind==='direct');if(first)await openChat(first.id);}
   await connections.load();if(!isCurrent())return;
   if(!simpleChat()){await completeDesktopSetup(S.user);if(!isCurrent())return;await enterDesktop({user:S.user,onDone:()=>hub.home()});if(new URLSearchParams(location.search).has('welcome'))showWelcome({uid:S.user.uid,force:true,theme:openThemes,onDone:()=>hub.home()});}social.ready();connectLive();refreshTimer=setInterval(()=>refresh().catch(()=>{}),30000);flushOutbox();}catch(error){if(!isCurrent())return;if(profile&&!S.user){profileSetup(firebaseUser,profile,error.message);return;}root.dataset.startupFailed='true';root.innerHTML=`<main class="auth-screen"><div class="auth-card"><h1>${navigator.onLine?'Connection interrupted':'You’re offline'}</h1><p>${navigator.onLine?e(error.message):'Reconnect to load your conversations. Your drafts and paused uploads stay on this device.'}</p><button class="primary" data-action="reload">Try again</button><p class="auth-switch"><button type="button" data-action="profile-setup-signout">Use another account</button></p></div></main>`;}
+}
+function mountDesktopHub(){
+ hub??=createHub({api,mountCinema:async (target,appId='cinema')=>{const {createCinemaApp}=await import('./cinema/cinema-app.js');return createCinemaApp({api,appId,self:()=>S.user,conversations:()=>S.conversations.map(c=>({...c,name:title(c)})),toast,openDesktop:()=>hub.home()}).mount(target)},onWindowChange:updateCall,mountMusic:target=>{const page=createMusicPage({api,self:()=>S.user?.uid,destinations:()=>S.conversations.map(c=>({id:c.id,name:title(c)})),activeConversation:()=>S.active,send:sendSongToConversation,toast,tracker:listeningTracker});page.render(target);return ()=>page.dispose()},mountFortnite:target=>{shop.mount(target);return ()=>shop.unmount()},owner:()=>S.user?.uid||'device',modal,toast,openFeature:id=>{if(id==='fortnite')shop.show();else if(id==='music')hub.open('music')},openChat:()=>{if(S.active)act(()=>openChat(S.active));updateCall()},settings:page=>settings(page)});
+ hub.refresh();
+}
+function unmountDesktopHub(){
+ if(!hub)return;
+ hub.dispose();hub=null;
+ document.body.classList.remove('hub-ready','chat-expanded','chat-app-hidden');
+ root.removeAttribute('style');
+}
+function applyOpeningMode(mode){
+ document.body.classList.toggle('simple-chat',mode==='chat');
+ document.title=mode==='chat'?'Messages · VELA':'Desktop';
+}
+function syncChatShellMode(){
+ const appShell=root.firstElementChild;
+ if(!appShell?.classList.contains('app-shell'))return;
+ const simple=simpleChat();
+ appShell.className=simple?'app-shell simple-chat-shell':'app-shell mac-shell duo-shell single-chat-window';
+ appShell.querySelector('.sidebar').hidden=!simple;
+ appShell.querySelector('#dm-list').hidden=!simple;
+ syncNavigation();
+}
+function syncSimpleWorkspace(){
+ root.classList.toggle('simple-workspace-open',simpleChat()&&S.view!=='friends'&&(S.view!=='chat'||!!active()));
+}
+async function switchOpeningMode(mode){
+ closeMenu();
+ if(mode==='chat')unmountDesktopHub();
+ applyOpeningMode(mode);
+ syncChatShellMode();
+ if(mode==='desktop')mountDesktopHub();
+ if(S.view==='chat'&&$('#composer')){
+  syncSimpleWorkspace();
+  renderSidebar();renderHeader();renderMessages();updateDock();updateCall();connections.enhance();syncRelationshipUI();
+ }else{
+  render();
+  if(mode==='desktop'&&S.view==='chat'&&S.active)act(()=>openChat(S.active));
+ }
+ if(mode==='desktop'){
+  const desktop=hub;
+  await completeDesktopSetup(S.user);
+  if(hub===desktop&&!engine?.info&&!uploading&&!S.upload)desktop.home();
+ }
 }
 function syncNavigation(){
  const compact=false,open=document.body.classList.contains('nav-open');
@@ -220,9 +265,9 @@ function syncNavigation(){
 }
 new MutationObserver(syncNavigation).observe(document.body,{attributes:true,attributeFilter:['class']});
 window.addEventListener('resize',syncNavigation);
-function shell(){disposeCallResizer?.();root.innerHTML=`<div class="${simpleChat()?'app-shell simple-chat-shell':'app-shell mac-shell duo-shell single-chat-window'}"><aside class="sidebar" ${simpleChat()?'':'hidden'}>${simpleChat()?`<div class="simple-chat-list-header"><div><img src="${assetURL('vela-mark.svg')}" alt="VELA"><h1>Messages</h1></div><div class="simple-chat-list-actions">${button('search','Search messages','simple-search')}${friendsButton()}${button('settings','Opening preferences','opening-preferences')}</div></div>`:''}<nav class="home-navigation" hidden><b id="pending-count"></b><b id="request-count"></b></nav><div id="dm-list" ${simpleChat()?'':'hidden'}></div><div id="account-dock" hidden></div></aside><main class="workspace"><header id="workspace-header"></header><div class="connection-banner" id="connection-banner" hidden></div><section id="call-stage" aria-label="Call" hidden><div class="call-statusline"><span id="call-status"></span><div>${button('arrow','Return to call','go-call')}</div></div><div id="call-tiles" class="call-tiles"></div><div class="call-controls" id="call-controls"></div><div class="call-resizer" role="separator" aria-label="Resize call area" aria-orientation="horizontal" aria-valuenow="280" tabindex="0"><span></span></div></section><div id="main-content"></div><div id="voice-dock" class="call-presence-pill"></div></main><div id="incoming-call"></div><div id="remote-audios" hidden></div></div>`;syncNavigation();disposeCallResizer=bindCallResizer($('#call-stage'),()=>{callLayout='grid';$('#call-stage').classList.remove('expanded')});render();}
+function shell(){disposeCallResizer?.();root.innerHTML=`<div class="app-shell"><aside class="sidebar" hidden><div class="simple-chat-list-header"><div><img src="${assetURL('vela-mark.svg')}" alt="VELA"><h1>Messages</h1></div><div class="simple-chat-list-actions">${button('search','Search messages','simple-search')}${friendsButton()}${button('settings','Opening preferences','opening-preferences')}</div></div><nav class="home-navigation" hidden><b id="pending-count"></b><b id="request-count"></b></nav><div id="dm-list" hidden></div><div id="account-dock" hidden></div></aside><main class="workspace"><header id="workspace-header"></header><div class="connection-banner" id="connection-banner" hidden></div><section id="call-stage" aria-label="Call" hidden><div class="call-statusline"><span id="call-status"></span><div>${button('arrow','Return to call','go-call')}</div></div><div id="call-tiles" class="call-tiles"></div><div class="call-controls" id="call-controls"></div><div class="call-resizer" role="separator" aria-label="Resize call area" aria-orientation="horizontal" aria-valuenow="280" tabindex="0"><span></span></div></section><div id="main-content"></div><div id="voice-dock" class="call-presence-pill"></div></main><div id="incoming-call"></div><div id="remote-audios" hidden></div></div>`;syncChatShellMode();disposeCallResizer=bindCallResizer($('#call-stage'),()=>{callLayout='grid';$('#call-stage').classList.remove('expanded')});render();}
 
-function render(){if(!S.user||!$('#dm-list'))return;root.classList.toggle('simple-workspace-open',simpleChat()&&S.view!=='friends'&&(S.view!=='chat'||!!active()));if(!simpleChat()&&S.view==='friends'&&S.conversations.some(c=>c.kind==='direct')){S.active=S.conversations.find(c=>c.kind==='direct').id;S.view='chat';}renderSidebar();renderHeader();renderContent();updateDock();updateCall();connections.enhance();if(S.view==='chat')syncRelationshipUI();}
+function render(){if(!S.user||!$('#dm-list'))return;syncSimpleWorkspace();if(!simpleChat()&&S.view==='friends'&&S.conversations.some(c=>c.kind==='direct')){S.active=S.conversations.find(c=>c.kind==='direct').id;S.view='chat';}renderSidebar();renderHeader();renderContent();updateDock();updateCall();connections.enhance();if(S.view==='chat')syncRelationshipUI();}
 function renderSidebar(){
  for(const [action,id]of [['shop','fortnite'],['music','music']]){const button=document.querySelector('.rail-app[data-action='+action+']');if(button)button.hidden=!featureEnabled(S.user.uid,id);}
  const pending=S.friends.filter(f=>f.status==='pending'&&f.requested_by!==S.user.uid).length;const listFriends=$('.simple-chat-list-actions .header-friends');if(listFriends){const label='Friends'+(pending?', '+pending+' incoming '+(pending===1?'request':'requests'):'');if(listFriends.getAttribute('aria-label')!==label)listFriends.outerHTML=friendsButton();}$('#pending-count').textContent=pending||'';$('#request-count').textContent=pending||'';
@@ -583,7 +628,7 @@ async function verifyCall(){if(!engine?.info)return;const dialog=modal('Verify C
 function diagnostics(){modal('Connection Information','<div id="diagnostics-content"></div>');renderDiagnostics();}
 function renderDiagnostics(){const out=$('#diagnostics-content');if(!out)return;out.innerHTML=`<p>${engine.relayAvailable?'Relay fallback available':'Direct connections only · Relay not configured'}</p>${engine.stats.map(s=>`<div class="stats-card"><h3>${e(user(s.uid).name)}</h3><dl><dt>Connection</dt><dd>${e(s.state)}</dd><dt>Route</dt><dd>${s.relay?'Relayed':'Direct peer-to-peer'}</dd><dt>Round-trip time</dt><dd>${s.rtt||'—'} ms</dd><dt>Audio packet loss</dt><dd>${(s.loss*100).toFixed(1)}%</dd><dt>Available outgoing bitrate</dt><dd>${(s.outgoing/1000000).toFixed(1)} Mbps</dd></dl>${s.video.map(v=>`<p>${v.width||0} × ${v.height||0} · ${v.fps||0} FPS · ${e(v.quality||'Auto')}</p>`).join('')}</div>`).join('')||'<p class="muted">Join with another person to see connection statistics.</p>'}`;}
 function mountOpeningPreferences(target,{account=false}={}){
- const mode=openingMode();
+ const mode=simpleChat()?'chat':'desktop';
  target.innerHTML=`<form class="opening-preferences" data-opening-controls>
   ${account?'':'<h2>Opening preferences</h2>'}
   ${openingControls(mode,autoFullscreenEnabled())}
@@ -591,17 +636,25 @@ function mountOpeningPreferences(target,{account=false}={}){
   <p role="status"></p>
  </form>`;
  const form=target.querySelector('form');
- form.onsubmit=async event=>{
-  event.preventDefault();
-  const next=form.elements.mode.value,fullscreen=form.elements.fullscreen.checked,status=form.querySelector('[role="status"]');
-  if(mode!==next&&(engine?.info||S.incoming||uploading||S.upload)){
-   status.textContent='Finish your call or send or remove your attachment before switching views.';
-   return;
+ const fullscreenSwitch=form.elements.fullscreen,status=form.querySelector('[role="status"]');
+ function leaveFullscreen(all=false){
+  if(document.fullscreenElement&&(all||document.fullscreenElement===document.documentElement)){
+   document.exitFullscreen().catch(()=>{});
   }
+ }
+ fullscreenSwitch.onchange=()=>{
+  setAutoFullscreen(fullscreenSwitch.checked);
+  if(!fullscreenSwitch.checked)leaveFullscreen();
+  status.textContent=fullscreenSwitch.checked?'Automatic fullscreen is on.':'Automatic fullscreen is off.';
+ };
+ form.onsubmit=event=>{
+  event.preventDefault();
+  const next=form.elements.mode.value,fullscreen=fullscreenSwitch.checked;
   saveOpeningPreferences(next,fullscreen);
-  if((!fullscreen||next==='chat')&&document.fullscreenElement===document.documentElement)await document.exitFullscreen().catch(()=>{});
-  if(mode!==next){location.reload();return;}
-  status.textContent='Preferences saved.';
+  if(!fullscreen||next==='chat')leaveFullscreen(next==='chat'&&next!==mode);
+  if(mode===next){status.textContent='Preferences saved.';return;}
+  target.closest('dialog')?.close();
+  act(()=>switchOpeningMode(next));
  };
  form.querySelector('[data-chat-account]')?.addEventListener('click',()=>{
   target.closest('dialog')?.close();settings('account');
@@ -766,14 +819,11 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>{live?.close();engine?.leave({keepalive:true}).catch(()=>{});});
 let observedAuthUid;
 installDesktopAutoFullscreen();
-const selectedOpeningMode=chooseOpeningMode().then(mode=>{
- document.body.classList.toggle('simple-chat',mode==='chat');
- if(mode==='chat')document.title='Messages · VELA';
-});
+const selectedOpeningMode=chooseOpeningMode().then(applyOpeningMode);
 onAuthStateChanged(auth,async firebaseUser=>{const nextUid=firebaseUser?.uid||null;if(observedAuthUid===nextUid)return;observedAuthUid=nextUid;await selectedOpeningMode;if(observedAuthUid!==nextUid)return;shop.unmount();S.session++;musicSharing.reset();listeningTracker.reset();creative.resetSession();if(firebaseUser){root.querySelector('#auth-form')?.setAttribute('aria-busy','true');const signup=pendingSignup;
  pendingSignup=undefined;
  await startup(firebaseUser,signup?.email===firebaseUser.email?{name:signup.name,handle:signup.handle}:undefined);
- }else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];S.active=null;S.view='friends';S.messages=[];S.more=false;S.query='';S.reply=null;root.classList.remove('simple-workspace-open');if(hub){hub.dispose();hub=null;document.body.classList.remove('hub-ready','chat-expanded','chat-app-hidden');root.removeAttribute('style');}layers.innerHTML='';if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
+ }else{musicDock.reset();musicRecoveryOwner='';musicRecovery=null;liveMusicLatestTrack=null;stopLiveMusicWidgets();invalidateUpload();S.upload=null;disposeCallResizer?.();disposeCallResizer=null;engine?.leave();closeMenu();clearInterval(refreshTimer);clearTimeout(liveRetry);outboxPump.reset();S.user=null;callEvents.clear();messageCache.clear();messageRequests.clear();live?.close();live=null;S.conversations=[];S.friends=[];S.active=null;S.view='friends';S.messages=[];S.more=false;S.query='';S.reply=null;root.classList.remove('simple-workspace-open');unmountDesktopHub();layers.innerHTML='';if(auth.currentUser)return;finishBoot();authScreen();showOpeningTheme();}});
 // Runtime is intentionally small and useful for local end-to-end verification.
 if(import.meta.env.DEV)window.__pixl={get state(){return S},get call(){return engine},api};
 

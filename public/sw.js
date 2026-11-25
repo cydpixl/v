@@ -19,7 +19,7 @@ self.addEventListener('fetch',event=>{
  if(request.mode==='navigate'){
   event.respondWith((async()=>{
    const cache=await caches.open(CACHE);
-   try{const response=await fetch(request,{signal:AbortSignal.timeout(8000)});if(response.ok&&response.headers.get('content-type')?.includes('text/html')){await cache.put(ROOT,response.clone());return response;}return await cache.match(ROOT,{ignoreVary:true})||response;}
+   try{const response=await fetch(request,{cache:'no-cache',signal:AbortSignal.timeout(8000)});if(response.ok&&response.headers.get('content-type')?.includes('text/html')){await cache.put(ROOT,response.clone());return response;}return await cache.match(ROOT,{ignoreVary:true})||response;}
    catch{return await cache.match(ROOT,{ignoreVary:true})||new Response('Vela is offline. Reconnect and reopen the app.',{status:503,headers:{'Content-Type':'text/plain'}});}
   })());return;
  }

@@ -13,9 +13,13 @@ export function autoFullscreenEnabled() {
   return localStorage.getItem(fullscreenKey) !== 'off';
 }
 
-export function saveOpeningPreferences(mode, fullscreen) {
-  localStorage.setItem(modeKey, mode);
+export function setAutoFullscreen(fullscreen) {
   localStorage.setItem(fullscreenKey, fullscreen ? 'on' : 'off');
+}
+
+export function saveOpeningPreferences(mode, fullscreen) {
+  setAutoFullscreen(fullscreen);
+  localStorage.setItem(modeKey, mode);
 }
 
 export function openingControls(mode, fullscreen) {
